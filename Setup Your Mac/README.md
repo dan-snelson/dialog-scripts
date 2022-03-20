@@ -11,4 +11,5 @@ Based on:
 
 ---
 
+## Screencast
 [Screencast](https://rumble.com/vxwn1k-setup-your-mac-via-dialog.html) (11:15; no audio)
