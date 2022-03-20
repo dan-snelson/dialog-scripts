@@ -31,7 +31,7 @@ Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https:**//github.c
 ![Jamf Pro Policy Script Payload](images/Display_Message_Dialog_Policy.png "Jamf Pro Policy Script Payload")
 
 - **Title:** `macOS Monterey:** High powered meets “Hi everyone.”`
-- **Message:** `**macOS** Monterey  \n\n**Connect, share, and create like never before.**  \n\nSay hello to exciting new FaceTime updates. Explore a redesigned Safari. Discover and invent powerful new ways to work using Universal Control and Shortcuts. Stay in the moment with Focus. And so much more.  \n\nClick **Details** to learn more before upgrading.  \n\nIf you need assistance, please contact the Global Services Department,  \n+1 (801) 240-4357, and mention KB0070400.`
+- **Message:** `**macOS** Monterey  \n\n**Connect, share, and create like never before.**  \n\nSay hello to exciting new FaceTime updates. Explore a redesigned Safari. Discover and invent powerful new ways to work using Universal Control and Shortcuts. Stay in the moment with Focus. And so much more.  \n\nClick **Details** to learn more before upgrading.  \n\nIf you need assistance, please contact the Global Services Department,  \n+1 (801) 555-1212, and mention KB0070400.`
 - **Icon:** `/Applications/Install macOS Monterey.app/Contents/Resources/InstallAssistant.icns`
 - **Button 1 Text:** `Details` 
 - **Button 2 Text:** `Close`
