@@ -20,7 +20,6 @@ Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https://github.com
 ## Jamf Pro Policy Script Payload
 
 ![Jamf Pro Policy Script Payload](images/Display_Message_Dialog_Policy.png "Jamf Pro Policy Script Payload")
-<<<<<<< HEAD
 
 - **Title:** `macOS Monterey:** High powered meets “Hi everyone.”`
 - **Message:** `**macOS** Monterey  \n\n**Connect, share, and create like never before.**  \n\nSay hello to exciting new FaceTime updates. Explore a redesigned Safari. Discover and invent powerful new ways to work using Universal Control and Shortcuts. Stay in the moment with Focus. And so much more.  \n\nClick **Details** to learn more before upgrading.  \n\nIf you need assistance, please contact the Global Services Department,  \n+1 (801) 555-1212, and mention KB0070400.`
@@ -30,5 +29,3 @@ Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https://github.com
 - **Info Button Text:** `KB0070400`
 - **Extra Flags:** `--timer 60 --blurscreen --quitoninfo --ignorednd --overlayicon /path/to/icon.icns`
 - **Action:** `jamfselfservice:**//content?entity=policy&id=363&action=view`
-=======
->>>>>>> parent of aee6b98 (Updated ReadMe with text from screenshots)
