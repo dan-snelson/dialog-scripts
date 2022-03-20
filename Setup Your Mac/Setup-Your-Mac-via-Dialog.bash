@@ -16,8 +16,11 @@
 #
 # HISTORY
 #
-# Version 0.0.1, 19-Mar-2021, Dan K. Snelson (@dan-snelson)
+# Version 0.0.1, 19-Mar-2022, Dan K. Snelson (@dan-snelson)
 #   Original version
+#
+# Version 0.0.2, 20-Mar-2022, Dan K. Snelson (@dan-snelson)
+#   Corrected initial indeterminate progress bar. (Thanks, @bartreardon!)
 #
 ####################################################################################################
 
@@ -33,7 +36,7 @@ dialogApp="/usr/local/bin/dialog"
 dialog_command_file="/var/tmp/dialog.log"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# For each configuration step (i.e., app to be installed), enter a pipe-seperated list of:
+# For each configuration step (i.e., app to be installed), enter a pipe-separated list of:
 # Display Name | Filepath for validation | Jamf Pro Policy Custom Event Name
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -68,7 +71,7 @@ message="Please wait while the following apps are downloaded and installed:"
 hwType=$(/usr/sbin/system_profiler SPHardwareDataType | grep "Model Identifier" | grep "Book")  
 if [ "$hwType" != "" ]; then
   icon="SF=laptopcomputer.and.arrow.down,weight=thin,colour1=#51a3ef,colour2=#5154ef"
-  else
+else
   icon="SF=desktopcomputer.and.arrow.down,weight=thin,colour1=#51a3ef,colour2=#5154ef"
 fi
 
@@ -166,19 +169,28 @@ dialogCMD="$dialogCMD $listitems"
 echo "$dialogCMD"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Launch dialog and run it in the background sleep for a second to let thing initialise
+# Launch dialog and run it in the background; sleep for two seconds to let thing initialise
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 eval "$dialogCMD" &
 sleep 2
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Set initial progress bar
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 progress_index=0
+dialog_command "progress: 1"
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Execute Jamf Pro Policy Events 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 (for app in "${apps[@]}"; do
   dialog_command "listitem: $(echo "$app" | cut -d '|' -f1): wait"
   dialog_command "progresstext: Installing $(echo "$app" | cut -d '|' -f1) …"
   install_command=$( echo "$app" | cut -d '|' -f3 )
-  /usr/local/bin/jamf policy -event $install_command -verbose
+  /usr/local/bin/jamf policy -event "$install_command" -verbose
   appCheck &
 done
 
