@@ -12,4 +12,5 @@ Based on:
 ---
 
 ## Screencast
-[Screencast](https://rumble.com/vxwn1k-setup-your-mac-via-dialog.html) (11:15; no audio)
+
+[<img alt="Setup Your Mac via Dialog" width="650px" src="images/screencast_still_image.png" />](https://rumble.com/vy2snm-setup-your-mac-via-dialog-0.0.3.html)
