@@ -22,6 +22,9 @@
 # Version 0.0.2, 20-Mar-2022, Dan K. Snelson (@dan-snelson)
 #   Corrected initial indeterminate progress bar. (Thanks, @bartreardon!)
 #
+# Version 0.0.3, 21-Mar-2022, Dan K. Snelson (@dan-snelson)
+#   Re-corrected initial indeterminate progress bar.
+#
 ####################################################################################################
 
 
@@ -118,8 +121,6 @@ function appCheck(){
   done
   dialog_command "listitem: $(echo "$app" | cut -d '|' -f1): ✅"
   dialog_command "progress: increment"
-  progress_index=$(( progress_index + 1 ))
-  echo "at item number $progress_index"
 }
 
 
@@ -180,7 +181,7 @@ sleep 2
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 progress_index=0
-dialog_command "progress: 1"
+dialog_command "progress: $progress_index"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Execute Jamf Pro Policy Events 
