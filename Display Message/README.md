@@ -41,3 +41,13 @@ Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https://github.com
 - **Info Button Text:** `KB0070400`
 - **Extra Flags:** `--timer 60 --blurscreen --quitoninfo --ignorednd --overlayicon /path/to/icon.icns`
 - **Action:** `jamfselfservice:**//content?entity=policy&id=363&action=view`
+
+---
+
+## Tips-and-Tricks
+
+The following _may_ work to display Self Service's icon:
+
+```
+--icon /Users/`/usr/bin/stat -f%Su /dev/console`/Library/Application\ Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png
+```
