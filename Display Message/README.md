@@ -51,8 +51,8 @@ Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https://github.com
 #### `appPath` (Thanks to @bartreardon)
 
 ```
-apppath=$(defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path)
-dialog --title "Title goes here" --message "Message goes here" --icon "$apppath"
+appPath=$(defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path)
+dialog --title "Title goes here" --message "Message goes here" --icon "$appPath"
 ```
 
 #### `brandingimage.png`
