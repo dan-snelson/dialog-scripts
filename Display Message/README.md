@@ -46,8 +46,16 @@ Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https://github.com
 
 ## Tips-and-Tricks
 
-The following _may_ work to display Self Service's icon:
+### Jamf Pro's Self Service Icon
 
+#### `appPath` (Thanks to @bartreardon)
+
+```
+apppath=$(defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path)
+dialog --title "Title goes here" --message "Message goes here" --icon "$apppath"
+```
+
+#### `brandingimage.png`
 ```
 dialog --title "Title goes here" --message "Message goes here" --icon /Users/$(/usr/bin/stat -f%Su /dev/console)/Library/Application\ Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png
 ```
