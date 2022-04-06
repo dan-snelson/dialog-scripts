@@ -49,5 +49,5 @@ Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https://github.com
 The following _may_ work to display Self Service's icon:
 
 ```
---icon /Users/`/usr/bin/stat -f%Su /dev/console`/Library/Application\ Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png
+dialog --title "Title goes here" --message "Message goes here" --icon /Users/$(/usr/bin/stat -f%Su /dev/console)/Library/Application\ Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png
 ```
