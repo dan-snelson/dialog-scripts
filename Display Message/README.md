@@ -55,7 +55,7 @@ appPath=$(defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_se
 dialog --title "Title goes here" --message "Message goes here" --icon "$appPath"
 ```
 
-#### `brandingimage.png`
+#### `brandingimage.png` (Thanks to @smithjw)
 ```
 dialog --title "Title goes here" --message "Message goes here" --icon /Users/$(/usr/bin/stat -f%Su /dev/console)/Library/Application\ Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png
 ```
