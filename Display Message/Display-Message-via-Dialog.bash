@@ -14,6 +14,9 @@
 # 	Version 0.0.1, 18-Feb-2022, Dan K. Snelson (@dan-snelson)
 #		Original version
 #
+#	Version 0.0.2, 06-Apr-2022, Dan K. Snelson (@dan-snelson)
+#		Default icon to Jamf Pro Self Service if not specified
+#
 ####################################################################################################
 
 
@@ -24,8 +27,8 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.1"
-scriptResult="Script version ${scriptVersion};"
+scriptVersion="0.0.2"
+scriptResult="Version ${scriptVersion};"
 loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
 dialogPath="/usr/local/bin/dialog"
 if [[ -n ${4} ]]; then titleoption="--title"; title="${4}"; fi
@@ -37,6 +40,11 @@ if [[ -n ${9} ]]; then infobuttonoption="--infobuttontext"; infobuttontext="${9}
 extraflags=${10}
 action=${11}
 
+# Default icon to Jamf Pro Self Service if not specified
+if [[ -z ${icon} ]]; then
+	iconoption="--icon"
+	icon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
+fi
 
 
 ####################################################################################################
@@ -82,7 +90,7 @@ ${dialogPath} \
 	${infobuttonoption} "${infobuttontext}" \
 	--infobuttonaction "https://servicenow.company.com/support?id=kb_article_view&sysparm_article=${infobuttontext}" \
 	--messagefont "size=14" \
-	${extraflags}
+	"${extraflags}"
 
 returncode=$?
 
