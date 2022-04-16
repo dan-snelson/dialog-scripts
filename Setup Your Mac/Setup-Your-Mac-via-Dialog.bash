@@ -2,9 +2,9 @@
 
 ####################################################################################################
 #
-# Setup Your Mac via Dialog
+# Setup Your Mac via swiftDialog
 #
-# Purpose: Leverages Dialog v1.10.1 (or later) (https://github.com/bartreardon/Dialog/releases) and 
+# Purpose: Leverages swiftDialog v1.10.1 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
 # Jamf Pro Policy Custom Events to allow end-users to self-complete Mac setup post-enrollment
 # via Jamf Pro's Self Service. (See Jamf Pro Known Issues PI100009 - PI-004775.)
 #
