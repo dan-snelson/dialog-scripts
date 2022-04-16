@@ -4,7 +4,7 @@
 #
 # Setup Your Mac via Dialog
 #
-# Purpose: Leverages Dialog v1.9.1+ (https://github.com/bartreardon/Dialog/releases) and 
+# Purpose: Leverages Dialog v1.10.1 (or later) (https://github.com/bartreardon/Dialog/releases) and 
 # Jamf Pro Policy Custom Events to allow end-users to self-complete Mac setup post-enrollment
 # via Jamf Pro's Self Service. (See Jamf Pro Known Issues PI100009 - PI-004775.)
 #
