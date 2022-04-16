@@ -65,10 +65,10 @@ scriptResult="${scriptResult} Display Message via Dialog (${scriptVersion})"
 # Validate a value has been specified for all parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ -n "${title}" ]] && [[ -n "${message}" ]] && [[ -n "${action}" ]]; then
-	scriptResult="${scriptResult} Parameters 4, 5 and 11 populated; proceeding ..."
+if [[ -n "${title}" ]] && [[ -n "${message}" ]]; then
+	scriptResult="${scriptResult} Parameters 4 and 5 populated; proceeding ..."
 else
-	scriptResult="${scriptResult} Error: Parameters 4, 5 and 11 not populated; exiting."
+	scriptResult="${scriptResult} Error: Parameters 4 or 5 not populated; exiting."
 	echo "${scriptResult}"
 	exit 1
 fi
@@ -90,7 +90,7 @@ ${dialogPath} \
 	${infobuttonoption} "${infobuttontext}" \
 	--infobuttonaction "https://servicenow.company.com/support?id=kb_article_view&sysparm_article=${infobuttontext}" \
 	--messagefont "size=14" \
-	"${extraflags}"
+	${extraflags}
 
 returncode=$?
 
