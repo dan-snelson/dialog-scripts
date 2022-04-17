@@ -12,6 +12,12 @@ Based on:
 
 ---
 
-## Screencast
+## Screencasts
+
+### Setup Your Mac
 
 [<img alt="Setup Your Mac via swiftDialog" width="650px" src="images/screencast_still_image.png" />](https://rumble.com/v11772r-setup-your-mac-via-dialog-0.0.4.html)
+
+### Harvesting Self Service Icons
+
+[<img alt="Setup Your Mac via swiftDialog" width="650px" src="images/Harvesting_Self_Service_Icons.png" />](https://rumble.com/v119x6y-harvesting-self-service-icons.html)
