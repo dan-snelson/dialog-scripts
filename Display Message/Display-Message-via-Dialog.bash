@@ -2,10 +2,10 @@
 
 ####################################################################################################
 #
-#	Display Message via Dialog
+#	Display Message via swiftDialog
 #
-#	Purpose: Displays an end-user message via Dialog
-#	See: https://github.com/bartreardon/Dialog/wiki/Example-Jamf-Scripts
+#	Purpose: Displays an end-user message via swiftDialog
+#	See: https://github.com/bartreardon/swiftDialog-scripts
 #
 ####################################################################################################
 #

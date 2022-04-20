@@ -1,6 +1,6 @@
-# Display Message via Dialog
+# Display Message via swiftDialog
 
-Leverages [Dialog](https://github.com/bartreardon/Dialog/releases) v1.9.1+ and Jamf Pro Policy [Script Parameters](https://docs.jamf.com/10.36.0/jamf-pro/documentation/Scripts.html#ID-0002355b) to display a message to end-users.
+Leverages [swiftDialog](https://github.com/bartreardon/swiftDialog/releases) v1.9.1+ and Jamf Pro Policy [Script Parameters](https://docs.jamf.com/10.36.0/jamf-pro/documentation/Scripts.html#ID-0002355b) to display a message to end-users.
 
 Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https://github.com/bartreardon/swiftDialog/wiki/Example-Jamf-Scripts).
 
