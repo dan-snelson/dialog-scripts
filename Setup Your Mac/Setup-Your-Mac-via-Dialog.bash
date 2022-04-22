@@ -29,6 +29,10 @@
 #   Updated for Listview processing https://github.com/bartreardon/swiftDialog/pull/103
 #   Added dynamic, policy-based icons
 #
+# Version 0.0.5, 21-Apr-2022, Dan K. Snelson (@dan-snelson)
+#   Standardized references to listitem code to more easily leverage statustext
+#   Simplified "jamf policy -event" code
+#
 ####################################################################################################
 
 
@@ -54,9 +58,9 @@ message="Please wait while the following apps are downloaded and installed:"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 apps=(
-    "Palo Alto GlobalProtect|/Applications/GlobalProtect.app|globalProtect|ea794c5a1850e735179c7c60919e3b51ed3ed2b301fe3f0f27ad5ebd394a2e4b"
     "FileVault Disk Encryption|/Library/Preferences/com.apple.fdesetup.plist|filevault|f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913"
     "Sophos Endpoint|/Applications/Sophos/Sophos Endpoint.app|sophosEndpoint|c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c"
+    "Palo Alto GlobalProtect|/Applications/GlobalProtect.app|globalProtect|fcccf5d72ad9a4f6d3a4d780dcd8385378a0a8fd18e8c33ad32326f5bd53cca0"
     "Google Chrome|/Applications/Google Chrome.app|googleChrome|12d3d198f40ab2ac237cff3b5cb05b09f7f26966d6dffba780e4d4e5325cc701"
     "Microsoft Teams|/Applications/Microsoft Teams.app|microsoftTeams|dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e"
     "Zoom|/Applications/zoom.us.app|zoom|92b8d3c448e7d773457532f0478a428a0662f694fbbfc6cb69e1fab5ff106d97"
@@ -231,7 +235,7 @@ dialog_command "progress: $progress_index"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 for app in "${apps[@]}"; do
-  dialog_command "listitem: $(echo "$app" | cut -d '|' -f1): wait"
+  dialog_command "listitem: title: $(echo "$app" | cut -d '|' -f1), status: wait, statustext: Pending"
 done
 
 
@@ -242,10 +246,9 @@ done
 
 (for app in "${apps[@]}"; do
   dialog_command "icon: https://ics.services.jamfcloud.com/icon/hash_$(echo "$app" | cut -d '|' -f4)"
-  dialog_command "listitem: $(echo "$app" | cut -d '|' -f1): pending"
+  dialog_command "listitem: title: $(echo "$app" | cut -d '|' -f1), status: pending, statustext: Installing"
   dialog_command "progresstext: Installing $(echo "$app" | cut -d '|' -f1) …"
-  install_command=$( echo "$app" | cut -d '|' -f3 )
-  /usr/local/bin/jamf policy -event "$install_command" -verbose
+  /usr/local/bin/jamf policy -event "$( echo "$app" | cut -d '|' -f3 )" -verbose
   appCheck &
 done
 
