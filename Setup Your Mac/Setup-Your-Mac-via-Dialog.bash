@@ -33,6 +33,9 @@
 #   Standardized references to listitem code to more easily leverage statustext
 #   Simplified "jamf policy -event" code
 #
+# Version 0.0.6, 22-Apr-2022, Dan K. Snelson (@dan-snelson)
+#   Added error-checking to appCheck (thanks for the idea, @@adamcodega!)
+#
 ####################################################################################################
 
 
@@ -149,11 +152,12 @@ function finalise(){
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function appCheck(){
-  while [ ! -e "$(echo "$app" | cut -d '|' -f2)" ]; do
-    sleep 2
-  done
-  dialog_command "listitem: $(echo "$app" | cut -d '|' -f1): success"
-  dialog_command "progress: increment"
+    if  [ -e "$(echo "$app" | cut -d '|' -f2)" ]; then
+        dialog_command "listitem: $(echo "$app" | cut -d '|' -f1): success"
+    else
+        dialog_command "listitem: title: $(echo "$app" | cut -d '|' -f1), status: fail, statustext: Failed"
+    fi
+    dialog_command "progress: increment"
 }
 
 
