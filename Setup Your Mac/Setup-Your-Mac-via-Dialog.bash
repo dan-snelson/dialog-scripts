@@ -4,7 +4,7 @@
 #
 # Setup Your Mac via swiftDialog
 #
-# Purpose: Leverages swiftDialog v1.10.1 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
+# Purpose: Leverages swiftDialog v1.10.2 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
 # Jamf Pro Policy Custom Events to allow end-users to self-complete Mac setup post-enrollment
 # via Jamf Pro's Self Service. (See Jamf Pro Known Issues PI100009 - PI-004775.)
 #
@@ -35,6 +35,9 @@
 #
 # Version 0.0.6, 22-Apr-2022, Dan K. Snelson (@dan-snelson)
 #   Added error-checking to appCheck (thanks for the idea, @@adamcodega!)
+#
+# Version 0.0.7, 29-Apr-2022, Dan K. Snelson (@dan-snelson)
+#   Mapped v1.10.2's new "--quitkey" to command+b (because "b" is for Bart!)
 #
 ####################################################################################################
 
@@ -192,7 +195,9 @@ dialogCMD="$dialogApp -p --title \"$title\" \
 --blurscreen \
 --ontop \
 --overlayicon \"$overlayicon\" \
---messagefont 'size=14'"
+--titlefont 'size=28' \
+--messagefont 'size=14' \
+--quitkey b"
 
 
 
