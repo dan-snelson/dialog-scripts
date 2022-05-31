@@ -4,13 +4,15 @@
 #
 # Setup Your Mac via swiftDialog
 #
-# Purpose: Leverages swiftDialog v1.10.2 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
+# Purpose: Leverages swiftDialog v1.11.0.2704 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
 # Jamf Pro Policy Custom Events to allow end-users to self-complete Mac setup post-enrollment
 # via Jamf Pro's Self Service. (See Jamf Pro Known Issues PI100009 - PI-004775.)
 #
 # Inspired by: Rich Trouton (@rtrouton) and Bart Reardon (@bartreardon)
 #
-# Based on: Adam Codega (@adamcodega)'s https://github.com/acodega/dialog-scripts/blob/main/MDMAppsDeploy.sh
+# Based on:
+# - Adam Codega (@adamcodega)'s https://github.com/acodega/dialog-scripts/blob/main/MDMAppsDeploy.sh
+# - James Smith (@smithjw)'s https://github.com/smithjw/speedy-prestage-pkg/tree/feature/swiftDialog
 #
 ####################################################################################################
 #
@@ -21,6 +23,13 @@
 #
 # Version 1.1.0, 19-May-2022, Dan K. Snelson (@dan-snelson)
 #   Added initial Splash screen with Asset Tag Capture and Debug Mode
+#
+# Version 1.2.0, 30-May-2022, Dan K. Snelson (@dan-snelson)
+#   Changed `--infobuttontext` to `--infotext`
+#   Added `regex` and `regexerror` for Asset Tag Capture
+#   Replaced @adamcodega's `apps` with @smithjw's `policy_array`
+#   Added progress update
+#   Added filepath validation
 #
 ####################################################################################################
 
@@ -33,51 +42,143 @@
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Script Version & Debug Mode
+# Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.1.0"
-debugMode="${4}"        # ( true | false, blank )
+scriptVersion="1.2.0"
+debugMode="${4}"    # ( true | false, blank )
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Set Dialog path, Command Files and currently logged-in user
+# Set Dialog path, Command Files, JAMF binary, log files and currently logged-in user
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogApp="/usr/local/bin/dialog"
-dialog_command_file="/var/tmp/dialog.log"
-welcome_screen_command_file="/var/tmp/dialog_welcome_screen.log"
+dialogCommandFile="/var/tmp/dialog.log"
+welcomeScreenCommandFile="/var/tmp/dialog_welcome_screen.log"
 loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
+jamfBinary="/usr/local/bin/jamf"
+logFolder="/private/var/log"
+logName="enrollment.log"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # APPS TO BE INSTALLED
 #
-# For each configuration step, enter a pipe-separated list of:
-# Display Name | Filepath for validation | Jamf Pro Policy Custom Event Name | Icon hash
+# For each configuration step, specify:
+# - listitem: The text to be displayed in the list
+# - icon: The hash of the icon to be displayed on the left
+#   - See: https://rumble.com/v119x6y-harvesting-self-service-icons.html
+# - progresstext: The text to be displayed below the progress bar 
+# - trigger: The Jamf Pro Policy Custom Event Name
+# - path: The filepath for validation
 #
-# For Icon hash, see: https://rumble.com/v119x6y-harvesting-self-service-icons.html
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-apps=(
-    "FileVault Disk Encryption|/Library/Preferences/com.apple.fdesetup.plist|filevault|f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913"
-    "Sophos Endpoint|/Applications/Sophos/Sophos Endpoint.app|sophosEndpoint|c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c"
-    "Palo Alto GlobalProtect|/Applications/GlobalProtect.app|globalProtect|fcccf5d72ad9a4f6d3a4d780dcd8385378a0a8fd18e8c33ad32326f5bd53cca0"
-    "Google Chrome|/Applications/Google Chrome.app|googleChrome|12d3d198f40ab2ac237cff3b5cb05b09f7f26966d6dffba780e4d4e5325cc701"
-    "Microsoft Teams|/Applications/Microsoft Teams.app|microsoftTeams|dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e"
-    "Zoom|/Applications/zoom.us.app|zoom|92b8d3c448e7d773457532f0478a428a0662f694fbbfc6cb69e1fab5ff106d97"
-)
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Set progress_total to the number of apps in the list; Add one for "Updating Inventory step"
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-progress_total=${#apps[@]}
-progress_total=$(( 1 + progress_total ))
+policy_array=('
+{
+    "steps": [
+        {
+            "listitem": "FileVault Disk Encryption",
+            "icon": "f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913",
+            "progresstext": "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac.",
+            "trigger_list": [
+                {
+                    "trigger": "filevault",
+                    "path": "/Library/Preferences/com.apple.fdesetup.plist"
+                }
+            ]
+        },
+        {
+            "listitem": "Sophos Endpoint",
+            "icon": "c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c",
+            "progresstext": "You’ll enjoy next-gen protection with Sophos Endpoint which doesn’t rely on signatures to catch malware.",
+            "trigger_list": [
+                {
+                    "trigger": "sophosEndpoint",
+                    "path": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
+                }
+            ]
+        },
+        {
+            "listitem": "Palo Alto GlobalProtect",
+            "icon": "fcccf5d72ad9a4f6d3a4d780dcd8385378a0a8fd18e8c33ad32326f5bd53cca0",
+            "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
+            "trigger_list": [
+                {
+                    "trigger": "globalProtect",
+                    "path": "/Applications/GlobalProtect.app/Contents/Info.plist"
+                }
+            ]
+        },
+        {
+            "listitem": "Microsoft Teams",
+            "icon": "dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e",
+            "progresstext": "Microsoft Teams is a hub for teamwork in Office 365. Keep all your team’s chats, meetings and files together in one place.",
+            "trigger_list": [
+                {
+                    "trigger": "microsoftTeams",
+                    "path": "/Applications/Microsoft Teams.app/Contents/Info.plist"
+                }
+            ]
+        },
+        {
+            "listitem": "Zoom",
+            "icon": "92b8d3c448e7d773457532f0478a428a0662f694fbbfc6cb69e1fab5ff106d97",
+            "progresstext": "Zoom is a videotelephony software program developed by Zoom Video Communications.",
+            "trigger_list": [
+                {
+                    "trigger": "zoom",
+                    "path": "/Applications/zoom.us.app/Contents/Info.plist"
+                }
+            ]
+        },
+        {
+            "listitem": "Google Chrome",
+            "icon": "12d3d198f40ab2ac237cff3b5cb05b09f7f26966d6dffba780e4d4e5325cc701",
+            "progresstext": "Google Chrome is a browser that combines a minimal design with sophisticated technology to make the Web faster.",
+            "trigger_list": [
+                {
+                    "trigger": "googleChrome",
+                    "path": "/Applications/Google Chrome.app/Contents/Info.plist"
+                }
+            ]
+        },
+        {
+            "listitem": "Final Configuration",
+            "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
+            "progresstext": "Finalizing Church Configuration …",
+            "trigger_list": [
+                {
+                    "trigger": "finalConfiguration",
+                    "path": ""
+                },
+                {
+                    "trigger": "reconAtReboot",
+                    "path": ""
+                },
+                {
+                    "trigger": "computerNameSet",
+                    "path": ""
+                }
+            ]
+        },
+        {
+            "listitem": "Update Inventory",
+            "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
+            "progresstext": "The listing of your computer’s installed apps and settings — its inventory — is automatically sent to the Jamf Pro server daily.",
+            "trigger_list": [
+                {
+                    "trigger": "recon",
+                    "path": ""
+                }
+            ]
+        }
+    ]
+}
+')
 
 
 
@@ -86,8 +187,8 @@ progress_total=$(( 1 + progress_total ))
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeTitle="Welcome to your new Mac!"
-welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Continue** to start applying Church settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the GSD: +1 (801) 240-4357."
-welcomeIcon="https://avatars.githubusercontent.com/u/3598965?v=4"
+welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Continue** to start applying Church settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the GSD: +1 (801) 555-1212."
+welcomeIcon="https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Apple_Computer_Logo_rainbow.svg/1028px-Apple_Computer_Logo_rainbow.svg.png?20201228132849"
 
 
 
@@ -95,21 +196,20 @@ welcomeIcon="https://avatars.githubusercontent.com/u/3598965?v=4"
 # "Welcome Screen" Dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogWelcomeScreenCMD="$dialogApp --ontop --title \"$welcomeTitle\" \
+dialogWelcomeScreenCMD="$dialogApp --ontop --title  \"$welcomeTitle\" \
 --message \"$welcomeMessage\" \
 --icon \"$welcomeIcon\" \
---iconsize 100 \
+--iconsize 198 \
 --button1text \"Continue\" \
 --button2text \"Quit\" \
 --button2disabled \
---infobuttontext \"v$scriptVersion\" \
+--infotext \"v$scriptVersion\" \
 --blurscreen \
---ontop \
---titlefont 'size=28' \
---messagefont 'size=18' \
---textfield \"Asset Tag\",required,prompt=\"Please enter your Mac's Asset Tag here\" \
+--titlefont 'size=26' \
+--messagefont 'size=16' \
+--textfield \"Asset Tag\",required,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^\\d{7}$',regexerror=\"Please enter seven digits (numbers only) for the Asset Tag\" \
 --quitkey k \
---commandfile \"$welcome_screen_command_file\""
+--commandfile \"$welcomeScreenCommandFile\" "
 
 
 
@@ -141,32 +241,18 @@ dialogCMD="$dialogApp --ontop --title \"$title\" \
 --progress $progress_total \
 --button1text \"Quit\" \
 --button1disabled \
---infobuttontext \"v$scriptVersion\" \
+--infotext \"v$scriptVersion\" \
 --blurscreen \
---ontop \
 --overlayicon \"$overlayicon\" \
 --titlefont 'size=28' \
 --messagefont 'size=14' \
+--height '73%' \
+--position 'centre' \
 --quitkey k"
 
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Create the list of apps
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-listitems=""
-for app in "${apps[@]}"; do
-  listitems="$listitems --listitem '$(echo "$app" | cut -d '|' -f1)'"
-done
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Final "Setup Your Mac" Dialog to be displayed to the end-user
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dialogCMD="$dialogCMD $listitems"
+#------------------------------- Edits below this line are optional -------------------------------#
 
 
 
@@ -218,7 +304,7 @@ function dialogCheck(){
     # Remove the temporary working directory when done
     /bin/rm -Rf "$tempDirectory"  
   else
-    echo "Dialog $(dialog --version) found; proceeding..."
+    echo_logger "DIALOG: version $(dialog --version) found; proceeding..."
   fi
 }
 
@@ -230,7 +316,7 @@ function dialogCheck(){
 
 function dialog_command_welcome_screen(){
   echo "$1"
-  echo "$1"  >> $welcome_screen_command_file
+  echo "$1"  >> $welcomeScreenCommandFile
 }
 
 
@@ -239,9 +325,10 @@ function dialog_command_welcome_screen(){
 # Execute a "Setup Your Mac" Dialog command
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function dialog_command(){
-  echo "$1"
-  echo "$1"  >> $dialog_command_file
+function dialog_update() {
+    echo_logger "DIALOG: $1"
+    # shellcheck disable=2001
+    echo "$1" >> "$dialogCommandFile"
 }
 
 
@@ -251,43 +338,61 @@ function dialog_command(){
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function finalise(){
-  dialog_command "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-  dialog_command "progresstext: Installation of applications complete."
-  sleep 7
-  dialog_command "icon: https://ics.services.jamfcloud.com/icon/hash_90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296"
-  dialog_command "progresstext: Updating computer inventory with an Asset Tag of \"${assetTag}\" …"
-
-  # If Debug Mode is enabled, pause for 7 seconds instead of updating inventory
-  if [[ $debugMode == "true" ]]; then
-    echo "DEBUG MODE IS ENABLED; otherwise would execute: /usr/local/bin/jamf recon -assetTag ${assetTag}"
-    sleep 7
-  else
-    /usr/local/bin/jamf recon -assetTag "${assetTag}"
-  fi
-
-  dialog_command "icon: SF=checkmark.seal.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-  dialog_command "progresstext: Complete! Please restart and enjoy your new Mac!"
-  dialog_command "progress: complete"
-  dialog_command "button1text: Done"
-  dialog_command "button1: enable"
-  rm "$dialog_command_file"
-  rm "$welcome_screen_command_file"
+  dialog_update "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
+  dialog_update "progresstext: Complete! Please restart and enjoy your new Mac!"
+  dialog_update "progress: complete"
+  dialog_update "button1text: Quit"
+  dialog_update "button1: enable"
+  rm "$dialogCommandFile"
+  rm "$welcomeScreenCommandFile"
   exit 0
 }
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for app installation
+#  smithjw's Logging Function (with preferred date / timestamp)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function appCheck(){
-    if  [ -e "$(echo "$app" | cut -d '|' -f2)" ]; then
-        dialog_command "listitem: $(echo "$app" | cut -d '|' -f1): success"
+function echo_logger() {
+    logFolder="${logFolder:=/private/var/log}"
+    logName="${logName:=log.log}"
+
+    mkdir -p $logFolder
+
+    echo -e "$(date +%Y-%m-%d\ %H:%M:%S)  $1" | tee -a $logFolder/$logName
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Parse JSON via osascript and JavaScript
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function get_json_value() {
+    JSON="$1" osascript -l 'JavaScript' \
+        -e 'const env = $.NSProcessInfo.processInfo.environment.objectForKey("JSON").js' \
+        -e "JSON.parse(env).$2"
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# smithjw's sweet function to execute Jamf Pro Policy Custom Events
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function run_jamf_trigger() {
+    trigger="$1"
+    if [ "$debugMode" = true ]; then
+        echo_logger "DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
+        sleep 7
+    elif [ "$trigger" == "recon" ]; then
+        echo_logger "DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
+        "$jamfBinary" recon -assetTag "${assetTag}"
     else
-        dialog_command "listitem: title: $(echo "$app" | cut -d '|' -f1), status: fail, statustext: Failed"
+        echo_logger "DIALOG: RUNNING: $jamfBinary policy -event $trigger"
+        "$jamfBinary" policy -event "$trigger"
     fi
-    dialog_command "progress: increment"
 }
 
 
@@ -338,34 +443,32 @@ fi
 case ${returncode} in
 
     0)  ## Process exit code 0 scenario here
-        echo "${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
-        eval "$dialogCMD" &
-        sleep 0.3
-        dialog_command "message: Asset Tag reported as \`${assetTag}\`. $message"
+        echo_logger "DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
+        eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
+        dialog_update "message: Asset Tag reported as \`${assetTag}\`. $message"
         if [[ ${debugMode} == "true" ]]; then
-          dialog_command "title: DEBUG MODE | $title"
+          dialog_update "title: DEBUG MODE | $title"
         fi
         ;;
 
     2)  ## Process exit code 2 scenario here
-        echo "${loggedInUser} clicked Quit"
+        echo_logger "DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
         exit 0
         ;;
 
     3)  ## Process exit code 3 scenario here
-        echo "${loggedInUser} clicked infobutton"
+        echo_logger "DIALOG: ${loggedInUser} clicked infobutton"
         /usr/bin/osascript -e "set Volume 3"
         /usr/bin/afplay /System/Library/Sounds/Tink.aiff
         ;;
 
     4)  ## Process exit code 4 scenario here
-        echo "${loggedInUser} allowed timer to expire"
-        eval "$dialogCMD" &
-        sleep 0.3
+        echo_logger "DIALOG: ${loggedInUser} allowed timer to expire"
+        eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
         ;;
 
     *)  ## Catch all processing
-        echo "Something else happened; Exit code: ${returncode}"
+        echo_logger "DIALOG: Something else happened; Exit code: ${returncode}"
         exit 1
         ;;
 
@@ -374,55 +477,103 @@ esac
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Set progress_total to the number of steps in policy_array
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+dialog_update "progresstext: Initializing configuration …"
+progress_total=$(get_json_value "${policy_array[*]}" "steps.length")
+echo_logger "DIALOG: progress_total=$progress_total"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Set initial progress bar
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 progress_index=0
-dialog_command "progress: $progress_index"
+dialog_update "progress: $progress_index"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Set wait icon for all listitems 
+# Iterate through policy_array JSON to construct the list for swiftDialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-for app in "${apps[@]}"; do
-  dialog_command "listitem: title: $(echo "$app" | cut -d '|' -f1), status: wait, statustext: Pending"
+dialog_step_length=$(get_json_value "${policy_array[*]}" "steps.length")
+for (( i=0; i<dialog_step_length; i++ )); do
+    listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
+    list_item_array+=("$listitem")
 done
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Close Welcome Screen and pause on initial loading screen
+# The ${array_name[*]/%/,} expansion will combine all items within the array adding a "," character at the end
+# To add a character to the start, use "/#/" instead of the "/%/"
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+list_item_string=${list_item_array[*]/%/,}
+dialog_update "list: ${list_item_string%?}"
+for (( i=0; i<dialog_step_length; i++ )); do
+    dialog_update "listitem: index: $i, status: wait, statustext: Pending"
+done
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Close Welcome Screen and pause on initial loading screen to build anticipation
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialog_command_welcome_screen "quit:"
-sleep 7
+sleep 3
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Execute Jamf Pro Policy Events 
+# This for loop will iterate over each distinct step in the policy_array array
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-(for app in "${apps[@]}"; do
-  dialog_command "icon: https://ics.services.jamfcloud.com/icon/hash_$(echo "$app" | cut -d '|' -f4)"
-  dialog_command "listitem: title: $(echo "$app" | cut -d '|' -f1), status: pending, statustext: Installing"
-  dialog_command "progresstext: Installing $(echo "$app" | cut -d '|' -f1) …"
+for (( i=0; i<dialog_step_length; i++ )); do
 
-  # If Debug Mode is enabled, pause for 7 seconds instead of executing Jamf Pro polices
-  if [[ $debugMode == "true" ]]; then
-    echo "DEBUG MODE IS ENABLED; otherwise would execute: /usr/local/bin/jamf policy -event $( echo "$app" | cut -d '|' -f3 ) -verbose"
-    sleep 7
-  else
-    /usr/local/bin/jamf policy -event "$( echo "$app" | cut -d '|' -f3 )" -verbose
-  fi
+    # Increment the progress bar
+    dialog_update "progress: $(( i * ( 100 / progress_total ) ))"
 
-  appCheck &
+    # Creating initial variables
+    listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
+    icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
+    progresstext=$(get_json_value "${policy_array[*]}" "steps[$i].progresstext")
 
+    trigger_list_length=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list.length")
+
+    # If there's a value in the variable, update running swiftDialog
+    if [[ -n "$listitem" ]]; then dialog_update "listitem: index: $i, status: pending, statustext: Installing"; fi
+    if [[ -n "$icon" ]]; then dialog_update "icon: https://ics.services.jamfcloud.com/icon/hash_$icon"; fi
+    if [[ -n "$progresstext" ]]; then dialog_update "progresstext: $progresstext"; fi
+    if [[ -n "$trigger_list_length" ]]; then
+        for (( j=0; j<trigger_list_length; j++ )); do
+
+            # Setting variables within the trigger_list
+            trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
+            path=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].path")
+
+            # If the path variable has a value, check if that path exists on disk
+            if [[ -f "$path" ]]; then
+                echo_logger "INFO: $path exists, moving on"
+                 if [[ "$debugMode" = true ]]; then sleep 7; fi
+            else
+                run_jamf_trigger "$trigger"
+            fi
+        done
+    fi
+
+    # Validate the expected path exists
+    echo_logger "DIALOG: Testing for \"$path\" …"
+    if [[ -f "$path" ]] || [[ -z "$path" ]]; then
+        dialog_update "listitem: index: $i, status: success"
+    else
+        dialog_update "listitem: index: $i, status: fail, statustext: Failed"
+    fi
 done
-
-wait)
 
 
 
