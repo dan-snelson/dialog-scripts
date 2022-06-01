@@ -4,7 +4,7 @@
 #
 # Setup Your Mac via swiftDialog
 #
-# Purpose: Leverages swiftDialog v1.11.0.2704 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
+# Purpose: Leverages swiftDialog v1.11.0.2758 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
 # Jamf Pro Policy Custom Events to allow end-users to self-complete Mac setup post-enrollment
 # via Jamf Pro's Self Service. (See Jamf Pro Known Issues PI100009 - PI-004775.)
 #
@@ -212,7 +212,7 @@ dialogWelcomeScreenCMD="$dialogApp --ontop --title  \"$welcomeTitle\" \
 --blurscreen \
 --titlefont 'size=26' \
 --messagefont 'size=16' \
---textfield \"Asset Tag\",required,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^\\d{7}$',regexerror=\"Please enter seven digits (numbers only) for the Asset Tag\" \
+--textfield \"Asset Tag\",required=true,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^\d{7,}$',regexerror=\"Please enter seven digits (numbers only) for the Asset Tag\" \
 --quitkey k \
 --commandfile \"$welcomeScreenCommandFile\" "
 
