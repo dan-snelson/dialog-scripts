@@ -49,7 +49,7 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 scriptVersion="1.2.1"
-debugMode="${4}"    # ( true | false, blank )
+debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 assetTagCapture="false" # Hard-coded for testing
 
