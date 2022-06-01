@@ -33,7 +33,7 @@ Version `1.1.0` prompts the user to provide an Asset Tag, which is captured and 
 
 #### Asset Tag Capture Optional
 
-Version `1.2.1` **requires** a Jamf Pro Administrator to _specifically enable_ Asset Tag Capture by setting Script Parameter 5 to `true` (i.e., defaults to disabled).
+Version `1.2.1` _requires_ a Jamf Pro Administrator to **specifically enable** Asset Tag Capture by setting Script Parameter `5` to `true` (i.e., default is to **not** prompt the user for an Asset Tag).
 
 ![Asset Tag Capture](images/Asset_Tag_Capture.png "Asset Tag Capture")
  ### Debug Mode
@@ -189,4 +189,4 @@ policy_array=('
 ![Jamf Pro Policy Script Payload](images/Policy_Script_Payload.png "Jamf Pro Policy Script Payload")
 
 - **Debug Mode:** `true` to enable Debug Mode; defaults to disabled
-- **Asset Tag Capture:** `true` to prompt user to provide an Asset Tag; defaults to disabled
+- **Asset Tag Capture:** `true` to prompt user to provide an Asset Tag; defaults to **not** prompting the user to provide an Asset Tag
