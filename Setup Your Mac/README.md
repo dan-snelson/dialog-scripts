@@ -1,6 +1,6 @@
 # Setup Your Mac via swiftDialog
 
-> Leverages [swiftDialog](https://github.com/bartreardon/swiftDialog/releases) v1.11.0.2704 (or later) and Jamf Pro Policy [Custom Events](https://docs.jamf.com/10.36.0/jamf-pro/documentation/Policy_Management.html?hl=custom%2Cevent#ID-0001f43f) to allow end-users to self-complete Mac setup **post-enrollment** via Jamf Pro's Self Service. (See Jamf Pro Known Issues `PI100009 - PI-004775`.)
+> Leverages [swiftDialog](https://github.com/bartreardon/swiftDialog/releases) v1.11.0.2758 (or later) and Jamf Pro Policy [Custom Events](https://docs.jamf.com/10.36.0/jamf-pro/documentation/Policy_Management.html?hl=custom%2Cevent#ID-0001f43f) to allow end-users to self-complete Mac setup **post-enrollment** via Jamf Pro's Self Service. (See Jamf Pro Known Issues `PI100009 - PI-004775`.)
 
 Inspired by:
 - Rich Trouton ([@rtrouton](https://github.com/rtrouton))
@@ -30,6 +30,10 @@ Based on:
 ### Asset Tag Capture
 
 Version `1.1.0` prompts the user to provide an Asset Tag, which is captured and reported in the **Setting up your Mac** screen and submitted near the end of the scipt when inventory is updated via `jamf recon -assetTag ${assetTag}`.
+
+#### Asset Tag Capture Optional
+
+Version `1.2.1` **requires** a Jamf Pro Administrator to _specifically enable_ Asset Tag Capture by setting Script Parameter 5 to `true` (i.e., defaults to disabled).
 
 ![Asset Tag Capture](images/Asset_Tag_Capture.png "Asset Tag Capture")
  ### Debug Mode
@@ -178,9 +182,11 @@ policy_array=('
 > Labels to use for script parameters. Parameters 1 through 3 are predefined as mount point, computer name, and username
 
 - **Parameter 4:** `Debug Mode ( true | false, blank)`
+- **Parameter 5:** `Asset Tag Capture ( true | false, blank)`
 
 ### Jamf Pro Policy Script Payload
 
 ![Jamf Pro Policy Script Payload](images/Policy_Script_Payload.png "Jamf Pro Policy Script Payload")
 
-- **Debug Mode:** `true` to enable Debug Mode; _anything else_ to disable
+- **Debug Mode:** `true` to enable Debug Mode; defaults to disabled
+- **Asset Tag Capture:** `true` to prompt user to provide an Asset Tag; defaults to disabled
