@@ -31,6 +31,9 @@
 #   Added progress update
 #   Added filepath validation
 #
+# Version 1.2.1, 01-Jun-2022, Dan K. Snelson (@dan-snelson)
+#   Made Asset Tag Capture optional (via Jamf Pro Script Paramter 5)
+#
 ####################################################################################################
 
 
@@ -45,8 +48,10 @@
 # Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.0"
+scriptVersion="1.2.1"
 debugMode="${4}"    # ( true | false, blank )
+assetTagCapture="${5}"  # ( true | false, blank )
+assetTagCapture="false" # Hard-coded for testing
 
 
 
@@ -387,8 +392,13 @@ function run_jamf_trigger() {
         echo_logger "DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
         sleep 7
     elif [ "$trigger" == "recon" ]; then
-        echo_logger "DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
-        "$jamfBinary" recon -assetTag "${assetTag}"
+        if [[ ${assetTagCapture} == "true" ]]; then
+            echo_logger "DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
+            "$jamfBinary" recon -assetTag "${assetTag}"
+        else
+            echo_logger "DIALOG: RUNNING: $jamfBinary recon"
+            "$jamfBinary" recon
+        fi
     else
         echo_logger "DIALOG: RUNNING: $jamfBinary policy -event $trigger"
         "$jamfBinary" policy -event "$trigger"
@@ -426,12 +436,16 @@ dialogCheck
 # Display Welcome Screen and capture user's interaction
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-assetTag=$( eval "$dialogWelcomeScreenCMD" | awk -F " : " '{print $NF}' )
+if [[ ${assetTagCapture} == "true" ]]; then
 
-if [[ -z ${assetTag} ]]; then
-	returncode="2"
-else
-	returncode="0"
+    assetTag=$( eval "$dialogWelcomeScreenCMD" | awk -F " : " '{print $NF}' )
+
+    if [[ -z ${assetTag} ]]; then
+        returncode="2"
+    else
+        returncode="0"
+    fi
+
 fi
 
 
@@ -440,39 +454,50 @@ fi
 # Evaluate User Interaction at Welcome Screen
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-case ${returncode} in
+if [[ ${assetTagCapture} == "true" ]]; then
 
-    0)  ## Process exit code 0 scenario here
-        echo_logger "DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
-        eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
-        dialog_update "message: Asset Tag reported as \`${assetTag}\`. $message"
-        if [[ ${debugMode} == "true" ]]; then
-          dialog_update "title: DEBUG MODE | $title"
-        fi
-        ;;
+    case ${returncode} in
 
-    2)  ## Process exit code 2 scenario here
-        echo_logger "DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
-        exit 0
-        ;;
+        0)  ## Process exit code 0 scenario here
+            echo_logger "DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
+            eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
+            dialog_update "message: Asset Tag reported as \`${assetTag}\`. $message"
+            if [[ ${debugMode} == "true" ]]; then
+            dialog_update "title: DEBUG MODE | $title"
+            fi
+            ;;
 
-    3)  ## Process exit code 3 scenario here
-        echo_logger "DIALOG: ${loggedInUser} clicked infobutton"
-        /usr/bin/osascript -e "set Volume 3"
-        /usr/bin/afplay /System/Library/Sounds/Tink.aiff
-        ;;
+        2)  ## Process exit code 2 scenario here
+            echo_logger "DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
+            exit 0
+            ;;
 
-    4)  ## Process exit code 4 scenario here
-        echo_logger "DIALOG: ${loggedInUser} allowed timer to expire"
-        eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
-        ;;
+        3)  ## Process exit code 3 scenario here
+            echo_logger "DIALOG: ${loggedInUser} clicked infobutton"
+            /usr/bin/osascript -e "set Volume 3"
+            /usr/bin/afplay /System/Library/Sounds/Tink.aiff
+            ;;
 
-    *)  ## Catch all processing
-        echo_logger "DIALOG: Something else happened; Exit code: ${returncode}"
-        exit 1
-        ;;
+        4)  ## Process exit code 4 scenario here
+            echo_logger "DIALOG: ${loggedInUser} allowed timer to expire"
+            eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
+            ;;
 
-esac
+        *)  ## Catch all processing
+            echo_logger "DIALOG: Something else happened; Exit code: ${returncode}"
+            exit 1
+            ;;
+
+    esac
+
+else
+
+    eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
+    if [[ ${debugMode} == "true" ]]; then
+        dialog_update "title: DEBUG MODE | $title"
+    fi
+
+fi
 
 
 
