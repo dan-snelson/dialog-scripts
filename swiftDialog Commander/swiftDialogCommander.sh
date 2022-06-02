@@ -128,7 +128,7 @@ swiftDialog Commander, ${scriptVersion} (for swiftDialog $dialogVersion)
 by Dan K. Snelson (@dan-snelson)
 
     Usage:
-    bash ./swiftDialogCMD.sh [-r | --reset] [-h | --help]
+    bash swiftDialogCommander.sh [-r | --reset] [-h | --help]
 
     [no flags]      Displays the \"»\" prompt and enters interactive mode
                     where you can enter commands to update the running swiftDialog.
