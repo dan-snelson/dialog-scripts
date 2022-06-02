@@ -27,9 +27,9 @@ To better wrap my head around how this works, I wrote `swiftDialog Commander` bo
 ## Usage
 
 1. Install the latest version of [switftDialog](https://github.com/bartreardon/swiftDialog/releases) on a local test Mac 
-2. Save [swiftDialogCommander.sh](https://raw.githubusercontent.com/macadmins/nudge/main/Example%20Assets/com.github.macadmins.Nudge.json) to your Downloads folder:
+2. Save [swiftDialogCommander.sh](https://raw.githubusercontent.com/dan-snelson/dialog-scripts/development/swiftDialog%20Commander/swiftDialogCommander.sh) to your Downloads folder:
 ```console
-curl -o ~/Downloads/swiftDialogCommander.sh https://raw.githubusercontent.com/macadmins/nudge/main/Example%20Assets/com.github.macadmins.Nudge.json
+curl -o ~/Downloads/swiftDialogCommander.sh https://raw.githubusercontent.com/dan-snelson/dialog-scripts/development/swiftDialog%20Commander/swiftDialogCommander.sh
 ```
 3. Review the built-in help via: `bash ~/Downloads/swiftDialogCommander.sh --help`
 4. Execute various commands via: `bash ~/Downloads/swiftDialogCommander.sh`
