@@ -9,7 +9,7 @@ Inspired by:
 
 Based on:
 - Adam Codega ([@adamcodega](https://github.com/acodega))'s [MDMAppsDeploy.sh](https://github.com/acodega/dialog-scripts/blob/main/MDMAppsDeploy.sh)
-- James Smith ([@smithjw](https://github.com/smithjw))'s [speedy-prestage-pkg](https://github.com/smithjw/speedy-prestage-pkg/tree/feature/swiftDialog)
+- James Smith ([@smithjw](https://github.com/smithjw))'s [swiftEnrolment](https://github.com/smithjw/swiftEnrolment)
 
 ---
 
