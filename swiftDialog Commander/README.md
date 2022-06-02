@@ -14,7 +14,7 @@ To better wrap my head around how this works, I wrote `swiftDialog Commander` bo
 
 ## Screencast
 
-[<img alt="swiftDialog Commander" width="650px" src="images/screencast_still_image.png" />](https://rumble.com/c/c-1599024)
+[<img alt="swiftDialog Commander" width="650px" src="images/screencast_still_image.png" />](https://rumble.com/v171h8u-swiftdialog-commander-0.0.1.html)
 
 ---
 
@@ -27,9 +27,9 @@ To better wrap my head around how this works, I wrote `swiftDialog Commander` bo
 ## Usage
 
 1. Install the latest version of [switftDialog](https://github.com/bartreardon/swiftDialog/releases) on a local test Mac 
-2. Save [swiftDialogCommander.sh](https://raw.githubusercontent.com/dan-snelson/dialog-scripts/development/swiftDialog%20Commander/swiftDialogCommander.sh) to your Downloads folder:
+2. Save [swiftDialogCommander.sh](https://raw.githubusercontent.com/dan-snelson/dialog-scripts/main/swiftDialog%20Commander/swiftDialogCommander.sh) to your Downloads folder:
 ```console
-curl -o ~/Downloads/swiftDialogCommander.sh https://raw.githubusercontent.com/dan-snelson/dialog-scripts/development/swiftDialog%20Commander/swiftDialogCommander.sh
+curl -o ~/Downloads/swiftDialogCommander.sh https://raw.githubusercontent.com/dan-snelson/dialog-scripts/main/swiftDialog%20Commander/swiftDialogCommander.sh
 ```
 3. Review the built-in help via: `bash ~/Downloads/swiftDialogCommander.sh --help`
 4. Execute various commands via: `bash ~/Downloads/swiftDialogCommander.sh`

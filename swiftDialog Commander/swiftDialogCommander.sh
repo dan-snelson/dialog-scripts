@@ -36,6 +36,7 @@ scriptVersion="0.0.1"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogApp="/usr/local/bin/dialog"
+dialogVersion=$( dialog --version )
 dialogCommandFile="/var/tmp/dialog.log"
 loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
 loggedInUserFullname=$( /usr/bin/id -F ${loggedInUser} )
@@ -123,7 +124,7 @@ function displayHelp() {
     printf '\e[8;50;100t' ; printf '\e[3;5;5t' ; clear
 
     echo "
-swiftDialog Commander, ${scriptVersion}
+swiftDialog Commander, ${scriptVersion} (for swiftDialog $dialogVersion)
 by Dan K. Snelson (@dan-snelson)
 
     Usage:
@@ -229,7 +230,8 @@ printf '\e[8;25;100t' ; printf '\e[3;5;5t' ; clear
 rm "$dialogCommandFile" > /dev/null 2>&1
 keepDialogAlive
 echo -e "###\n# Welcome to swiftDialog Commander ($scriptVersion)\n###\n"
-echo -e "This script updates a running swiftDialog via the macOS Terminal.\n"
+echo -e "This script updates a running swiftDialog via the macOS Terminal;"
+echo -e "version $dialogVersion of swiftDialog is currently installed.\n"
 echo -e "Type \"exit\" to close the dialog and exit this script; you can then\nre-run the script and add \"--help\" to view the built-in help.\n\n"
 echo -e "Try copying-and-pasting the following commands:\n"
 echo -e "   title: $loggedInUserFirstname's First Test of swiftDialog\n"
