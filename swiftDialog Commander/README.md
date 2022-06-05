@@ -33,10 +33,28 @@ curl -o ~/Downloads/swiftDialogCommander.sh https://raw.githubusercontent.com/da
 ```
 3. Review the built-in help via: `bash ~/Downloads/swiftDialogCommander.sh --help`
 4. Execute various commands via: `bash ~/Downloads/swiftDialogCommander.sh`
-> `title: Title goes here`
+> `title: My First Test of swiftDialog`
 
 > `icon: /System/Library/CoreServices/Finder.app`
 
-> `message: Message goes here`
+> `message: swiftDialog is pretty sweet`
 
 > `overlayicon: /Library/Application Support/Dialog/Dialog.app`
+
+> `list: Item 1, Item 2, Item 3`
+
+> `listitem: title: Item 1, status: success`
+
+> `progresstext: Item 1 installed.`
+
+> `progress: 33`
+
+> `listitem: title: Item 2, status: wait, statustext: Pending`
+
+> `progress: 66`
+
+> `listitem: title: Item 3, status: wait, statustext: Pending`
+
+> `listitem: title: Item 2, status: fail, statustext: Failed`
+
+> `progresstext: Item 2 failed.`

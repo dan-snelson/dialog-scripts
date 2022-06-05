@@ -13,6 +13,12 @@
 #     Version 0.0.1, 31-May-2022, Dan K. Snelson (@dan-snelson)
 #        Original version
 #
+#     Version 0.0.2, 04-Jun-2022, Dan K. Snelson (@dan-snelson)
+#       Added output of initial dialog settings
+#       Added `progress`, `progresstext` and command-line examples
+#       Added `listitem` examples
+#       Corrected a dialog displaying and immediately closing when using `--help`
+#
 ####################################################################################################
 
 
@@ -27,7 +33,7 @@
 # Script Version
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.1"
+scriptVersion="0.0.2"
 
 
 
@@ -53,6 +59,7 @@ logName="swiftDialogCMD.log"
 title="Welcome to swiftDialog Commander ($scriptVersion)"
 message="To begin, the **--moveable** option is enabled, so you can click-and-drag this window (from its upper-left hand corner) to a more sutible location (i.e., so you can see _both_ Terminal and this swiftDialog window.)  \n\nConsole _should_ have launched and opened two log files:\n1. **$dialogCommandFile**, the file that swiftDialog is set to watch for updates, which you should move below this swiftDialog window  \n\n  2. **$logFolder/$logName**, the log file for this script, which you should move below the Terminal window  \n\nEnter commands in Terminal at the **»** prompt; here are a few examples:  \n\n    title: $loggedInUserFirstname's First Test of swiftDialog  \n\n    icon: /System/Library/CoreServices/Finder.app  \n\n    message: swiftDialog is pretty sweet  \n\n    overlayicon: /Library/Application Support/Dialog/Dialog.app  \n\nEnter **quit:** to close this dialog, then enter **reset** to auto-launch a new dialog; enter **exit** to close this dialog and exit the script. (See [Updating Dialog with new content](https://github.com/bartreardon/swiftDialog/wiki/Updating-Dialog-with-new-content--(v1.9.0)).)  \n\nIf you need general assistance, please join us on the MacAdmin's Slack [swiftDialog](https://macadmins.slack.com/archives/C01U5MXNGG6) channel."
 icon="/Library/Application Support/Dialog/Dialog.app"
+initialProgressText="Provide your users with progress feedback"
 
 
 
@@ -73,6 +80,8 @@ dialogCMD="$dialogApp --ontop --title  \"$title\" \
 --height 575 \
 --moveable \
 --position 'topright' \
+--progress 100 \
+--progresstext \"$initialProgressText\" \
 --quitkey k "
 
 
@@ -93,7 +102,6 @@ function echo_logger() {
 
     mkdir -p $logFolder
 
-    # echo "$(date +%Y-%m-%d\ %H:%M:%S)  $1" | tee -a $logFolder/$logName
     echo "$(date +%Y-%m-%d\ %H:%M:%S)  $1" >> "$logFolder/$logName"
 }
 
@@ -121,7 +129,7 @@ function displayHelp() {
 
     echo "quit:" >> "$dialogCommandFile"
 
-    printf '\e[8;50;100t' ; printf '\e[3;5;5t' ; clear
+    printf '\e[8;30;100t' ; printf '\e[3;5;5t' ; clear
 
     echo "
 swiftDialog Commander, ${scriptVersion} (for swiftDialog $dialogVersion)
@@ -142,6 +150,9 @@ by Dan K. Snelson (@dan-snelson)
                         message: Message goes here
 
                         icon: /System/Library/CoreServices/Finder.app
+
+                        list: Item 1, Item 2, Item 3
+
 
 
     -r | --reset    Resets the log file before launching the script
@@ -226,9 +237,8 @@ function revealMe() {
 # Initial Setup
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-printf '\e[8;25;100t' ; printf '\e[3;5;5t' ; clear
+printf '\e[8;40;100t' ; printf '\e[3;5;5t' ; clear
 rm "$dialogCommandFile" > /dev/null 2>&1
-keepDialogAlive
 echo -e "###\n# Welcome to swiftDialog Commander ($scriptVersion)\n###\n"
 echo -e "This script updates a running swiftDialog via the macOS Terminal;"
 echo -e "version $dialogVersion of swiftDialog is currently installed.\n"
@@ -237,7 +247,17 @@ echo -e "Try copying-and-pasting the following commands:\n"
 echo -e "   title: $loggedInUserFirstname's First Test of swiftDialog\n"
 echo -e "   icon: /System/Library/CoreServices/Finder.app\n"
 echo -e "   message: swiftDialog is pretty sweet\n"
-echo -e "   overlayicon: /Library/Application Support/Dialog/Dialog.app\n\n"
+echo -e "   overlayicon: /Library/Application Support/Dialog/Dialog.app\n"
+echo -e "   list: Item 1, Item 2, Item 3\n"
+echo -e "   listitem: title: Item 1, status: success\n"
+echo -e "   progresstext: Item 1 installed.\n"
+echo -e "   progress: 33\n"
+echo -e "   listitem: title: Item 2, status: wait, statustext: Pending\n"
+echo -e "   progress: 66\n"
+echo -e "   listitem: title: Item 3, status: wait, statustext: Pending\n"
+echo -e "   listitem: title: Item 2, status: fail, statustext: Failed\n"
+echo -e "   progresstext: Item 2 failed.\n\n"
+
 
 
 
@@ -252,7 +272,8 @@ while test $# -gt 0; do
             rm "$logFolder/$logName"
             echo_logger "Reset $logName …"
             ;;
-        -h|--help ) displayHelp
+        -h|--help )
+            displayHelp
             ;;
     esac
     shift
@@ -292,6 +313,17 @@ open "$dialogCommandFile"
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Launch swiftDialog
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+echo_logger "Initial swiftDialog command:"
+echo_logger "$dialogCMD"
+
+keepDialogAlive
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Give focus back to Terminal
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -304,8 +336,7 @@ osascript -e 'tell application "Terminal" to activate'
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 while [[ "$sdCommand" != "exit" ]] ; do
-    # read -r -p "`echo $'\n» '`" sdCommand
-    read -r -p "`echo $'» '`" sdCommand
+    read -r -p "$(echo $'» ')" sdCommand
     dialog_update "${sdCommand}"
 done
 
