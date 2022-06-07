@@ -10,14 +10,17 @@
 #
 # HISTORY
 #
-#     Version 0.0.1, 31-May-2022, Dan K. Snelson (@dan-snelson)
+#   Version 0.0.1, 31-May-2022, Dan K. Snelson (@dan-snelson)
 #        Original version
 #
-#     Version 0.0.2, 04-Jun-2022, Dan K. Snelson (@dan-snelson)
+#   Version 0.0.2, 04-Jun-2022, Dan K. Snelson (@dan-snelson)
 #       Added output of initial dialog settings
 #       Added `progress`, `progresstext` and command-line examples
 #       Added `listitem` examples
 #       Corrected a dialog displaying and immediately closing when using `--help`
+#
+#   Version 0.0.3, 06-Jun-2022, Dan K. Snelson (@dan-snelson)
+#       Added link to blog post for additional examples
 #
 ####################################################################################################
 
@@ -33,7 +36,7 @@
 # Script Version
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.2"
+scriptVersion="0.0.3"
 
 
 
@@ -62,7 +65,6 @@ icon="/Library/Application Support/Dialog/Dialog.app"
 initialProgressText="Provide your users with progress feedback"
 
 
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Inital Dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -82,7 +84,7 @@ dialogCMD="$dialogApp --ontop --title  \"$title\" \
 --position 'topright' \
 --progress 100 \
 --progresstext \"$initialProgressText\" \
---quitkey k "
+--quitkey K "
 
 
 
@@ -237,15 +239,16 @@ function revealMe() {
 # Initial Setup
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-printf '\e[8;40;100t' ; printf '\e[3;5;5t' ; clear
+printf '\e[8;50;100t' ; printf '\e[3;5;5t' ; clear
 rm "$dialogCommandFile" > /dev/null 2>&1
 echo -e "###\n# Welcome to swiftDialog Commander ($scriptVersion)\n###\n"
 echo -e "This script updates a running swiftDialog via the macOS Terminal;"
 echo -e "version $dialogVersion of swiftDialog is currently installed.\n"
-echo -e "Type \"exit\" to close the dialog and exit this script; you can then\nre-run the script and add \"--help\" to view the built-in help.\n\n"
+echo -e "Type \"exit\" to close the dialog and exit this script; you can then\nre-run the script and add \"--help\" to view the built-in help.\n"
 echo -e "Try copying-and-pasting the following commands:\n"
 echo -e "   title: $loggedInUserFirstname's First Test of swiftDialog\n"
 echo -e "   icon: /System/Library/CoreServices/Finder.app\n"
+echo -e "   icon: SF=person.3.sequence.fill,palette=red,green,blue\n"
 echo -e "   message: swiftDialog is pretty sweet\n"
 echo -e "   overlayicon: /Library/Application Support/Dialog/Dialog.app\n"
 echo -e "   list: Item 1, Item 2, Item 3\n"
@@ -256,8 +259,9 @@ echo -e "   listitem: title: Item 2, status: wait, statustext: Pending\n"
 echo -e "   progress: 66\n"
 echo -e "   listitem: title: Item 3, status: wait, statustext: Pending\n"
 echo -e "   listitem: title: Item 2, status: fail, statustext: Failed\n"
-echo -e "   progresstext: Item 2 failed.\n\n"
-
+echo -e "   progresstext: Item 2 failed.\n"
+echo -e "Additional examples are available at:"
+echo -e "https://snelson.us/swiftDialogCommander\n\n"
 
 
 

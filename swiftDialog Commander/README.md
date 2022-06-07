@@ -37,6 +37,8 @@ curl -o ~/Downloads/swiftDialogCommander.sh https://raw.githubusercontent.com/da
 
 > `icon: /System/Library/CoreServices/Finder.app`
 
+> `icon: SF=person.3.sequence.fill,palette=red,green,blue`
+
 > `message: swiftDialog is pretty sweet`
 
 > `overlayicon: /Library/Application Support/Dialog/Dialog.app`
