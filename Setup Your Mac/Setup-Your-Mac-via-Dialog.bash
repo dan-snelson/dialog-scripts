@@ -34,6 +34,10 @@
 # Version 1.2.1, 01-Jun-2022, Dan K. Snelson (@dan-snelson)
 #   Made Asset Tag Capture optional (via Jamf Pro Script Paramter 5)
 #
+# Version 1.2.2, 07-Jun-2022, Dan K. Snelson (@dan-snelson)
+#   Added "dark mode" for logo (thanks, @mm2270)
+#   Added "compact" for `--liststyle`
+#
 ####################################################################################################
 
 
@@ -48,7 +52,7 @@
 # Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.1"
+scriptVersion="1.2.2"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 
@@ -192,7 +196,14 @@ policy_array=('
 
 welcomeTitle="Welcome to your new Mac!"
 welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Continue** to start applying Church settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the GSD: +1 (801) 555-1212."
-welcomeIcon="https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Apple_Computer_Logo_rainbow.svg/1028px-Apple_Computer_Logo_rainbow.svg.png?20201228132849"
+
+appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
+
+if [[ "${appleInterfaceStyle}" == "Dark" ]]; then
+    welcomeIcon="https://wallpapercave.com/dwp2x/MGxxFCB.jpg"
+else
+    welcomeIcon="https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Apple_Computer_Logo_rainbow.svg/1028px-Apple_Computer_Logo_rainbow.svg.png?20201228132849"
+fi
 
 
 
@@ -250,8 +261,9 @@ dialogCMD="$dialogApp --ontop --title \"$title\" \
 --overlayicon \"$overlayicon\" \
 --titlefont 'size=28' \
 --messagefont 'size=14' \
---height '73%' \
+--height '57%' \
 --position 'centre' \
+--liststyle 'compact' \
 --quitkey k"
 
 
