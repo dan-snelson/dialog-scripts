@@ -84,7 +84,7 @@ dialogCMD="$dialogApp --ontop --title \"$title\" \
 userInput=$( eval "$dialogCMD" )
 
 assetTag=$( echo "$userInput" | grep "Asset Tag" | awk -F " : " '{print $NF}' )
-option=$( echo "$userInput" | grep "SelectedIndex" | awk -F " : " '{print $NF}' )
+option=$( echo "$userInput" | grep "SelectedOption" | awk -F " : " '{print $NF}' )
 
 echo "Asset Tag: ${assetTag}"
 echo "Option: ${option}"
