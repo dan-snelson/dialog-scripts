@@ -1,4 +1,4 @@
-# <mark>NEW!</mark> &ldquo;Setup Your Mac, please&rdquo;
+# :new: &ldquo;Setup Your Mac, please&rdquo;
 
 > When auto-launching Self Service post-enrollment isn't enough, continually prompt your users to _actually_ setup their Macs
 
