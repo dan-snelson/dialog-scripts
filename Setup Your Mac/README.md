@@ -2,7 +2,7 @@
 
 > When auto-launching Self Service post-enrollment isn't enough, **continually** prompt your users to _actually_ setup their Macs
 
-[<img alt="Setup Your Mac, please" width="650px" src="images/Setup_Your_Mac_please.png" />](https://snelson.us/2022/07/setup-your-mac-please/)
+[<img alt="Setup Your Mac, please" src="images/Setup_Your_Mac_please.png" />](https://snelson.us/2022/07/setup-your-mac-please/)
 
 While we _thought_ we'd done everything to help ensure our users had a seamless experience in setting up their new Macs, we recently realized we should **prompt** those users with computers which have successfully enrolled, but still have yet to run our **Setup Your Mac** policy.
 
