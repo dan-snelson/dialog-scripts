@@ -1,6 +1,6 @@
 # :new: &ldquo;Setup Your Mac, please&rdquo;
 
-> When auto-launching Self Service post-enrollment isn't enough, continually prompt your users to _actually_ setup their Macs
+> When auto-launching Self Service post-enrollment isn't enough, **continually** prompt your users to _actually_ setup their Macs
 
 [<img alt="Setup Your Mac, please" width="650px" src="images/Setup_Your_Mac_please.png" />](https://snelson.us/2022/07/setup-your-mac-please/)
 
