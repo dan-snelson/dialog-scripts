@@ -14,6 +14,8 @@ While we _thought_ we'd done everything to help ensure our users had a seamless 
 
 # Setup Your Mac via swiftDialog
 
+![Setup Your Mac (1.2.3)](images/Setup_Your_Mac_1.2.3.png "Setup Your Mac (1.2.3)")
+
 > Leverages [swiftDialog](https://github.com/bartreardon/swiftDialog/releases) v1.11.0.2758 (or later) and Jamf Pro Policy [Custom Events](https://docs.jamf.com/10.36.0/jamf-pro/documentation/Policy_Management.html?hl=custom%2Cevent#ID-0001f43f) to allow end-users to self-complete Mac setup **post-enrollment** via Jamf Pro's Self Service. (See Jamf Pro Known Issues `PI100009 - PI-004775`.)
 
 Inspired by:
