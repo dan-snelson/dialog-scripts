@@ -18,7 +18,30 @@
 # Version 0.0.2, 22-Jul-2022, Dan K. Snelson (@dan-snelson)
 #   Added script execution delay (Parameter 4)
 #
+# Version 0.0.3, 26-Jul-2022, Dan K. Snelson (@dan-snelson)
+#   Exit if no user is logged-in
+#   Added "--ignorednd" and "--blurscreen" to Dialog command
+#
 #################################################################################
+
+
+
+#################################################################################
+#
+# Environmental Checks
+#
+#################################################################################
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Exit gracefully if no user is logged in
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
+
+if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
+  echo "No user logged in; exiting."
+  exit 0
+fi
 
 
 
@@ -32,12 +55,11 @@
 # Global variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.2"
+scriptVersion="0.0.3"
 scriptResult="Prompt to Setup Your Mac (${scriptVersion}); "
 jamfProPolicyName="@Setup Your Mac"
 plistPath="/Library/Preferences/com.company.plist"
 plistKey="Setup Your Mac"
-loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
 selfServiceAppPath=$( /usr/bin/defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 dialogApp="/usr/local/bin/dialog"
 dialogCommandFile=$( /usr/bin/mktemp "/var/tmp/Prompt-to-Setup-Your-Mac.XXXXXXX" )
@@ -100,6 +122,8 @@ function promptUser() {
     --moveable \
     --timer 120 \
     --position 'centre' \
+    --ignorednd \
+    --blurscreen \
     --commandfile \"$dialogCommandFile\" "
 
     eval "$dialogCMD"
