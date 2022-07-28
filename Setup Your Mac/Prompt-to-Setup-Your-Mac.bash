@@ -18,8 +18,8 @@
 # Version 0.0.2, 22-Jul-2022, Dan K. Snelson (@dan-snelson)
 #   Added script execution delay (Parameter 4)
 #
-# Version 0.0.3, 26-Jul-2022, Dan K. Snelson (@dan-snelson)
-#   Exit if no user is logged-in
+# Version 0.0.3, 28-Jul-2022, Dan K. Snelson (@dan-snelson)
+#   Exit if odd-ball user is logged-in
 #   Added "--ignorednd" and "--blurscreen" to Dialog command
 #
 #################################################################################
@@ -33,13 +33,15 @@
 #################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Exit gracefully if no user is logged in
+# Exit gracefully if odd-ball users are logged in
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
 
-if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
-  echo "No user logged in; exiting."
+if [[ -z "${loggedInUser}" ]] \
+|| [[ ${loggedInUser} == "loginwindow" ]] \
+|| [[ ${loggedInUser} == "_mbsetupuser" ]] ; then
+  echo "Odd-ball user \"${loggedInUser}\" logged in; exiting."
   exit 0
 fi
 
