@@ -18,25 +18,8 @@
 #
 # HISTORY
 #
-# Version 1.0.0, 30-Apr-2022, Dan K. Snelson (@dan-snelson)
-#   First "official" release
-#
-# Version 1.1.0, 19-May-2022, Dan K. Snelson (@dan-snelson)
-#   Added initial Splash screen with Asset Tag Capture and Debug Mode
-#
-# Version 1.2.0, 30-May-2022, Dan K. Snelson (@dan-snelson)
-#   Changed `--infobuttontext` to `--infotext`
-#   Added `regex` and `regexerror` for Asset Tag Capture
-#   Replaced @adamcodega's `apps` with @smithjw's `policy_array`
-#   Added progress update
-#   Added filepath validation
-#
-# Version 1.2.1, 01-Jun-2022, Dan K. Snelson (@dan-snelson)
-#   Made Asset Tag Capture optional (via Jamf Pro Script Paramter 5)
-#
-# Version 1.2.2, 07-Jun-2022, Dan K. Snelson (@dan-snelson)
-#   Added "dark mode" for logo (thanks, @mm2270)
-#   Added "compact" for `--liststyle`
+# Version 1.2.3b1, 06-Aug-2022, Dan K. Snelson (@dan-snelson)
+#   Updates for switftDialog v1.11.2-Preview1
 #
 ####################################################################################################
 
@@ -52,7 +35,7 @@
 # Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.2"
+scriptVersion="1.2.3b1"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 
@@ -176,7 +159,7 @@ policy_array=('
         {
             "listitem": "Update Inventory",
             "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
-            "progresstext": "The listing of your computer’s installed apps and settings — its inventory — is automatically sent to the Jamf Pro server daily.",
+            "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
             "trigger_list": [
                 {
                     "trigger": "recon",
@@ -237,7 +220,7 @@ message="Please wait while the following apps are installed …"
 overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 
 # Set initial icon based on whether the Mac is a desktop or laptop
-hwType=$(/usr/sbin/system_profiler SPHardwareDataType | grep "Model Identifier" | grep "Book")  
+hwType=$(/usr/sbin/system_profiler SPHardwareDataType | grep "Model Identifier" | grep "Book")
 if [ "$hwType" != "" ]; then
   icon="SF=laptopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
 else
@@ -258,14 +241,14 @@ dialogCMD="$dialogApp --ontop --title \"$title\" \
 --button1disabled \
 --infotext \"v$scriptVersion\" \
 --blurscreen \
---overlayicon \"$overlayicon\" \
 --titlefont 'size=28' \
 --messagefont 'size=14' \
 --height '57%' \
 --position 'centre' \
---liststyle 'compact' \
 --quitkey k"
 
+# --overlayicon \"$overlayicon\" \
+# --liststyle 'compact' \
 
 
 #------------------------------- Edits below this line are optional -------------------------------#
@@ -367,7 +350,7 @@ function finalise(){
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#  smithjw's Logging Function (with preferred date / timestamp)
+#  smithjw's Logging Function
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function echo_logger() {
@@ -539,6 +522,8 @@ dialog_step_length=$(get_json_value "${policy_array[*]}" "steps.length")
 for (( i=0; i<dialog_step_length; i++ )); do
     listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
     list_item_array+=("$listitem")
+    icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
+    icon_url_array+=("$icon")
 done
 
 
@@ -551,7 +536,7 @@ done
 list_item_string=${list_item_array[*]/%/,}
 dialog_update "list: ${list_item_string%?}"
 for (( i=0; i<dialog_step_length; i++ )); do
-    dialog_update "listitem: index: $i, status: wait, statustext: Pending"
+    dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_${icon_url_array[$i]}, status: wait, statustext: Pending"
 done
 
 
@@ -582,12 +567,15 @@ for (( i=0; i<dialog_step_length; i++ )); do
     trigger_list_length=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list.length")
 
     # If there's a value in the variable, update running swiftDialog
-    if [[ -n "$listitem" ]]; then dialog_update "listitem: index: $i, status: pending, statustext: Installing"; fi
+
+    # Random, initial listitem progress
+    listitemProgress=$( /usr/bin/jot -r 1 1 15 )
+
+    if [[ -n "$listitem" ]]; then dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: pending, statustext: Installing, progress: $listitemProgress"; fi
     if [[ -n "$icon" ]]; then dialog_update "icon: https://ics.services.jamfcloud.com/icon/hash_$icon"; fi
     if [[ -n "$progresstext" ]]; then dialog_update "progresstext: $progresstext"; fi
     if [[ -n "$trigger_list_length" ]]; then
         for (( j=0; j<trigger_list_length; j++ )); do
-
             # Setting variables within the trigger_list
             trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
             path=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].path")
@@ -597,6 +585,9 @@ for (( i=0; i<dialog_step_length; i++ )); do
                 echo_logger "INFO: $path exists, moving on"
                  if [[ "$debugMode" = true ]]; then sleep 7; fi
             else
+                # Random, listitem progress
+                updatedProgress=$( /usr/bin/jot -r 1 20 73 )
+                dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: pending, statustext: Installing, progress: $updatedProgress"
                 run_jamf_trigger "$trigger"
             fi
         done
@@ -605,9 +596,9 @@ for (( i=0; i<dialog_step_length; i++ )); do
     # Validate the expected path exists
     echo_logger "DIALOG: Testing for \"$path\" …"
     if [[ -f "$path" ]] || [[ -z "$path" ]]; then
-        dialog_update "listitem: index: $i, status: success"
+        dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: success"
     else
-        dialog_update "listitem: index: $i, status: fail, statustext: Failed"
+        dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: fail, statustext: Failed"
     fi
 done
 
