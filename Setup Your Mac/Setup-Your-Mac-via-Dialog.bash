@@ -18,8 +18,8 @@
 #
 # HISTORY
 #
-# Version 1.2.3b1, 06-Aug-2022, Dan K. Snelson (@dan-snelson)
-#   Updates for switftDialog v1.11.2-Preview1
+# Version 1.2.3, 11-Aug-2022, Dan K. Snelson (@dan-snelson)
+#   Updates for switftDialog v1.11.2-Preview3
 #
 ####################################################################################################
 
@@ -35,7 +35,7 @@
 # Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.3b1"
+scriptVersion="1.2.3"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 
@@ -205,7 +205,7 @@ dialogWelcomeScreenCMD="$dialogApp --ontop --title  \"$welcomeTitle\" \
 --blurscreen \
 --titlefont 'size=26' \
 --messagefont 'size=16' \
---textfield \"Asset Tag\",required=true,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^\d{7,}$',regexerror=\"Please enter seven digits (numbers only) for the Asset Tag\" \
+--textfield \"Asset Tag\",required=true,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^(AP|IP)?[0-9]{6,}$',regexerror=\"Please enter (at least) seven digits for the Asset Tag, optionally preceed by either 'AP' or 'IP'. \" \
 --quitkey k \
 --commandfile \"$welcomeScreenCommandFile\" "
 
@@ -240,14 +240,14 @@ dialogCMD="$dialogApp --ontop --title \"$title\" \
 --button1text \"Quit\" \
 --button1disabled \
 --infotext \"v$scriptVersion\" \
---blurscreen \
 --titlefont 'size=28' \
 --messagefont 'size=14' \
---height '57%' \
+--height '67%' \
 --position 'centre' \
---quitkey k"
+--blurscreen \
+--overlayicon \"$overlayicon\" \
+--quitkey K"
 
-# --overlayicon \"$overlayicon\" \
 # --liststyle 'compact' \
 
 
@@ -457,7 +457,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
             eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
             dialog_update "message: Asset Tag reported as \`${assetTag}\`. $message"
             if [[ ${debugMode} == "true" ]]; then
-            dialog_update "title: DEBUG MODE | $title"
+                dialog_update "title: DEBUG MODE | $title"
             fi
             ;;
 
@@ -536,7 +536,7 @@ done
 list_item_string=${list_item_array[*]/%/,}
 dialog_update "list: ${list_item_string%?}"
 for (( i=0; i<dialog_step_length; i++ )); do
-    dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_${icon_url_array[$i]}, status: wait, statustext: Pending"
+    dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_${icon_url_array[$i]}, status: wait, statustext: Pending …"
 done
 
 
@@ -568,10 +568,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
 
     # If there's a value in the variable, update running swiftDialog
 
-    # Random, initial listitem progress
-    listitemProgress=$( /usr/bin/jot -r 1 1 15 )
-
-    if [[ -n "$listitem" ]]; then dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: pending, statustext: Installing, progress: $listitemProgress"; fi
+    if [[ -n "$listitem" ]]; then dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: pending, statustext: Installing …, "; fi
     if [[ -n "$icon" ]]; then dialog_update "icon: https://ics.services.jamfcloud.com/icon/hash_$icon"; fi
     if [[ -n "$progresstext" ]]; then dialog_update "progresstext: $progresstext"; fi
     if [[ -n "$trigger_list_length" ]]; then
@@ -583,11 +580,8 @@ for (( i=0; i<dialog_step_length; i++ )); do
             # If the path variable has a value, check if that path exists on disk
             if [[ -f "$path" ]]; then
                 echo_logger "INFO: $path exists, moving on"
-                 if [[ "$debugMode" = true ]]; then sleep 7; fi
+                 if [[ "$debugMode" = true ]]; then sleep 3; fi
             else
-                # Random, listitem progress
-                updatedProgress=$( /usr/bin/jot -r 1 20 73 )
-                dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: pending, statustext: Installing, progress: $updatedProgress"
                 run_jamf_trigger "$trigger"
             fi
         done
@@ -596,7 +590,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
     # Validate the expected path exists
     echo_logger "DIALOG: Testing for \"$path\" …"
     if [[ -f "$path" ]] || [[ -z "$path" ]]; then
-        dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: success"
+        dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: success, statustext: Installed"
     else
         dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: fail, statustext: Failed"
     fi

@@ -1,8 +1,8 @@
 # CHANGELOG
 
-## 1.2.3b1
+## 1.2.3
 ### 06-Aug-2022
-- Updates for switftDialog v1.11.2-Preview1
+- Updates for switftDialog v1.11.2 Preview 3
 
 ## 1.2.2
 ### 07-Jun-2022
