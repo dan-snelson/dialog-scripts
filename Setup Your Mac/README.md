@@ -1,4 +1,4 @@
-# :new: &ldquo;Setup Your Mac, please&rdquo;
+# &ldquo;Setup Your Mac, please&rdquo;
 
 > When auto-launching Self Service post-enrollment isn't enough, **continually** prompt your users to _actually_ setup their Macs
 
@@ -16,7 +16,7 @@ While we _thought_ we'd done everything to help ensure our users had a seamless 
 
 ![Setup Your Mac (1.2.3)](images/Setup_Your_Mac_1.2.3.png "Setup Your Mac (1.2.3)")
 
-> Leverages [swiftDialog](https://github.com/bartreardon/swiftDialog/releases) v1.11.0.2758 (or later) and Jamf Pro Policy [Custom Events](https://docs.jamf.com/10.36.0/jamf-pro/documentation/Policy_Management.html?hl=custom%2Cevent#ID-0001f43f) to allow end-users to self-complete Mac setup **post-enrollment** via Jamf Pro's Self Service. (See Jamf Pro Known Issues `PI100009 - PI-004775`.)
+> Leverages [swiftDialog](https://github.com/bartreardon/swiftDialog/releases) v1.11.2 (or later) and Jamf Pro Policy [Custom Events](https://docs.jamf.com/10.36.0/jamf-pro/documentation/Policy_Management.html?hl=custom%2Cevent#ID-0001f43f) to allow end-users to self-complete Mac setup **post-enrollment** via Jamf Pro's Self Service. (See Jamf Pro Known Issues `PI100009 - PI-004775`.)
 
 Inspired by:
 - Rich Trouton ([@rtrouton](https://github.com/rtrouton))
@@ -43,6 +43,9 @@ Based on:
 
 ## Features
 
+### :new: Jamf Pro Policy Trigger Failures
+
+Version `1.2.3` reports failures in Jamf Pro Policy Triggers to the both the user and the Jamf Pro Policy Log.
 ### Asset Tag Capture
 
 Version `1.1.0` prompts the user to provide an Asset Tag, which is captured and reported in the **Setting up your Mac** screen and submitted near the end of the scipt when inventory is updated via `jamf recon -assetTag ${assetTag}`.
