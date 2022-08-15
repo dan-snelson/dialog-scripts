@@ -1,8 +1,9 @@
 # CHANGELOG
 
 ## 1.2.3
-### 06-Aug-2022
-- Updates for switftDialog v1.11.2 Preview 3
+### 15-Aug-2022
+- Updates for switftDialog v1.11.2
+- Report failures in Jamf Pro Policy Triggers
 
 ## 1.2.2
 ### 07-Jun-2022

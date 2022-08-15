@@ -18,8 +18,9 @@
 #
 # HISTORY
 #
-# Version 1.2.3, 11-Aug-2022, Dan K. Snelson (@dan-snelson)
-#   Updates for switftDialog v1.11.2-Preview3
+# Version 1.2.3, 15-Aug-2022, Dan K. Snelson (@dan-snelson)
+#   Updates for switftDialog v1.11.2
+#   Report failures in Jamf Pro Policy Triggers
 #
 ####################################################################################################
 
@@ -52,6 +53,7 @@ loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /
 jamfBinary="/usr/local/bin/jamf"
 logFolder="/private/var/log"
 logName="enrollment.log"
+exitCode="0"
 
 
 
@@ -178,7 +180,7 @@ policy_array=('
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeTitle="Welcome to your new Mac!"
-welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Continue** to start applying Church settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the GSD: +1 (801) 555-1212."
+welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Continue** to start applying Church settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
 
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
 
@@ -337,14 +339,20 @@ function dialog_update() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function finalise(){
-  dialog_update "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-  dialog_update "progresstext: Complete! Please restart and enjoy your new Mac!"
-  dialog_update "progress: complete"
-  dialog_update "button1text: Quit"
-  dialog_update "button1: enable"
-  rm "$dialogCommandFile"
-  rm "$welcomeScreenCommandFile"
-  exit 0
+    if [[ "${jamfProPolicyTriggerFailure}" == "failed" ]]; then
+        dialog_update "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
+        dialog_update "progresstext: Failures detected; Church Support notified. Please restart."
+        echo_logger "Jamf Pro Policy Trigger Failures: ${jamfProPolicyTriggerFailures}"
+    else
+        dialog_update "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
+        dialog_update "progresstext: Complete! Please restart and enjoy your new Mac!"
+    fi
+    dialog_update "progress: complete"
+    dialog_update "button1text: Quit"
+    dialog_update "button1: enable"
+    rm "$dialogCommandFile"
+    rm "$welcomeScreenCommandFile"
+    exit "${exitCode}"
 }
 
 
@@ -593,6 +601,9 @@ for (( i=0; i<dialog_step_length; i++ )); do
         dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: success, statustext: Installed"
     else
         dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: fail, statustext: Failed"
+        jamfProPolicyTriggerFailure="failed"
+        jamfProPolicyTriggerFailures+="$trigger; "
+        exitCode="1"
     fi
 done
 
