@@ -46,6 +46,15 @@ Based on:
 ### :new: Jamf Pro Policy Trigger Failures
 
 Version `1.2.3` reports failures in Jamf Pro Policy Triggers to the both the user and the Jamf Pro Policy Log.
+![Setup Your Mac (1.2.3) failure](images/Setup_Your_Mac_Failure_1.2.3.png "Setup Your Mac (1.2.3) failure")
+
+```
+Running script Setup Your Mac via Dialog (1.2.3)...
+Script exit code: 1
+…
+2022-08-16 10:43:13  Jamf Pro Policy Trigger Failures: sophosEndpoint; 
+```
+
 ### Asset Tag Capture
 
 Version `1.1.0` prompts the user to provide an Asset Tag, which is captured and reported in the **Setting up your Mac** screen and submitted near the end of the scipt when inventory is updated via `jamf recon -assetTag ${assetTag}`.
