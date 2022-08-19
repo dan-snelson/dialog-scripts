@@ -33,7 +33,7 @@ Based on:
 
 ### Setup Your Mac
 
-[<img alt="Setup Your Mac via swiftDialog" width="650px" src="images/screencast_still_image.png" />](https://rumble.com/v16vwbj-setup-your-mac-via-swiftdialog-1.2.0.html)
+[<img alt="Setup Your Mac via swiftDialog" width="650px" src="images/Setup_Your_Mac_Screencast.png" />](https://rumble.com/v1gic2h-setup-your-mac-via-swiftdialog-1.2.4.html)
 
 ### Harvesting Self Service Icons
 
