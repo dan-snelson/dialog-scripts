@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.4
+
+### 18-Aug-2022
+- Swap "Installing …" and "Pending …" status indicators (thanks, @joncrain)
 ## 1.2.3
 ### 15-Aug-2022
 - Updates for switftDialog v1.11.2

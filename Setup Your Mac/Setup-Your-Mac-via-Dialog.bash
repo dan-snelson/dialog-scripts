@@ -12,15 +12,14 @@
 #
 # Based on:
 # - Adam Codega (@adamcodega)'s https://github.com/acodega/dialog-scripts/blob/main/MDMAppsDeploy.sh
-# - James Smith (@smithjw)'s https://github.com/smithjw/speedy-prestage-pkg/tree/feature/swiftDialog
+# - James Smith (@smithjw)'s https://github.com/smithjw/swiftEnrolment
 #
 ####################################################################################################
 #
 # HISTORY
 #
-# Version 1.2.3, 15-Aug-2022, Dan K. Snelson (@dan-snelson)
-#   Updates for switftDialog v1.11.2
-#   Report failures in Jamf Pro Policy Triggers
+# Version 1.2.4, 18-Aug-2022, Dan K. Snelson (@dan-snelson)
+#   Swap "Installing …" and "Pending …" status indicators (thanks, @joncrain!)
 #
 ####################################################################################################
 
@@ -36,7 +35,7 @@
 # Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.3"
+scriptVersion="1.2.4"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 
@@ -544,7 +543,7 @@ done
 list_item_string=${list_item_array[*]/%/,}
 dialog_update "list: ${list_item_string%?}"
 for (( i=0; i<dialog_step_length; i++ )); do
-    dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_${icon_url_array[$i]}, status: wait, statustext: Pending …"
+    dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_${icon_url_array[$i]}, status: pending, statustext: Pending …"
 done
 
 
@@ -576,7 +575,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
 
     # If there's a value in the variable, update running swiftDialog
 
-    if [[ -n "$listitem" ]]; then dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: pending, statustext: Installing …, "; fi
+    if [[ -n "$listitem" ]]; then dialog_update "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: wait, statustext: Installing …, "; fi
     if [[ -n "$icon" ]]; then dialog_update "icon: https://ics.services.jamfcloud.com/icon/hash_$icon"; fi
     if [[ -n "$progresstext" ]]; then dialog_update "progresstext: $progresstext"; fi
     if [[ -n "$trigger_list_length" ]]; then
