@@ -18,8 +18,8 @@
 #
 # HISTORY
 #
-# Version 1.2.4, 18-Aug-2022, Dan K. Snelson (@dan-snelson)
-#   Swap "Installing …" and "Pending …" status indicators (thanks, @joncrain!)
+# Version 1.2.5, 24-Aug-2022, Dan K. Snelson (@dan-snelson)
+#   Resolves https://github.com/dan-snelson/dialog-scripts/issues/3 (thanks, @pyther!)
 #
 ####################################################################################################
 
@@ -35,7 +35,7 @@
 # Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.4"
+scriptVersion="1.2.5"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 
@@ -461,7 +461,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
 
         0)  ## Process exit code 0 scenario here
             echo_logger "DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
-            eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
+            eval "${dialogCMD[*]}" & sleep 0.3
             dialog_update "message: Asset Tag reported as \`${assetTag}\`. $message"
             if [[ ${debugMode} == "true" ]]; then
                 dialog_update "title: DEBUG MODE | $title"
@@ -481,7 +481,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
 
         4)  ## Process exit code 4 scenario here
             echo_logger "DIALOG: ${loggedInUser} allowed timer to expire"
-            eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
+            eval "${dialogCMD[*]}" & sleep 0.3
             ;;
 
         *)  ## Catch all processing
@@ -493,7 +493,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
 
 else
 
-    eval "$dialogApp" "${dialogCMD[*]}" & sleep 0.3
+    eval "${dialogCMD[*]}" & sleep 0.3
     if [[ ${debugMode} == "true" ]]; then
         dialog_update "title: DEBUG MODE | $title"
     fi

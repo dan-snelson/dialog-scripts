@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.5
+### 24-Aug-2022
+- Resolves https://github.com/dan-snelson/dialog-scripts/issues/3 (thanks, @pyther!)
+
 ## 1.2.4
 
 ### 18-Aug-2022
