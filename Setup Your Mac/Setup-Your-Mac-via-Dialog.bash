@@ -351,6 +351,7 @@ function finalise(){
     dialog_update "button1: enable"
     rm "$dialogCommandFile"
     rm "$welcomeScreenCommandFile"
+    wait
     exit "${exitCode}"
 }
 
