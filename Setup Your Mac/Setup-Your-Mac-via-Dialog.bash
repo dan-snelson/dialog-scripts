@@ -18,8 +18,8 @@
 #
 # HISTORY
 #
-# Version 1.2.5, 24-Aug-2022, Dan K. Snelson (@dan-snelson)
-#   Resolves https://github.com/dan-snelson/dialog-scripts/issues/3 (thanks, @pyther!)
+# Version 1.2.6, 29-Aug-2022, Dan K. Snelson (@dan-snelson)
+#   Adjust I/O timing (for policy_array loop)
 #
 ####################################################################################################
 
@@ -35,7 +35,7 @@
 # Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.5"
+scriptVersion="1.2.6"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 
@@ -604,6 +604,10 @@ for (( i=0; i<dialog_step_length; i++ )); do
         jamfProPolicyTriggerFailures+="$trigger; "
         exitCode="1"
     fi
+
+    # I/O Pause (thanks, @bartreardon!)
+    sleep 0.3
+
 done
 
 
