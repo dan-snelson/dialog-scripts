@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.7
+### 10-Sep-2022
+- Added "completionAction" (Script Parameter 6) to address [Pull Request No. 5](https://github.com/dan-snelson/dialog-scripts/pull/5)
+- Added "Failure" dialog to address [Issue No. 6](https://github.com/dan-snelson/dialog-scripts/issues/6)
 ## 1.2.6
 ### 29-Aug-2022
 - Adjust I/O timing (for policy_array loop)
