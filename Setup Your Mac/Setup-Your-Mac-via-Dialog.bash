@@ -6,7 +6,6 @@
 #
 # Purpose: Leverages swiftDialog v1.11.2 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
 # Jamf Pro Policy Custom Events to allow end-users to self-complete Mac setup post-enrollment
-# via Jamf Pro's Self Service. (See Jamf Pro Known Issues PI100009 - PI-004775.)
 #
 # Inspired by: Rich Trouton (@rtrouton) and Bart Reardon (@bartreardon)
 #
@@ -39,7 +38,7 @@
 scriptVersion="1.2.7"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
-completionAction="${6}" # ( wait (default), number of seconds to sleep )
+completionAction="${6}" # ( number of seconds to sleep | wait, blank )
 
 
 
@@ -401,7 +400,7 @@ function dialog_update_setup_your_mac() {
 
 function dialog_update_failure(){
   echo "$1"
-  echo "$1"  >> $failureCommandFile
+  echo "$1" >> $failureCommandFile
 }
 
 
@@ -427,7 +426,6 @@ function finalise(){
             dialog_update_failure "title: DEBUG MODE | $failureTitle"
         fi
         dialog_update_failure "message: A failure has been detetected; please contact the Help Desk:  \n+1 (801) 555-1212.  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}"
-        rm "$setupYourMacCommandFile"
         dialog_update_failure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         rm "$setupYourMacCommandFile"
         rm "$welcomeCommandFile"
