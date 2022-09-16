@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.2.8
+- Replaced "ugly" `completionAction` `if … then … else` with "more readabale" `case` statement (thanks, @pyther!)
+- Updated "method for determining laptop/desktop" (thanks, @acodega and @scriptingosx!)
+- Additional tweaks discovered during internal production deployment
 ## 1.2.7
 ### 10-Sep-2022
 - Added "completionAction" (Script Parameter 6) to address [Pull Request No. 5](https://github.com/dan-snelson/dialog-scripts/pull/5)

@@ -17,9 +17,10 @@
 #
 # HISTORY
 #
-# Version 1.2.7, 10-Sep-2022, Dan K. Snelson (@dan-snelson)
-#   Added "completionAction" (Script Parameter 6) to address Pull Request No. 5
-#   Added "Failure" dialog to address Issue No. 6
+# Version 1.2.8, 17-Sep-2022, Dan K. Snelson (@dan-snelson)
+#   Replaced "ugly" `completionAction` `if … then … else` with "more readabale" `case` statement (thanks, @pyther!)
+#   Updated "method for determining laptop/desktop" (thanks, @acodega and @scriptingosx)
+#   Additional tweaks discovered during internal production deployment
 #
 ####################################################################################################
 
@@ -44,16 +45,17 @@ completionAction="${6}" # ( number of seconds to sleep | wait, blank )
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Check for an allowed "Completion Action" value (Parameter 6); defaults to "wait"
-# Options: ( wait | seconds to sleep )
+# Options: ( number of seconds to sleep | wait, blank )
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [ -n "${completionAction}" ] && [ "${completionAction}" -eq "${completionAction}" ] 2>/dev/null; then
-    completionAction="sleep ${completionAction}"
-else
-    completionAction="wait"
-fi
+case "${completionAction}" in
+    '' | *[!0-9]*   ) completionAction="wait" ;;
+    *               ) completionAction="sleep ${completionAction}" ;;
+esac
 
-# echo "Using \"${completionAction}\" as the Completion Action"
+if [[ ${debugMode} == "true" ]]; then
+    echo "Using \"${completionAction}\" as the Completion Action"
+fi
 
 
 
@@ -241,8 +243,7 @@ message="Please wait while the following apps are installed …"
 overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 
 # Set initial icon based on whether the Mac is a desktop or laptop
-hwType=$(/usr/sbin/system_profiler SPHardwareDataType | grep "Model Identifier" | grep "Book")
-if [ "$hwType" != "" ]; then
+if system_profiler SPPowerDataType | grep -q Battery; then
   icon="SF=laptopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
 else
   icon="SF=desktopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
@@ -280,14 +281,7 @@ dialogSetupYourMacCMD="$dialogApp \
 
 failureTitle="Failure Detected"
 failureMessage="Placeholder message; update in the finalise function"
-
-appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
-
-if [[ "${appleInterfaceStyle}" == "Dark" ]]; then
-    failureIcon="https://wallpapercave.com/dwp2x/MGxxFCB.jpg"
-else
-    failureIcon="https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Apple_Computer_Logo_rainbow.svg/1028px-Apple_Computer_Logo_rainbow.svg.png?20201228132849"
-fi
+failureIcon="SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
 
 
 
@@ -302,12 +296,12 @@ dialogFailureCMD="$dialogApp \
 --icon \"$failureIcon\" \
 --iconsize 125 \
 --width 650 \
---height 300 \
+--height 375 \
 --position topright \
---button1text \"Quit\" \
+--button1text \"Close\" \
 --infotext \"v$scriptVersion\" \
---titlefont 'size=26' \
---messagefont 'size=16' \
+--titlefont 'size=22' \
+--messagefont 'size=14' \
 --overlayicon \"$overlayicon\" \
 --commandfile \"$failureCommandFile\" "
 
@@ -389,7 +383,7 @@ function dialog_update_welcome() {
 function dialog_update_setup_your_mac() {
     echo_logger "DIALOG: $1"
     # shellcheck disable=2001
-    echo "$1" >> "$setupYourMacCommandFile"
+    echo "$1" >> $setupYourMacCommandFile
 }
 
 
@@ -414,8 +408,8 @@ function finalise(){
     if [[ "${jamfProPolicyTriggerFailure}" == "failed" ]]; then
 
         dialog_update_setup_your_mac "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
-        dialog_update_setup_your_mac "progresstext: Failures detected. Please Contact Support."
-        dialog_update_setup_your_mac "button1text: Contact Support"
+        dialog_update_setup_your_mac "progresstext: Failures detected. Please click Continue for troubleshooting information."
+        dialog_update_setup_your_mac "button1text: Continue …"
         dialog_update_setup_your_mac "button1: enable"
         dialog_update_setup_your_mac "progress: complete"
         echo_logger "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
@@ -425,10 +419,11 @@ function finalise(){
         if [[ ${debugMode} == "true" ]]; then
             dialog_update_failure "title: DEBUG MODE | $failureTitle"
         fi
-        dialog_update_failure "message: A failure has been detetected; please contact the Help Desk:  \n+1 (801) 555-1212.  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}"
+        dialog_update_failure "message: A failure has been detected. Please complete the following steps:\n1. Reboot and login to your Mac  \n2. Login to Self Service  \n3. Re-run any failed policy listed below  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please contact the Help Desk,  \n+1 (801) 555-1212, and mention [KB86753099](https://servicenow.company.com/support?id=kb_article_view&sysparm_article=KB86753099#Failures). "
         dialog_update_failure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
+        eval ${completionAction}
+        dialog_update_failure "quit:"
         rm "$setupYourMacCommandFile"
-        rm "$welcomeCommandFile"
         rm "$failureCommandFile"
         exit "${exitCode}"
 
@@ -441,7 +436,7 @@ function finalise(){
         dialog_update_setup_your_mac "button1: enable"
         rm "$setupYourMacCommandFile"
         rm "$welcomeCommandFile"
-        eval "${completionAction}"
+        eval "${completionAction}" # Comment-out this line to NOT require user-interaction for successful completions
         exit "${exitCode}"
 
     fi
