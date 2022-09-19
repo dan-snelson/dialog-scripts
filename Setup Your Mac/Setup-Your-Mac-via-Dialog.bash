@@ -243,7 +243,7 @@ message="Please wait while the following apps are installed …"
 overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 
 # Set initial icon based on whether the Mac is a desktop or laptop
-if system_profiler SPPowerDataType | grep -q Battery; then
+if system_profiler SPPowerDataType | grep -q "Battery Power"; then
   icon="SF=laptopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
 else
   icon="SF=desktopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
