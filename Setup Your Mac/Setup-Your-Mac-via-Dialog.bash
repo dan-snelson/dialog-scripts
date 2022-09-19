@@ -36,7 +36,7 @@
 # Script Version & Debug Mode (Jamf Pro Script Parameter 4)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.7"
+scriptVersion="1.2.8"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 completionAction="${6}" # ( number of seconds to sleep | wait, blank )
