@@ -413,7 +413,7 @@ function finalise(){
         dialog_update_setup_your_mac "button1: enable"
         dialog_update_setup_your_mac "progress: complete"
         echo_logger "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
-        eval ${completionAction}
+        eval "${completionAction}"
         dialog_update_setup_your_mac "quit:"
         eval "${dialogFailureCMD}" & sleep 0.3
         if [[ ${debugMode} == "true" ]]; then
@@ -421,7 +421,7 @@ function finalise(){
         fi
         dialog_update_failure "message: A failure has been detected. Please complete the following steps:\n1. Reboot and login to your Mac  \n2. Login to Self Service  \n3. Re-run any failed policy listed below  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please contact the Help Desk,  \n+1 (801) 555-1212, and mention [KB86753099](https://servicenow.company.com/support?id=kb_article_view&sysparm_article=KB86753099#Failures). "
         dialog_update_failure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
-        eval ${completionAction}
+        eval "${completionAction}"
         dialog_update_failure "quit:"
         rm "$setupYourMacCommandFile"
         rm "$failureCommandFile"
