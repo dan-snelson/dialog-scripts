@@ -7,7 +7,7 @@
 #
 ####################################################################################################
 #
-# Version 1.2.9, 02-Oct-2022, Dan K. Snelson (@dan-snelson)
+# Version 1.2.9, 03-Oct-2022, Dan K. Snelson (@dan-snelson)
 #   Added `setupYourMacPolicyArrayIconPrefixUrl` variable (thanks for the idea, @mani2care!)
 #   Removed unnecessary listitem icon updates (thanks, @bartreardon!)
 #   Output swiftDialog version when running in debug mode
