@@ -1,6 +1,16 @@
 # CHANGELOG
 
+## 1.2.9
+
+### 03-Oct-2022
+- Added `setupYourMacPolicyArrayIconPrefixUrl` variable (thanks for the idea, @mani2care!)
+- Removed unnecessary `listitem` icon updates (thanks, @bartreardon!)
+- Output swiftDialog version when running in debug mode
+- Updated URL for Zoom icon
 ## 1.2.8
+
+### 19-Sep-2022
+
 - Replaced "ugly" `completionAction` `if … then … else` with "more readabale" `case` statement (thanks, @pyther!)
 - Updated "method for determining laptop/desktop" (thanks, @acodega and @scriptingosx!)
 - Additional tweaks discovered during internal production deployment

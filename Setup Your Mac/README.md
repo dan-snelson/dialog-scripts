@@ -6,7 +6,7 @@
 
 - [Setup-Your-Mac-via-Dialog.bash](Setup-Your-Mac-via-Dialog.bash)
 
-[Continue reading …](https://snelson.us/2022/09/setup-your-mac-via-swiftdialog-1-2-7/)
+[Continue reading …](https://snelson.us/setup-your-mac)
 
 ---
 
@@ -14,9 +14,9 @@
 
 > When auto-launching Self Service post-enrollment isn't enough, **continually** prompt your users to _actually_ setup their Macs
 
-[<img alt="Setup Your Mac, please" src="images/Setup_Your_Mac_please.png" />](https://snelson.us/2022/07/setup-your-mac-please/)
-
 While we _thought_ we'd done everything to help ensure our users had a seamless experience in setting up their new Macs, we recently realized we should **prompt** those users with computers which have successfully enrolled, but still have yet to run our **Setup Your Mac** policy.
+
+[<img alt="Setup Your Mac, please" src="images/Setup_Your_Mac_please.png" />](https://snelson.us/2022/07/setup-your-mac-please/)
 
 - [Prompt-to-Setup-Your-Mac.bash](Prompt-to-Setup-Your-Mac.bash)
 

@@ -3,24 +3,15 @@
 ####################################################################################################
 #
 # Setup Your Mac via swiftDialog
-#
-# Purpose: Leverages swiftDialog v1.11.2 (or later) (https://github.com/bartreardon/swiftDialog/releases) and 
-# Jamf Pro Policy Custom Events to allow end-users to self-complete Mac setup post-enrollment
-#
-# Inspired by: Rich Trouton (@rtrouton) and Bart Reardon (@bartreardon)
-#
-# Based on:
-# - Adam Codega (@adamcodega)'s https://github.com/acodega/dialog-scripts/blob/main/MDMAppsDeploy.sh
-# - James Smith (@smithjw)'s https://github.com/smithjw/swiftEnrolment
+# https://snelson.us/setup-your-mac
 #
 ####################################################################################################
 #
-# HISTORY
-#
-# Version 1.2.8, 17-Sep-2022, Dan K. Snelson (@dan-snelson)
-#   Replaced "ugly" `completionAction` `if … then … else` with "more readabale" `case` statement (thanks, @pyther!)
-#   Updated "method for determining laptop/desktop" (thanks, @acodega and @scriptingosx)
-#   Additional tweaks discovered during internal production deployment
+# Version 1.2.9, 02-Oct-2022, Dan K. Snelson (@dan-snelson)
+#   Added `setupYourMacPolicyArrayIconPrefixUrl` variable (thanks for the idea, @mani2care!)
+#   Removed unnecessary listitem icon updates (thanks, @bartreardon!)
+#   Output swiftDialog version when running in debug mode
+#   Updated URL for Zoom icon
 #
 ####################################################################################################
 
@@ -33,13 +24,17 @@
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Script Version & Debug Mode (Jamf Pro Script Parameter 4)
+# Script Version & Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.8"
+scriptVersion="1.2.9"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 completionAction="${6}" # ( number of seconds to sleep | wait, blank )
+
+if [[ ${debugMode} == "true" ]]; then
+    scriptVersion="Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
+fi
 
 
 
@@ -65,6 +60,7 @@ fi
 
 dialogApp="/usr/local/bin/dialog"
 setupYourMacCommandFile="/var/tmp/dialog_setup_your_mac.log"
+setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
 welcomeCommandFile="/var/tmp/dialog_welcome.log"
 failureCommandFile="/var/tmp/dialog_failure.log"
 loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
@@ -138,7 +134,7 @@ policy_array=('
         },
         {
             "listitem": "Zoom",
-            "icon": "92b8d3c448e7d773457532f0478a428a0662f694fbbfc6cb69e1fab5ff106d97",
+            "icon": "be66420495a3f2f1981a49a0e0ad31783e9a789e835b4196af60554bf4c115ac",
             "progresstext": "Zoom is a videotelephony software program developed by Zoom Video Communications.",
             "trigger_list": [
                 {
@@ -161,7 +157,7 @@ policy_array=('
         {
             "listitem": "Final Configuration",
             "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
-            "progresstext": "Finalizing Church Configuration …",
+            "progresstext": "Finalizing Configuration …",
             "trigger_list": [
                 {
                     "trigger": "finalConfiguration",
@@ -223,7 +219,7 @@ dialogWelcomeCMD="$dialogApp \
 --button1text \"Continue\" \
 --button2text \"Quit\" \
 --button2disabled \
---infotext \"v$scriptVersion\" \
+--infotext \"$scriptVersion\" \
 --blurscreen \
 --ontop \
 --titlefont 'size=26' \
@@ -262,7 +258,7 @@ dialogSetupYourMacCMD="$dialogApp \
 --progress $progress_total \
 --button1text \"Quit\" \
 --button1disabled \
---infotext \"v$scriptVersion\" \
+--infotext \"$scriptVersion\" \
 --titlefont 'size=28' \
 --messagefont 'size=14' \
 --height '70%' \
@@ -299,7 +295,7 @@ dialogFailureCMD="$dialogApp \
 --height 375 \
 --position topright \
 --button1text \"Close\" \
---infotext \"v$scriptVersion\" \
+--infotext \"$scriptVersion\" \
 --titlefont 'size=22' \
 --messagefont 'size=14' \
 --overlayicon \"$overlayicon\" \
@@ -632,7 +628,7 @@ done
 list_item_string=${list_item_array[*]/%/,}
 dialog_update_setup_your_mac "list: ${list_item_string%?}"
 for (( i=0; i<dialog_step_length; i++ )); do
-    dialog_update_setup_your_mac "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_${icon_url_array[$i]}, status: pending, statustext: Pending …"
+    dialog_update_setup_your_mac "listitem: index: $i, icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon_url_array[$i]}, status: pending, statustext: Pending …"
 done
 
 
@@ -664,8 +660,8 @@ for (( i=0; i<dialog_step_length; i++ )); do
 
     # If there's a value in the variable, update running swiftDialog
 
-    if [[ -n "$listitem" ]]; then dialog_update_setup_your_mac "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: wait, statustext: Installing …, "; fi
-    if [[ -n "$icon" ]]; then dialog_update_setup_your_mac "icon: https://ics.services.jamfcloud.com/icon/hash_$icon"; fi
+    if [[ -n "$listitem" ]]; then dialog_update_setup_your_mac "listitem: index: $i, status: wait, statustext: Installing …, "; fi
+    if [[ -n "$icon" ]]; then dialog_update_setup_your_mac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}$icon"; fi
     if [[ -n "$progresstext" ]]; then dialog_update_setup_your_mac "progresstext: $progresstext"; fi
     if [[ -n "$trigger_list_length" ]]; then
         for (( j=0; j<trigger_list_length; j++ )); do
@@ -686,9 +682,9 @@ for (( i=0; i<dialog_step_length; i++ )); do
     # Validate the expected path exists
     echo_logger "DIALOG: Testing for \"$path\" …"
     if [[ -f "$path" ]] || [[ -z "$path" ]]; then
-        dialog_update_setup_your_mac "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: success, statustext: Installed"
+        dialog_update_setup_your_mac "listitem: index: $i, status: success, statustext: Installed"
     else
-        dialog_update_setup_your_mac "listitem: index: $i, icon: https://ics.services.jamfcloud.com/icon/hash_$icon, status: fail, statustext: Failed"
+        dialog_update_setup_your_mac "listitem: index: $i, status: fail, statustext: Failed"
         jamfProPolicyTriggerFailure="failed"
         jamfProPolicyPolicyNameFailures+="• $listitem  \n"
         exitCode="1"
