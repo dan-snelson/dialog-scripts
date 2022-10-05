@@ -515,6 +515,14 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Initialize Log
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+echo_logger "Setup Your Mac (${scriptVersion}) by Dan K. Snelson. See: https://snelson.us/setup-your-mac"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Confirm Setup Assistant complete and user at Desktop
 # Useful for triggering on Enrollment Complete and will not pause if run via Self Service
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -527,14 +535,6 @@ while [[ "$dockStatus" == "" ]]; do
     sleep 5
     dockStatus=$(/usr/bin/pgrep -x Dock)
 done
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Initialize Log
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-echo_logger "Setup Your Mac (${scriptVersion}) by Dan K. Snelson. See: https://snelson.us/setup-your-mac"
 
 
 
