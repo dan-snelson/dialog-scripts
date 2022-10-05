@@ -34,6 +34,10 @@ debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 completionAction="${6}" # ( number of seconds to sleep | wait, blank )
 
+# Hard-coded Testing Variables
+debugMode="true"        # ( true | false, blank )
+assetTagCapture="true"  # ( true | false, blank )
+
 if [[ ${debugMode} == "true" ]]; then
     scriptVersion="Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
 fi
@@ -371,6 +375,7 @@ function dialogCheck(){
 function dialog_update_welcome() {
     echo_logger "WELCOME DIALOG: $1"
     echo "$1" >> $welcomeCommandFile
+    sleep 0.35
 }
 
 
@@ -382,7 +387,6 @@ function dialog_update_welcome() {
 function dialog_update_setup_your_mac() {
     echo_logger "SETUP YOUR MAC DIALOG: $1"
     echo "$1" >> $setupYourMacCommandFile
-
     sleep 0.35
 }
 
@@ -395,6 +399,7 @@ function dialog_update_setup_your_mac() {
 function dialog_update_failure(){
     echo_logger "FAILURE DIALOG: $1"
     echo "$1" >> $failureCommandFile
+    sleep 0.35
 }
 
 
@@ -408,10 +413,10 @@ function finalise(){
     if [[ "${jamfProPolicyTriggerFailure}" == "failed" ]]; then
 
         dialog_update_setup_your_mac "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
+        dialog_update_setup_your_mac "progress: complete"
         dialog_update_setup_your_mac "progresstext: Failures detected. Please click Continue for troubleshooting information."
         dialog_update_setup_your_mac "button1text: Continue …"
         dialog_update_setup_your_mac "button1: enable"
-        dialog_update_setup_your_mac "progress: complete"
         echo_logger "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
         eval "${completionAction}"
         dialog_update_setup_your_mac "quit:"
@@ -430,8 +435,8 @@ function finalise(){
     else
 
         dialog_update_setup_your_mac "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-        dialog_update_setup_your_mac "progresstext: Complete! Please restart and enjoy your new Mac!"
         dialog_update_setup_your_mac "progress: complete"
+        dialog_update_setup_your_mac "progresstext: Complete! Please restart and enjoy your new Mac!"
         dialog_update_setup_your_mac "button1text: Quit"
         dialog_update_setup_your_mac "button1: enable"
         rm "$setupYourMacCommandFile"
@@ -699,7 +704,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
 
             # If the path variable has a value, check if that path exists on disk
             if [[ -f "$path" ]]; then
-                echo_logger "INFO: $path exists, moving on"
+                echo_logger "SETUP YOUR MAC DIALOG: INFO: $path exists, moving on"
                  if [[ "$debugMode" = true ]]; then sleep 3; fi
             else
                 run_jamf_trigger "$trigger"
