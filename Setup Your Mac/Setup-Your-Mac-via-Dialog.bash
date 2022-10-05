@@ -508,18 +508,16 @@ if [[ $(id -u) -ne 0 ]]; then
   exit 1
 fi
 
-####################################################################################################
-#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Confirm Setup Assistant complete and user at Desktop
 # Useful for triggering on Enrollment Complete and will not pause if run via Self Service
-#
-####################################################################################################
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dockStatus=$(/usr/bin/pgrep -x Dock)
-echo "Waiting for Desktop..."
+echo_logger "Waiting for Desktop..."
 
 while [[ "$dockStatus" == "" ]]; do
-    echo "Desktop is not loaded; waiting..."
+    echo_logger "Desktop is not loaded; waiting..."
     sleep 5
     dockStatus=$(/usr/bin/pgrep -x Dock)
 done
