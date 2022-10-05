@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.2.10
+
+### 05-Oct-2022 
+- Modifications for swiftDialog v2 (thanks, @bartreardon!)
+  - Added I/O pause to `dialog_update_setup_your_mac`
+  - Added `list: show` when displaying policy_array
+  - Re-ordered Setup Your Mac progress bar commands
+- More specific logging for various dialog update functions
+
 ## 1.2.9
 
 ### 03-Oct-2022

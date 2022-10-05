@@ -7,11 +7,12 @@
 #
 ####################################################################################################
 #
-# Version 1.2.9, 03-Oct-2022, Dan K. Snelson (@dan-snelson)
-#   Added `setupYourMacPolicyArrayIconPrefixUrl` variable (thanks for the idea, @mani2care!)
-#   Removed unnecessary listitem icon updates (thanks, @bartreardon!)
-#   Output swiftDialog version when running in debug mode
-#   Updated URL for Zoom icon
+# Version 1.2.10, 04-Oct-2022, Dan K. Snelson (@dan-snelson)
+#   Modifications for swiftDialog v2 (thanks, @bartreardon!)
+#   - Added I/O pause to `dialog_update_setup_your_mac`
+#   - Added `list: show` when displaying policy_array
+#   - Re-ordered Setup Your Mac progress bar commands
+#   More specific logging for various dialog update functions
 #
 ####################################################################################################
 
@@ -27,7 +28,7 @@
 # Script Version & Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.9"
+scriptVersion="1.2.10"
 debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 completionAction="${6}" # ( number of seconds to sleep | wait, blank )
@@ -255,7 +256,8 @@ dialogSetupYourMacCMD="$dialogApp \
 --title \"$title\" \
 --message \"$message\" \
 --icon \"$icon\" \
---progress $progress_total \
+--progress \
+--progresstext \"Initializing configuration …\" \
 --button1text \"Quit\" \
 --button1disabled \
 --infotext \"$scriptVersion\" \
@@ -366,8 +368,8 @@ function dialogCheck(){
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialog_update_welcome() {
-  echo "$1"
-  echo "$1" >> $welcomeCommandFile
+    echo_logger "WELCOME DIALOG: $1"
+    echo "$1" >> $welcomeCommandFile
 }
 
 
@@ -377,9 +379,10 @@ function dialog_update_welcome() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialog_update_setup_your_mac() {
-    echo_logger "DIALOG: $1"
-    # shellcheck disable=2001
+    echo_logger "SETUP YOUR MAC DIALOG: $1"
     echo "$1" >> $setupYourMacCommandFile
+
+    sleep 0.35
 }
 
 
@@ -389,8 +392,8 @@ function dialog_update_setup_your_mac() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialog_update_failure(){
-  echo "$1"
-  echo "$1" >> $failureCommandFile
+    echo_logger "FAILURE DIALOG: $1"
+    echo "$1" >> $failureCommandFile
 }
 
 
@@ -475,18 +478,18 @@ function get_json_value() {
 function run_jamf_trigger() {
     trigger="$1"
     if [ "$debugMode" = true ]; then
-        echo_logger "DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
+        echo_logger "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
         sleep 3
     elif [ "$trigger" == "recon" ]; then
         if [[ ${assetTagCapture} == "true" ]]; then
-            echo_logger "DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
+            echo_logger "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
             "$jamfBinary" recon -assetTag "${assetTag}"
         else
-            echo_logger "DIALOG: RUNNING: $jamfBinary recon"
+            echo_logger "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon"
             "$jamfBinary" recon
         fi
     else
-        echo_logger "DIALOG: RUNNING: $jamfBinary policy -event $trigger"
+        echo_logger "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary policy -event $trigger"
         "$jamfBinary" policy -event "$trigger"
     fi
 }
@@ -507,6 +510,14 @@ if [[ $(id -u) -ne 0 ]]; then
   echo "This script should be run as root"
   exit 1
 fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Initialize Log
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+echo_logger "Setup Your Mac (${scriptVersion}) by Dan K. Snelson. See: https://snelson.us/setup-your-mac"
 
 
 
@@ -545,7 +556,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
     case ${returncode} in
 
         0)  ## Process exit code 0 scenario here
-            echo_logger "DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
+            echo_logger "WELCOME DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialog_update_setup_your_mac "message: Asset Tag reported as \`${assetTag}\`. $message"
             if [[ ${debugMode} == "true" ]]; then
@@ -554,23 +565,23 @@ if [[ ${assetTagCapture} == "true" ]]; then
             ;;
 
         2)  ## Process exit code 2 scenario here
-            echo_logger "DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
+            echo_logger "WELCOME DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
             exit 0
             ;;
 
         3)  ## Process exit code 3 scenario here
-            echo_logger "DIALOG: ${loggedInUser} clicked infobutton"
+            echo_logger "WELCOME DIALOG: ${loggedInUser} clicked infobutton"
             /usr/bin/osascript -e "set Volume 3"
             /usr/bin/afplay /System/Library/Sounds/Tink.aiff
             ;;
 
         4)  ## Process exit code 4 scenario here
-            echo_logger "DIALOG: ${loggedInUser} allowed timer to expire"
+            echo_logger "WELCOME DIALOG: ${loggedInUser} allowed timer to expire"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             ;;
 
         *)  ## Catch all processing
-            echo_logger "DIALOG: Something else happened; Exit code: ${returncode}"
+            echo_logger "WELCOME DIALOG: Something else happened; Exit code: ${returncode}"
             exit 1
             ;;
 
@@ -584,25 +595,6 @@ else
     fi
 
 fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Set progress_total to the number of steps in policy_array
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dialog_update_setup_your_mac "progresstext: Initializing configuration …"
-progress_total=$(get_json_value "${policy_array[*]}" "steps.length")
-echo_logger "DIALOG: progress_total=$progress_total"
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Set initial progress bar
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-progress_index=0
-dialog_update_setup_your_mac "progress: $progress_index"
 
 
 
@@ -621,6 +613,15 @@ done
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Set progress_total to the number of steps in policy_array
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+progress_total=$(get_json_value "${policy_array[*]}" "steps.length")
+echo_logger "SETUP YOUR MAC DIALOG: progress_total=$progress_total"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # The ${array_name[*]/%/,} expansion will combine all items within the array adding a "," character at the end
 # To add a character to the start, use "/#/" instead of the "/%/"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -630,6 +631,16 @@ dialog_update_setup_your_mac "list: ${list_item_string%?}"
 for (( i=0; i<dialog_step_length; i++ )); do
     dialog_update_setup_your_mac "listitem: index: $i, icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon_url_array[$i]}, status: pending, statustext: Pending …"
 done
+dialog_update_setup_your_mac "list: show"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Set initial progress bar
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+progress_index=0
+dialog_update_setup_your_mac "progress: $progress_index"
 
 
 
@@ -661,7 +672,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
     # If there's a value in the variable, update running swiftDialog
 
     if [[ -n "$listitem" ]]; then dialog_update_setup_your_mac "listitem: index: $i, status: wait, statustext: Installing …, "; fi
-    if [[ -n "$icon" ]]; then dialog_update_setup_your_mac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}$icon"; fi
+    if [[ -n "$icon" ]]; then dialog_update_setup_your_mac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon}"; fi
     if [[ -n "$progresstext" ]]; then dialog_update_setup_your_mac "progresstext: $progresstext"; fi
     if [[ -n "$trigger_list_length" ]]; then
         for (( j=0; j<trigger_list_length; j++ )); do
@@ -680,7 +691,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
     fi
 
     # Validate the expected path exists
-    echo_logger "DIALOG: Testing for \"$path\" …"
+    echo_logger "SETUP YOUR MAC DIALOG: Testing for \"$path\" …"
     if [[ -f "$path" ]] || [[ -z "$path" ]]; then
         dialog_update_setup_your_mac "listitem: index: $i, status: success, statustext: Installed"
     else
@@ -690,7 +701,6 @@ for (( i=0; i<dialog_step_length; i++ )); do
         exitCode="1"
     fi
 
-    # I/O Pause (thanks, @bartreardon!)
     sleep 0.3
 
 done
