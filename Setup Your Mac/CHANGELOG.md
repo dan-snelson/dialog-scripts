@@ -8,6 +8,7 @@
   - Added `list: show` when displaying policy_array
   - Re-ordered Setup Your Mac progress bar commands
 - More specific logging for various dialog update functions
+- Confirm Setup Assistant complete and user at Desktop (thanks, @ehemmete!)
 
 ## 1.2.9
 

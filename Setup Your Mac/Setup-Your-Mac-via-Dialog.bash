@@ -13,6 +13,7 @@
 #   - Added `list: show` when displaying policy_array
 #   - Re-ordered Setup Your Mac progress bar commands
 #   More specific logging for various dialog update functions
+#   Confirm Setup Assistant complete and user at Desktop (thanks, @ehemmete!)
 #
 ####################################################################################################
 
@@ -511,6 +512,8 @@ if [[ $(id -u) -ne 0 ]]; then
   exit 1
 fi
 
+
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Confirm Setup Assistant complete and user at Desktop
 # Useful for triggering on Enrollment Complete and will not pause if run via Self Service
@@ -524,6 +527,7 @@ while [[ "$dockStatus" == "" ]]; do
     sleep 5
     dockStatus=$(/usr/bin/pgrep -x Dock)
 done
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
