@@ -40,7 +40,7 @@ Based on Bart Reardon (@bartreardon)'s [Example Jamf Scripts](https://github.com
 - **Button 2 Text:** `Close`
 - **Info Button Text:** `KB0070400`
 - **Extra Flags:** `--timer 60 --blurscreen --quitoninfo --ignorednd --overlayicon /path/to/icon.icns`
-- **Action:** `jamfselfservice:**//content?entity=policy&id=363&action=view`
+- **Action:** `jamfselfservice://content?entity=policy&id=888&action=view`
 
 ---
 
