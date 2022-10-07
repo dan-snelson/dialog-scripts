@@ -34,10 +34,6 @@ debugMode="${4}"        # ( true | false, blank )
 assetTagCapture="${5}"  # ( true | false, blank )
 completionAction="${6}" # ( number of seconds to sleep | wait, blank )
 
-# Hard-coded Testing Variables
-debugMode="true"        # ( true | false, blank )
-assetTagCapture="true"  # ( true | false, blank )
-
 if [[ ${debugMode} == "true" ]]; then
     scriptVersion="Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
 fi
