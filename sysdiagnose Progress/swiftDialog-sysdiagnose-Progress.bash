@@ -91,6 +91,7 @@ dialogSysdiagnoseWelcome="$dialogApp \
 --title \"$title\" \
 --message \"$message\" \
 --icon \"$icon\" \
+--overlayicon \"$overlayIcon\" \
 --button1text \"$button1text\" \
 --button2text \"$button2text\" \
 --infobuttontext \"$infobuttontext\" \
@@ -104,7 +105,6 @@ dialogSysdiagnoseWelcome="$dialogApp \
 --height 450 \
 --commandfile \"$dialogWelcomeLog\" "
 
-# --overlayicon \"$overlayIcon\" \
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

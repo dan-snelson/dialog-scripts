@@ -5,3 +5,4 @@ Scripts with leverage Bart Reardon's [swiftDialog](https://github.com/bartreardo
 - [Display Message](https://github.com/dan-snelson/dialog-scripts/tree/main/Display%20Message)
 - [swiftDialog Commander](https://github.com/dan-snelson/dialog-scripts/tree/main/swiftDialog%20Commander)
 - :new: [Inventory Update Progress](https://github.com/dan-snelson/dialog-scripts/tree/main/Inventory%20Update%20Progress)
+- :new: [sysdiagnose Progress](https://github.com/dan-snelson/dialog-scripts/tree/main/sysdiagnose%20Progress)
