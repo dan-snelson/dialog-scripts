@@ -105,7 +105,7 @@ fi
 # Client-side Script Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function updateScriptLog() { # Write to client-side log file ...
+function updateScriptLog() {
     echo -e "$( date +%Y-%m-%d\ %H:%M:%S )  ${1}" | tee -a "${scriptLog}"
 }
 
@@ -240,8 +240,7 @@ fi
 # Client-side Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Check for / create logFile
-if [[ ! -f "${scriptLog}" ]]; then # scriptLog not found; Create scriptLog ...
+if [[ ! -f "${scriptLog}" ]]; then
     touch "${scriptLog}"
     echo "$( date +%Y-%m-%d\ %H:%M:%S )  *** Created log file via script ***" >>"${scriptLog}"
 fi
