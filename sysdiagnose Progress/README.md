@@ -4,6 +4,6 @@
 
 ![sysdiagnose Progress)](images/sysdiagnose_Progress.png "sysdiagnose Progress)")
 
-- [swiftDialog-sysdiagnose-Progress.bash](swiftDialog-Inventory-Update-Progress.bash)
+- [swiftDialog-sysdiagnose-Progress.bash](swiftDialog-sysdiagnose-Progress.bash)
 
 [Continue reading …](https://snelson.us/2022/10/user-friendly-sysdiagnose/)
