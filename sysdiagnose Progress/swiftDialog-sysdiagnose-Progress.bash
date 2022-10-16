@@ -20,7 +20,7 @@
 # Version 1.2.0, 05-Jan-2020, Dan K. Snelson (@dan-snelson)
 #   Updated output filename to better match Apple's default
 #
-# Version 1.3.0, Date, Dan K. Snelson (@dan-snelson)
+# Version 1.3.0, 15-Oct-2022, Dan K. Snelson (@dan-snelson)
 #   Near-complete re-write to leverage swiftDialog
 #
 ####################################################################################################
@@ -279,8 +279,8 @@ function sysdiagnoseWithProgress() {
 
     while [[ -n $(pgrep "sysdiagnose_helper") ]]; do
 
-        currentTotal=$( du -Ad "$sysdiagnoseProgressDirectory" | awk '{ print $1 }' )
-        updateScriptLog "currentTotal: $currentTotal"
+        currentTotal=$( du -HAdP "$sysdiagnoseProgressDirectory" | awk '{ print $1 }' )
+        # updateScriptLog "currentTotal: $currentTotal" # Uncomment to determine value for estimatedTotalBytes
         progressPercentage=$( echo "scale=2 ; ( $currentTotal / $estimatedTotalBytes ) *100 " | bc )
         updateProgressDialog "progress: ${progressPercentage}"
 
