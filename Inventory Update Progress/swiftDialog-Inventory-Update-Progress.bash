@@ -17,6 +17,9 @@
 # Version 0.0.2, 14-Oct-2022, Dan K. Snelson (@dan-snelson)
 #   Added logic to simply update inventory for OSes too old for swiftDialog
 #
+# Version 0.0.3, 18-Oct-2022, Dan K. Snelson (@dan-snelson)
+#   Added "debug mode" for auditing Extension Attribute execution time
+#
 ####################################################################################################
 
 
@@ -27,7 +30,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.2"
+scriptVersion="0.0.3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 osVersion=$( /usr/bin/sw_vers -productVersion )
@@ -36,7 +39,8 @@ dialogApp="/usr/local/bin/dialog"
 dialogLog=$( mktemp /var/tmp/dialogLog.XXX )
 inventoryLog=$( mktemp /var/tmp/inventoryLog.XXX )
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
-estimatedTotalSeconds="${5:-"99"}"
+estimatedTotalSeconds="${5:-"298"}"
+debugMode="${6:-"false"}"
 
 
 
@@ -251,7 +255,11 @@ fi
 # Logging preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "swiftDialog Inventory Update Progress (${scriptVersion})"
+if [[ ${debugMode} == "true" ]]; then
+    updateScriptLog "DEBUG MODE | swiftDialog Inventory Update Progress (${scriptVersion})"
+else
+    updateScriptLog "swiftDialog Inventory Update Progress (${scriptVersion})"
+fi
 
 
 
@@ -270,6 +278,12 @@ dialogCheck
 updateScriptLog "Create Inventory Update dialog …"
 eval "$dialogInventoryUpdate" &
 
+if [[ ${debugMode} == "true" ]]; then
+    sleep 0.5
+    updateDialog "title: DEBUG MODE | $title"
+    updateDialog "message: Please wait while a DEBUG inventory is submitted …"
+fi
+
 SECONDS="0"
 updateDialog "progress: 1"
 
@@ -279,9 +293,15 @@ until [[ "$inventoryProgressText" == "Submitting data to"* ]]; do
 
     progressPercentage=$( echo "scale=2 ; ( $SECONDS / $estimatedTotalSeconds ) * 100" | bc )
     updateDialog "progress: ${progressPercentage}"
+    # if [[ ${debugMode} == "true" ]]; then
+    #     updateScriptLog "DEBUG MODE | progress: ${progressPercentage}"
+    # fi
 
     inventoryProgressText=$( tail -n1 "$inventoryLog" | sed -e 's/verbose: //g' -e 's/Found app: \/System\/Applications\///g' -e 's/Utilities\///g' -e 's/Found app: \/Applications\///g' -e 's/Running script for the extension attribute //g' )
     updateDialog "progresstext: ${inventoryProgressText}"
+    if [[ ${debugMode} == "true" ]]; then
+        updateScriptLog "DEBUG MODE | progresstext: ${inventoryProgressText}"
+    fi
 
 done
 
