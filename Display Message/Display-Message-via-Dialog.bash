@@ -165,9 +165,9 @@ function quitScript() {
     updateScriptLog "Exiting …"
 
     # brutal hack - need to find a better way
-    # killall tail
+    killall tail
 
-    # Remove dialogWelcomeLog
+    # Remove dialogMessageLog
     if [[ -e ${dialogMessageLog} ]]; then
         updateScriptLog "Removing ${dialogMessageLog} …"
         rm "${dialogMessageLog}"
@@ -213,7 +213,8 @@ if [[ "${osMajorVersion}" -ge 11 ]] ; then
     updateScriptLog "macOS ${osMajorVersion} installed; proceeding ..."
     scriptResult="${scriptResult} macOS ${osMajorVersion} installed; proceeding;"
 else
-    updateScriptLog="macOS ${osMajorVersion} installed; exiting."
+    updateScriptLog "macOS ${osVersion} installed; exiting."
+    jamfDisplayMessage "Display Message via swiftDialog (${scriptVersion}) by Dan K. Snelson  macOS ${osVersion} installed; macOS Big Sur 11 (or later) required"
     exit 1
 fi
 
@@ -264,7 +265,8 @@ dialogCheck
 # Display Message: Dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "Message Title: ${title};"
+updateScriptLog "Title: ${title}"
+updateScriptLog "Message: ${message}"
 
 ${dialogApp} \
     ${titleoption} "${title}" \
@@ -314,6 +316,7 @@ case ${returncode} in
         updateScriptLog "Something else happened; Exit code: ${returncode};"
         quitScript "1"
         ;;
+
 esac
 
 updateScriptLog "End-of-line."
