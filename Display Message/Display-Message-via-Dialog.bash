@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 ####################################################################################################
 #
@@ -159,7 +159,7 @@ function runAsUser() {
 function quitScript() {
 
     updateScriptLog "Quitting …"
-    updateProgressDialog "quit: "
+    echo "quit: " >> "${dialogMessageLog}"
 
     sleep 1
     updateScriptLog "Exiting …"
@@ -227,20 +227,22 @@ if [[ -z "${title}" ]] || [[ -z "${message}" ]]; then
 
     updateScriptLog "Either Parameter 4 or Parameter 5 are NOT populated; displaying instructions …"
 
+    extraflags="--width 825 --height 400 --moveable --timer 75 --position topright --blurscreen --titlefont size=26 --messagefont size=13 --iconsize 125"
+
     titleoption="--title"
-    title="Title goes here (Parameter 4 NOT populated)"
+    title="Title [Parameter 4] goes here"
 
     messageoption="--message"
-    message="Message goes here (Parameter 5 NOT populated)  \n\nPlease review this [blog post](https://snelson.us/2022/03/display-message-via-swiftdialog/)."
+    message="### Message [Parameter 5] goes here  \n\n**Note:** Please review this [blog post](https://snelson.us/2022/03/display-message-via-swiftdialog/) for additional information.  \n\n--- \n\nDisplaying with the following \"extraflags:\"  \n\n${extraflags}  \n\nThank you, [Bart Reardon](https://www.buymeacoffee.com/bartreardon), for making [swiftDialog](https://github.com/bartreardon/swiftDialog)! (Two words: **Rock. Star.**)"
 
     button1option="--button1text"
-    button1text="Parameter 7"
+    button1text="Button 1 [Parameter 7]"
 
     button2option="--button2text"
-    button2text="Parameter 8"
+    button2text="Button 2 [Parameter 8]"
 
     infobuttonoption="--infobuttontext"
-    infobuttontext="Paramter 9"
+    infobuttontext="Infobutton [Paramter 9]"
 
 else
 
