@@ -2,20 +2,28 @@
 
 ####################################################################################################
 #
-#	Display Message via swiftDialog
+# Display Message via swiftDialog
 #
-#	Purpose: Displays an end-user message via swiftDialog
-#	See: https://github.com/bartreardon/swiftDialog-scripts
+#   Purpose: Displays an end-user message via swiftDialog
+#   See: https://snelson.us/2022/03/display-message-via-swiftdialog/
 #
 ####################################################################################################
 #
 # HISTORY
 #
-# 	Version 0.0.1, 18-Feb-2022, Dan K. Snelson (@dan-snelson)
-#		Original version
+# Version 0.0.1, 18-Feb-2022, Dan K. Snelson (@dan-snelson)
+#   Original version
 #
-#	Version 0.0.2, 06-Apr-2022, Dan K. Snelson (@dan-snelson)
-#		Default icon to Jamf Pro Self Service if not specified
+# Version 0.0.2, 06-Apr-2022, Dan K. Snelson (@dan-snelson)
+#   Default icon to Jamf Pro Self Service if not specified
+#
+# Version 0.0.3, 19-Oct-2022, Dan K. Snelson (@dan-snelson)
+#   Validate Operating System
+#   Check for / install dialog (thanks, @acodega)
+#   Added Client-side Script Logging
+#   Changed Jamf Pro Script Parameters
+#   - Friendly error message when Title or Message are not populated
+#   - Changed Action (Parameter 11) to be optional (thanks for the idea, @eosrebel!)
 #
 ####################################################################################################
 
@@ -27,10 +35,14 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.2"
-scriptResult="Version ${scriptVersion};"
-loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
-dialogPath="/usr/local/bin/dialog"
+scriptVersion="0.0.3"
+scriptLog="/var/tmp/org.churchofjesuschrist.log"
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
+loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+osVersion=$( sw_vers -productVersion )
+osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
+dialogApp="/usr/local/bin/dialog"
+dialogMessageLog=$( mktemp /var/tmp/dialogWelcomeLog.XXX )
 if [[ -n ${4} ]]; then titleoption="--title"; title="${4}"; fi
 if [[ -n ${5} ]]; then messageoption="--message"; message="${5}"; fi
 if [[ -n ${6} ]]; then iconoption="--icon"; icon="${6}"; fi
@@ -42,9 +54,130 @@ action=${11}
 
 # Default icon to Jamf Pro Self Service if not specified
 if [[ -z ${icon} ]]; then
-	iconoption="--icon"
-	icon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
+    iconoption="--icon"
+    icon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 fi
+
+
+
+####################################################################################################
+#
+# Functions
+#
+####################################################################################################
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Client-side Script Logging
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function updateScriptLog() {
+    echo -e "$( date +%Y-%m-%d\ %H:%M:%S )  ${1}" | tee -a "${scriptLog}"
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# JAMF Display Message (for fallback in case swiftDialog fails to install)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function jamfDisplayMessage() {
+    updateScriptLog "Jamf Display Message: ${1}"
+    /usr/local/jamf/bin/jamf displayMessage -message "${1}" &
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check for / install swiftDialog (thanks, Adam!)
+# https://github.com/acodega/dialog-scripts/blob/main/dialogCheckFunction.sh
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function dialogCheck(){
+  # Get the URL of the latest PKG From the Dialog GitHub repo
+  dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+
+  # Expected Team ID of the downloaded PKG
+  expectedDialogTeamID="PWA5E9TQ59"
+
+  # Check for Dialog and install if not found
+  if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
+
+    updateScriptLog "Dialog not found. Installing..."
+
+    # Create temporary working directory
+    workDirectory=$( /usr/bin/basename "$0" )
+    tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+
+    # Download the installer package
+    /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
+
+    # Verify the download
+    teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
+
+    # Install the package if Team ID validates
+    if [ "$expectedDialogTeamID" = "$teamID" ] || [ "$expectedDialogTeamID" = "" ]; then
+ 
+      /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+
+    else
+
+      jamfDisplayMessage "Dialog Team ID verification failed."
+      exit 1
+
+    fi
+ 
+    # Remove the temporary working directory when done
+    /bin/rm -Rf "$tempDirectory"  
+
+  else
+
+    updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
+
+  fi
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Run command as logged-in user (thanks, @scriptingosx!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function runAsUser() {
+
+    updateScriptLog "Run \"$@\" as \"$uid\" … "
+    launchctl asuser "$uid" sudo -u "$loggedInUser" "$@"
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Quit Script (thanks, @bartreadon!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function quitScript() {
+
+    updateScriptLog "Quitting …"
+    updateProgressDialog "quit: "
+
+    sleep 1
+    updateScriptLog "Exiting …"
+
+    # brutal hack - need to find a better way
+    # killall tail
+
+    # Remove dialogWelcomeLog
+    if [[ -e ${dialogMessageLog} ]]; then
+        updateScriptLog "Removing ${dialogMessageLog} …"
+        rm "${dialogMessageLog}"
+    fi
+
+    updateScriptLog "Goodbye!"
+    exit "${1}"
+
+}
+
 
 
 ####################################################################################################
@@ -54,24 +187,74 @@ fi
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Client-side Logging
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ ! -f "${scriptLog}" ]]; then
+    touch "${scriptLog}"
+    echo "$( date +%Y-%m-%d\ %H:%M:%S )  *** Created log file via script ***" >>"${scriptLog}"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Logging preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptResult="${scriptResult} Display Message via Dialog (${scriptVersion})"
+updateScriptLog "Display Message via Dialog (${scriptVersion})"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate a value has been specified for all parameters
+# Validate Operating System
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ -n "${title}" ]] && [[ -n "${message}" ]]; then
-	scriptResult="${scriptResult} Parameters 4 and 5 populated; proceeding ..."
+if [[ "${osMajorVersion}" -ge 11 ]] ; then
+    updateScriptLog "macOS ${osMajorVersion} installed; proceeding ..."
+    scriptResult="${scriptResult} macOS ${osMajorVersion} installed; proceeding;"
 else
-	scriptResult="${scriptResult} Error: Parameters 4 or 5 not populated; exiting."
-	echo "${scriptResult}"
-	exit 1
+    updateScriptLog="macOS ${osMajorVersion} installed; exiting."
+    exit 1
 fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate Script Parameters
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ -z "${title}" ]] || [[ -z "${message}" ]]; then
+
+    updateScriptLog "Either Parameter 4 or Parameter 5 are NOT populated; displaying instructions …"
+
+    titleoption="--title"
+    title="Title goes here (Parameter 4 NOT populated)"
+
+    messageoption="--message"
+    message="Message goes here (Parameter 5 NOT populated)  \n\nPlease review this [blog post](https://snelson.us/2022/03/display-message-via-swiftdialog/)."
+
+    button1option="--button1text"
+    button1text="Parameter 7"
+
+    button2option="--button2text"
+    button2text="Parameter 8"
+
+    infobuttonoption="--infobuttontext"
+    infobuttontext="Paramter 9"
+
+else
+
+    updateScriptLog "Both \"title\" and \"message\" Parameters are populated; proceeding ..."
+
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check for / install swiftDialog
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+dialogCheck
 
 
 
@@ -79,18 +262,19 @@ fi
 # Display Message: Dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptResult="${scriptResult} Message Title: ${title};"
+updateScriptLog "Message Title: ${title};"
 
-${dialogPath} \
-	${titleoption} "${title}" \
-	${messageoption} "${message}" \
-	${iconoption} "${icon}" \
-	${button1option} "${button1text}" \
-	${button2option} "${button2text}" \
-	${infobuttonoption} "${infobuttontext}" \
-	--infobuttonaction "https://servicenow.company.com/support?id=kb_article_view&sysparm_article=${infobuttontext}" \
-	--messagefont "size=14" \
-	${extraflags}
+${dialogApp} \
+    ${titleoption} "${title}" \
+    ${messageoption} "${message}" \
+    ${iconoption} "${icon}" \
+    ${button1option} "${button1text}" \
+    ${button2option} "${button2text}" \
+    ${infobuttonoption} "${infobuttontext}" \
+    --infobuttonaction "https://servicenow.company.com/support?id=kb_article_view&sysparm_article=${infobuttontext}" \
+    --messagefont "size=14" \
+    --commandfile "$dialogMessageLog}" \
+    ${extraflags}
 
 returncode=$?
 
@@ -98,41 +282,38 @@ returncode=$?
 
 case ${returncode} in
 
-	0)  ## Process exit code 0 scenario here
-		echo "${loggedInUser} clicked ${button1text}"
-		scriptResult="${scriptResult} ${loggedInUser} clicked ${button1text};"
-		/usr/bin/su - "${loggedInUser}" -c "/usr/bin/open \"${action}\""
-		echo "${scriptResult}"
-		exit 0
-		;;
+    0)  ## Process exit code 0 scenario here
+        echo "${loggedInUser} clicked ${button1text}"
+        updateScriptLog "${loggedInUser} clicked ${button1text};"
+        if [[ -n "${action}" ]]; then
+           runAsUser open "${action}"
+        fi
+        quitScript "0"
+        ;;
 
-	2)  ## Process exit code 2 scenario here
-		echo "${loggedInUser} clicked ${button2text}"
-		scriptResult="${scriptResult} ${loggedInUser} clicked ${button2text};"
-		echo "${scriptResult}"
-		exit 0
-		;;
+    2)  ## Process exit code 2 scenario here
+        echo "${loggedInUser} clicked ${button2text}"
+        updateScriptLog "${loggedInUser} clicked ${button2text};"
+        quitScript "0"
+        ;;
 
-	3)  ## Process exit code 3 scenario here
-		echo "${loggedInUser} clicked ${infobuttontext}"
-		scriptResult="${scriptResult} ${loggedInUser} clicked ${infobuttontext};"
-		;;
+    3)  ## Process exit code 3 scenario here
+        echo "${loggedInUser} clicked ${infobuttontext}"
+        updateScriptLog "${loggedInUser} clicked ${infobuttontext};"
+        ;;
 
-	4)  ## Process exit code 4 scenario here
-		echo "${loggedInUser} allowed timer to expire"
-		scriptResult="${scriptResult} ${loggedInUser} allowed timer to expire;"
-		;;
+    4)  ## Process exit code 4 scenario here
+        echo "${loggedInUser} allowed timer to expire"
+        updateScriptLog "${loggedInUser} allowed timer to expire;"
+        ;;
 
-	*)  ## Catch all processing
-		echo "Something else happened; Exit code: ${returncode}"
-		scriptResult="${scriptResult} Something else happened; Exit code: ${returncode};"
-		echo "${scriptResult}"
-		exit 1
-		;;
+    *)  ## Catch all processing
+        echo "Something else happened; Exit code: ${returncode}"
+        updateScriptLog "Something else happened; Exit code: ${returncode};"
+        quitScript "1"
+        ;;
 esac
 
-scriptResult="${scriptResult} End-of-line."
+updateScriptLog "End-of-line."
 
-echo "${scriptResult}"
-
-exit 0
+quitScript "0"
