@@ -20,6 +20,10 @@
 # Version 0.0.3, 18-Oct-2022, Dan K. Snelson (@dan-snelson)
 #   Added "debug mode" for auditing Extension Attribute execution time
 #
+# Version 0.0.4, 20-Oct-2022, Dan K. Snelson (@dan-snelson)
+#   Modified `updateScriptLog` function to (hopefully) make parsing easier (thanks, @tlark!)
+#   Corrected fat-fingered spelling of "Elasped"
+#
 ####################################################################################################
 
 
@@ -30,7 +34,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.3"
+scriptVersion="0.0.4"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 osVersion=$( /usr/bin/sw_vers -productVersion )
@@ -110,7 +114,7 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function updateScriptLog() {
-    echo -e "$( date +%Y-%m-%d\ %H:%M:%S )  ${1}" | tee -a "${scriptLog}"
+    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
 }
 
 
@@ -314,8 +318,8 @@ done
 updateScriptLog "Complete Inventory Update dialog"
 updateDialog "message: Inventory update complete"
 updateDialog "progress: 100"
-updateDialog "progresstext: Elasped Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
-updateScriptLog "Elasped Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+updateDialog "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+updateScriptLog "Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
 
 sleep 3
 
