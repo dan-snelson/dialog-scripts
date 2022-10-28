@@ -5,7 +5,7 @@
 # Display Message via swiftDialog
 #
 #   Purpose: Displays an end-user message via swiftDialog
-#   See: https://snelson.us/2022/03/display-message-via-swiftdialog/
+#   See: https://snelson.us/2022/10/display-message-swiftdialog-003/
 #
 ####################################################################################################
 #
