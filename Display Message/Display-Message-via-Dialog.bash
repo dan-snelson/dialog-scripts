@@ -25,6 +25,9 @@
 #   - Friendly error message when Title or Message are not populated
 #   - Changed Action (Parameter 11) to be optional (thanks for the idea, @eosrebel!)
 #
+# Version 0.0.4, 03-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   Reverted `action` code to version 0.0.2
+#
 ####################################################################################################
 
 
@@ -35,7 +38,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.3"
+scriptVersion="0.0.4"
 scriptLog="/var/tmp/org.churchofjesuschrist.log"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
@@ -52,7 +55,12 @@ if [[ -n ${9} ]]; then infobuttonoption="--infobuttontext"; infobuttontext="${9}
 extraflags=${10}
 action=${11}
 
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Default icon to Jamf Pro Self Service if not specified
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 if [[ -z ${icon} ]]; then
     iconoption="--icon"
     icon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
@@ -134,19 +142,6 @@ function dialogCheck(){
     updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
 
   fi
-
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Run command as logged-in user (thanks, @scriptingosx!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function runAsUser() {
-
-    updateScriptLog "Run \"$@\" as \"$uid\" … "
-    launchctl asuser "$uid" sudo -u "$loggedInUser" "$@"
 
 }
 
@@ -290,7 +285,7 @@ case ${returncode} in
         echo "${loggedInUser} clicked ${button1text}"
         updateScriptLog "${loggedInUser} clicked ${button1text};"
         if [[ -n "${action}" ]]; then
-           runAsUser open "${action}"
+           su - "${loggedInUser}" -c "open \"${action}\""
         fi
         quitScript "0"
         ;;
