@@ -3,17 +3,18 @@
 ####################################################################################################
 #
 # Setup Your Mac via swiftDialog
-# https://snelson.us/setup-your-mac
+# https://snelson.us/setup-your-mac/
 #
 ####################################################################################################
 #
-# Version 1.2.10, 04-Oct-2022, Dan K. Snelson (@dan-snelson)
-#   Modifications for swiftDialog v2 (thanks, @bartreardon!)
-#   - Added I/O pause to `dialog_update_setup_your_mac`
-#   - Added `list: show` when displaying policy_array
-#   - Re-ordered Setup Your Mac progress bar commands
-#   More specific logging for various dialog update functions
-#   Confirm Setup Assistant complete and user at Desktop (thanks, @ehemmete!)
+# HISTORY
+#
+# Version 1.3.0, 09-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   Script Parameter Changes
+#       - Parameter 4: `debug` mode enabled by default
+#       - Parameter 7:  Script Log Location
+#   Embraced drastic speed improvements in swiftDialog v2
+#   General script standardization
 #
 ####################################################################################################
 
@@ -29,10 +30,12 @@
 # Script Version & Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.2.10"
-debugMode="${4}"        # ( true | false, blank )
-assetTagCapture="${5}"  # ( true | false, blank )
-completionAction="${6}" # ( number of seconds to sleep | wait, blank )
+scriptVersion="1.3.0"
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
+debugMode="${4:-"true"}"            # [ true (default) | false ]
+assetTagCapture="${5:-"false"}"     # [ true | false (default) ]
+completionAction="${6:-"wait"}"     # [ number of seconds to sleep | wait (default) ]
+scriptLog="${7:-"/var/tmp/org.churchofjesuschrist.log"}"
 
 if [[ ${debugMode} == "true" ]]; then
     scriptVersion="Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
@@ -42,7 +45,7 @@ fi
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Check for an allowed "Completion Action" value (Parameter 6); defaults to "wait"
-# Options: ( number of seconds to sleep | wait, blank )
+# Options: [ number of seconds to sleep | wait (default) ]
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 case "${completionAction}" in
@@ -61,20 +64,20 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogApp="/usr/local/bin/dialog"
-setupYourMacCommandFile="/var/tmp/dialog_setup_your_mac.log"
+welcomeCommandFile=$( mktemp /var/tmp/dialogWelcome.XXX )
+setupYourMacCommandFile=$( mktemp /var/tmp/dialogSetupYourMac.XXX )
 setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
-welcomeCommandFile="/var/tmp/dialog_welcome.log"
-failureCommandFile="/var/tmp/dialog_failure.log"
-loggedInUser=$( /bin/echo "show State:/Users/ConsoleUser" | /usr/sbin/scutil | /usr/bin/awk '/Name :/ { print $3 }' )
+failureCommandFile=$( mktemp /var/tmp/dialogFailure.XXX )
 jamfBinary="/usr/local/bin/jamf"
-logFolder="/private/var/log"
-logName="enrollment.log"
+loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+loggedInUserFullname=$( id -F "${loggedInUser}" )
+loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 exitCode="0"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# APPS TO BE INSTALLED
+# APPS TO BE INSTALLED (Thanks, Obi-@smithjw!)
 #
 # For each configuration step, specify:
 # - listitem: The text to be displayed in the list
@@ -85,6 +88,7 @@ exitCode="0"
 # - path: The filepath for validation
 #
 # shellcheck disable=1112
+#
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 policy_array=('
@@ -196,7 +200,7 @@ policy_array=('
 # "Welcome / Asset Tag" Dialog Title, Message and Icon
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-welcomeTitle="Welcome to your new Mac!"
+welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
 welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Continue** to start applying Church settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
 
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
@@ -226,7 +230,7 @@ dialogWelcomeCMD="$dialogApp \
 --ontop \
 --titlefont 'size=26' \
 --messagefont 'size=16' \
---textfield \"Asset Tag\",required=true,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^(AP|IP)?[0-9]{6,}$',regexerror=\"Please enter (at least) seven digits for the Asset Tag, optionally preceed by either 'AP' or 'IP'. \" \
+--textfield \"Asset Tag\",required=true,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^(AP|IP)?[0-9]{7,}$',regexerror=\"Please enter (at least) seven digits for the Asset Tag, optionally preceed by either 'AP' or 'IP'. \" \
 --quitkey k \
 --commandfile \"$welcomeCommandFile\" "
 
@@ -236,7 +240,7 @@ dialogWelcomeCMD="$dialogApp \
 # "Setup Your Mac" Dialog Title, Message, Overlay Icon and Icon
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-title="Setting up your Mac"
+title="Setting up ${loggedInUserFirstname}'s Mac"
 message="Please wait while the following apps are installed …"
 overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 
@@ -294,8 +298,8 @@ dialogFailureCMD="$dialogApp \
 --message \"$failureMessage\" \
 --icon \"$failureIcon\" \
 --iconsize 125 \
---width 650 \
---height 375 \
+--width 625 \
+--height 400 \
 --position topright \
 --button1text \"Close\" \
 --infotext \"$scriptVersion\" \
@@ -317,49 +321,73 @@ dialogFailureCMD="$dialogApp \
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Client-side Script Logging
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function updateScriptLog() {
+    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # JAMF Display Message (for fallback in case swiftDialog fails to install)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function jamfDisplayMessage() {
-    echo "${1}"
+    updateScriptLog "Jamf Display Message: ${1}"
     /usr/local/jamf/bin/jamf displayMessage -message "${1}" &
 }
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (thanks, Adam!)
-# https://github.com/acodega/dialog-scripts/blob/main/dialogCheckFunction.sh
+# Check for / install swiftDialog (Thanks big bunches, @acodega!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialogCheck(){
   # Get the URL of the latest PKG From the Dialog GitHub repo
   dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+
   # Expected Team ID of the downloaded PKG
   expectedDialogTeamID="PWA5E9TQ59"
 
   # Check for Dialog and install if not found
   if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
-    echo "Dialog not found. Installing..."
+
+    updateScriptLog "Dialog not found. Installing..."
+
     # Create temporary working directory
     workDirectory=$( /usr/bin/basename "$0" )
     tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+
     # Download the installer package
     /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
+
     # Verify the download
     teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
+
     # Install the package if Team ID validates
     if [ "$expectedDialogTeamID" = "$teamID" ] || [ "$expectedDialogTeamID" = "" ]; then
+ 
       /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+
     else
+
       jamfDisplayMessage "Dialog Team ID verification failed."
       exit 1
+
     fi
+ 
     # Remove the temporary working directory when done
     /bin/rm -Rf "$tempDirectory"  
+
   else
-    echo_logger "DIALOG: version $(dialog --version) found; proceeding..."
+
+    updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
+
   fi
+
 }
 
 
@@ -368,10 +396,9 @@ function dialogCheck(){
 # Execute a "Welcome / Asset Tag" Dialog command
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function dialog_update_welcome() {
-    echo_logger "WELCOME DIALOG: $1"
-    echo "$1" >> $welcomeCommandFile
-    sleep 0.35
+function dialogUpdateWelcome(){
+    updateScriptLog "WELCOME DIALOG: $1"
+    echo "$1" >> "$welcomeCommandFile"
 }
 
 
@@ -380,10 +407,9 @@ function dialog_update_welcome() {
 # Execute a "Setup Your Mac" Dialog command
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function dialog_update_setup_your_mac() {
-    echo_logger "SETUP YOUR MAC DIALOG: $1"
-    echo "$1" >> $setupYourMacCommandFile
-    sleep 0.35
+function dialogUpdateSetupYourMac() {
+    updateScriptLog "SETUP YOUR MAC DIALOG: $1"
+    echo "$1" >> "$setupYourMacCommandFile"
 }
 
 
@@ -392,10 +418,9 @@ function dialog_update_setup_your_mac() {
 # Execute a "Failure" Dialog command
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function dialog_update_failure(){
-    echo_logger "FAILURE DIALOG: $1"
-    echo "$1" >> $failureCommandFile
-    sleep 0.35
+function dialogUpdateFailure(){
+    updateScriptLog "FAILURE DIALOG: $1"
+    echo "$1" >> "$failureCommandFile"
 }
 
 
@@ -408,55 +433,36 @@ function finalise(){
 
     if [[ "${jamfProPolicyTriggerFailure}" == "failed" ]]; then
 
-        dialog_update_setup_your_mac "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
-        dialog_update_setup_your_mac "progress: complete"
-        dialog_update_setup_your_mac "progresstext: Failures detected. Please click Continue for troubleshooting information."
-        dialog_update_setup_your_mac "button1text: Continue …"
-        dialog_update_setup_your_mac "button1: enable"
-        echo_logger "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
+        dialogUpdateSetupYourMac "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
+        dialogUpdateSetupYourMac "progresstext: Failures detected. Please click Continue for troubleshooting information."
+        dialogUpdateSetupYourMac "button1text: Continue …"
+        dialogUpdateSetupYourMac "button1: enable"
+        dialogUpdateSetupYourMac "progress: complete"
+        updateScriptLog "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
         eval "${completionAction}"
-        dialog_update_setup_your_mac "quit:"
+        dialogUpdateSetupYourMac "quit:"
         eval "${dialogFailureCMD}" & sleep 0.3
         if [[ ${debugMode} == "true" ]]; then
-            dialog_update_failure "title: DEBUG MODE | $failureTitle"
+            dialogUpdateFailure "title: DEBUG MODE | $failureTitle"
         fi
-        dialog_update_failure "message: A failure has been detected. Please complete the following steps:\n1. Reboot and login to your Mac  \n2. Login to Self Service  \n3. Re-run any failed policy listed below  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please contact the Help Desk,  \n+1 (801) 555-1212, and mention [KB86753099](https://servicenow.company.com/support?id=kb_article_view&sysparm_article=KB86753099#Failures). "
-        dialog_update_failure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
+        dialogUpdateFailure "message: A failure has been detected, ${loggedInUserFirstname}.  \n\nPlease complete the following steps:\n1. Reboot and login to your Mac  \n2. Login to Self Service  \n3. Re-run any failed policy listed below  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please contact the Help Desk,  \n+1 (801) 555-1212, and mention [KB86753099](https://servicenow.company.com/support?id=kb_article_view&sysparm_article=KB86753099#Failures). "
+        dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         eval "${completionAction}"
-        dialog_update_failure "quit:"
-        rm "$setupYourMacCommandFile"
-        rm "$failureCommandFile"
-        exit "${exitCode}"
+        dialogUpdateFailure "quit:"
+        quitScript "${exitCode}"
 
     else
 
-        dialog_update_setup_your_mac "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-        dialog_update_setup_your_mac "progress: complete"
-        dialog_update_setup_your_mac "progresstext: Complete! Please restart and enjoy your new Mac!"
-        dialog_update_setup_your_mac "button1text: Quit"
-        dialog_update_setup_your_mac "button1: enable"
-        rm "$setupYourMacCommandFile"
-        rm "$welcomeCommandFile"
+        dialogUpdateSetupYourMac "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
+        dialogUpdateSetupYourMac "progresstext: Complete! Please restart and enjoy your new Mac, ${loggedInUserFirstname}!"
+        dialogUpdateSetupYourMac "progress: complete"
+        dialogUpdateSetupYourMac "button1text: Quit"
+        dialogUpdateSetupYourMac "button1: enable"
         eval "${completionAction}" # Comment-out this line to NOT require user-interaction for successful completions
-        exit "${exitCode}"
+        quitScript "${exitCode}"
 
     fi
 
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#  smithjw's Logging Function
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function echo_logger() {
-    logFolder="${logFolder:=/private/var/log}"
-    logName="${logName:=log.log}"
-
-    mkdir -p $logFolder
-
-    echo -e "$(date +%Y-%m-%d\ %H:%M:%S)  $1" | tee -a $logFolder/$logName
 }
 
 
@@ -479,21 +485,54 @@ function get_json_value() {
 
 function run_jamf_trigger() {
     trigger="$1"
-    if [ "$debugMode" = true ]; then
-        echo_logger "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
+    if [[ "$debugMode" = true ]]; then
+        updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
         sleep 3
-    elif [ "$trigger" == "recon" ]; then
+    elif [[ "$trigger" == "recon" ]]; then
         if [[ ${assetTagCapture} == "true" ]]; then
-            echo_logger "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
+            updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
             "$jamfBinary" recon -assetTag "${assetTag}"
         else
-            echo_logger "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon"
+            updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon"
             "$jamfBinary" recon
         fi
     else
-        echo_logger "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary policy -event $trigger"
+        updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary policy -event $trigger"
         "$jamfBinary" policy -event "$trigger"
     fi
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Quit Script (thanks, @bartreadon!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function quitScript() {
+
+    updateScriptLog "Exiting …"
+
+    # Remove welcomeCommandFile
+    if [[ -e ${welcomeCommandFile} ]]; then
+        updateScriptLog "Removing ${welcomeCommandFile} …"
+        rm "${welcomeCommandFile}"
+    fi
+
+    # Remove setupYourMacCommandFile
+    if [[ -e ${setupYourMacCommandFile} ]]; then
+        updateScriptLog "Removing ${setupYourMacCommandFile} …"
+        rm "${setupYourMacCommandFile}"
+    fi
+
+    # Remove failureCommandFile
+    if [[ -e ${failureCommandFile} ]]; then
+        updateScriptLog "Removing ${failureCommandFile} …"
+        rm "${failureCommandFile}"
+    fi
+
+    updateScriptLog "Goodbye!"
+    exit "${1}"
+
 }
 
 
@@ -509,17 +548,32 @@ function run_jamf_trigger() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ $(id -u) -ne 0 ]]; then
-  echo "This script should be run as root"
-  exit 1
+    echo "This script must be run as root; exiting."
+    exit 1
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Initialize Log
+# Client-side Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-echo_logger "Setup Your Mac (${scriptVersion}) by Dan K. Snelson. See: https://snelson.us/setup-your-mac"
+if [[ ! -f "${scriptLog}" ]]; then
+    touch "${scriptLog}"
+    updateScriptLog "*** Created log file via script ***"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Logging preamble
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ ${debugMode} == "true" ]]; then
+    updateScriptLog "DEBUG MODE | Setup Your Mac (${scriptVersion})"
+else
+    updateScriptLog "Setup Your Mac (${scriptVersion})"
+fi
 
 
 
@@ -528,13 +582,13 @@ echo_logger "Setup Your Mac (${scriptVersion}) by Dan K. Snelson. See: https://s
 # Useful for triggering on Enrollment Complete and will not pause if run via Self Service
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dockStatus=$(/usr/bin/pgrep -x Dock)
-echo_logger "Waiting for Desktop..."
+dockStatus=$( pgrep -x Dock )
+updateScriptLog "Waiting for Desktop …"
 
 while [[ "$dockStatus" == "" ]]; do
-    echo_logger "Desktop is not loaded; waiting..."
+    updateScriptLog "Desktop is not loaded; waiting 5 seconds …"
     sleep 5
-    dockStatus=$(/usr/bin/pgrep -x Dock)
+    dockStatus=$( pgrep -x Dock )
 done
 
 
@@ -548,7 +602,7 @@ dialogCheck
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Display Welcome / Asset Tag and capture user's interaction
+# Display Welcome Screen and capture user's interaction
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ${assetTagCapture} == "true" ]]; then
@@ -566,7 +620,7 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Evaluate User Interaction at Welcome / Asset Tag Dialog
+# Evaluate User Interaction at Welcome Screen
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ${assetTagCapture} == "true" ]]; then
@@ -574,32 +628,32 @@ if [[ ${assetTagCapture} == "true" ]]; then
     case ${returncode} in
 
         0)  ## Process exit code 0 scenario here
-            echo_logger "WELCOME DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
+            updateScriptLog "WELCOME DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
-            dialog_update_setup_your_mac "message: Asset Tag reported as \`${assetTag}\`. $message"
+            dialogUpdateSetupYourMac "message: Asset Tag reported as \`${assetTag}\`. $message"
             if [[ ${debugMode} == "true" ]]; then
-                dialog_update_setup_your_mac "title: DEBUG MODE | $title"
+                dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
             fi
             ;;
 
         2)  ## Process exit code 2 scenario here
-            echo_logger "WELCOME DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
+            updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
             exit 0
             ;;
 
         3)  ## Process exit code 3 scenario here
-            echo_logger "WELCOME DIALOG: ${loggedInUser} clicked infobutton"
+            updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked infobutton"
             /usr/bin/osascript -e "set Volume 3"
             /usr/bin/afplay /System/Library/Sounds/Tink.aiff
             ;;
 
         4)  ## Process exit code 4 scenario here
-            echo_logger "WELCOME DIALOG: ${loggedInUser} allowed timer to expire"
+            updateScriptLog "WELCOME DIALOG: ${loggedInUser} allowed timer to expire"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             ;;
 
         *)  ## Catch all processing
-            echo_logger "WELCOME DIALOG: Something else happened; Exit code: ${returncode}"
+            updateScriptLog "WELCOME DIALOG: Something else happened; Exit code: ${returncode}"
             exit 1
             ;;
 
@@ -609,7 +663,7 @@ else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     if [[ ${debugMode} == "true" ]]; then
-        dialog_update_setup_your_mac "title: DEBUG MODE | $title"
+        dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
     fi
 
 fi
@@ -635,7 +689,7 @@ done
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 progress_total=$(get_json_value "${policy_array[*]}" "steps.length")
-echo_logger "SETUP YOUR MAC DIALOG: progress_total=$progress_total"
+updateScriptLog "SETUP YOUR MAC DIALOG: progress_total=$progress_total"
 
 
 
@@ -645,11 +699,11 @@ echo_logger "SETUP YOUR MAC DIALOG: progress_total=$progress_total"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 list_item_string=${list_item_array[*]/%/,}
-dialog_update_setup_your_mac "list: ${list_item_string%?}"
+dialogUpdateSetupYourMac "list: ${list_item_string%?}"
 for (( i=0; i<dialog_step_length; i++ )); do
-    dialog_update_setup_your_mac "listitem: index: $i, icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon_url_array[$i]}, status: pending, statustext: Pending …"
+    dialogUpdateSetupYourMac "listitem: index: $i, icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon_url_array[$i]}, status: pending, statustext: Pending …"
 done
-dialog_update_setup_your_mac "list: show"
+dialogUpdateSetupYourMac "list: show"
 
 
 
@@ -658,16 +712,15 @@ dialog_update_setup_your_mac "list: show"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 progress_index=0
-dialog_update_setup_your_mac "progress: $progress_index"
+dialogUpdateSetupYourMac "progress: $progress_index"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Close Welcome / Asset Tag dialog
+# Close Welcome Screen
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialog_update_welcome "quit:"
-sleep 0.3
+dialogUpdateWelcome "quit:"
 
 
 
@@ -678,7 +731,7 @@ sleep 0.3
 for (( i=0; i<dialog_step_length; i++ )); do
 
     # Increment the progress bar
-    dialog_update_setup_your_mac "progress: $(( i * ( 100 / progress_total ) ))"
+    dialogUpdateSetupYourMac "progress: $(( i * ( 100 / progress_total ) ))"
 
     # Creating initial variables
     listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
@@ -689,9 +742,9 @@ for (( i=0; i<dialog_step_length; i++ )); do
 
     # If there's a value in the variable, update running swiftDialog
 
-    if [[ -n "$listitem" ]]; then dialog_update_setup_your_mac "listitem: index: $i, status: wait, statustext: Installing …, "; fi
-    if [[ -n "$icon" ]]; then dialog_update_setup_your_mac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon}"; fi
-    if [[ -n "$progresstext" ]]; then dialog_update_setup_your_mac "progresstext: $progresstext"; fi
+    if [[ -n "$listitem" ]]; then dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Installing …, "; fi
+    if [[ -n "$icon" ]]; then dialogUpdateSetupYourMac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon}"; fi
+    if [[ -n "$progresstext" ]]; then dialogUpdateSetupYourMac "progresstext: $progresstext"; fi
     if [[ -n "$trigger_list_length" ]]; then
         for (( j=0; j<trigger_list_length; j++ )); do
             # Setting variables within the trigger_list
@@ -700,8 +753,8 @@ for (( i=0; i<dialog_step_length; i++ )); do
 
             # If the path variable has a value, check if that path exists on disk
             if [[ -f "$path" ]]; then
-                echo_logger "SETUP YOUR MAC DIALOG: INFO: $path exists, moving on"
-                 if [[ "$debugMode" = true ]]; then sleep 3; fi
+                updateScriptLog "SETUP YOUR MAC DIALOG: INFO: $path exists, moving on"
+                if [[ "$debugMode" = true ]]; then sleep 3; fi
             else
                 run_jamf_trigger "$trigger"
             fi
@@ -709,17 +762,15 @@ for (( i=0; i<dialog_step_length; i++ )); do
     fi
 
     # Validate the expected path exists
-    echo_logger "SETUP YOUR MAC DIALOG: Testing for \"$path\" …"
+    updateScriptLog "SETUP YOUR MAC DIALOG: Testing for \"$path\" …"
     if [[ -f "$path" ]] || [[ -z "$path" ]]; then
-        dialog_update_setup_your_mac "listitem: index: $i, status: success, statustext: Installed"
+        dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
     else
-        dialog_update_setup_your_mac "listitem: index: $i, status: fail, statustext: Failed"
+        dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
         jamfProPolicyTriggerFailure="failed"
         jamfProPolicyPolicyNameFailures+="• $listitem  \n"
         exitCode="1"
     fi
-
-    sleep 0.3
 
 done
 

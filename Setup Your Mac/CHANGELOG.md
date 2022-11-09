@@ -1,7 +1,14 @@
 # CHANGELOG
 
-## 1.2.10
+## 1.3.0
+### 09-Nov-2022 
+- **Script Parameter Changes**
+  - :warning: **Parameter 4:** `debug` mode **enabled** by default
+  - :new: **Parameter 7:** Script Log Location
+- :new: Embraced _**drastic**_ speed improvements in :bullettrain_front:`swiftDialog v2`:dash:
+- General script standardization
 
+## 1.2.10
 ### 05-Oct-2022 
 - Modifications for swiftDialog v2 (thanks, @bartreardon!)
   - Added I/O pause to `dialog_update_setup_your_mac`
@@ -11,14 +18,12 @@
 - Confirm Setup Assistant complete and user at Desktop (thanks, @ehemmete!)
 
 ## 1.2.9
-
 ### 03-Oct-2022
 - Added `setupYourMacPolicyArrayIconPrefixUrl` variable (thanks for the idea, @mani2care!)
 - Removed unnecessary `listitem` icon updates (thanks, @bartreardon!)
 - Output swiftDialog version when running in debug mode
 - Updated URL for Zoom icon
 ## 1.2.8
-
 ### 19-Sep-2022
 
 - Replaced "ugly" `completionAction` `if … then … else` with "more readabale" `case` statement (thanks, @pyther!)
