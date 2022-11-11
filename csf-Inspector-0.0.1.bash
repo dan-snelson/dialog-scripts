@@ -347,7 +347,7 @@ else
 
     # Display results to user
     timestamp="$( date '+%Y-%m-%d-%H%M%S' )"
-    updateWelcomeDialog "message: **Results for ${loggedInUser} on ${timestamp}:**  \n\n- **Installation Status:** Installed  \n- **Version:** ${falconVersion}  \n- **System Extension:** ${systemExtensionStatus}  \n- **Agent ID:** ${falconAgentID}  \n- **Heartbeats:** ${falconHeartbeats6}"
+    updateWelcomeDialog "message: **Results for ${loggedInUser} on ${timestamp}**  \n\n- **Installation Status:** Installed  \n- **Version:** ${falconVersion}  \n- **System Extension:** ${systemExtensionStatus}  \n- **Agent ID:** ${falconAgentID}  \n- **Heartbeats:** ${falconHeartbeats6}"
     updateWelcomeDialog "progress: complete"
     updateWelcomeDialog "progresstext: Complete!"
     sleep "${anticipationDuration}"
