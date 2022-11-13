@@ -4,9 +4,11 @@
 
 ![Setup Your Mac (1.3.0)](images/Setup_Your_Mac_1.3.0.png "Setup Your Mac (1.3.0)")
 
+[Continue reading …](https://snelson.us/setup-your-mac)
+
+## Script
 - [Setup-Your-Mac-via-Dialog.bash](Setup-Your-Mac-via-Dialog.bash)
 
-[Continue reading …](https://snelson.us/setup-your-mac)
 
 ---
 
@@ -18,6 +20,7 @@ While we _thought_ we'd done everything to help ensure our users had a seamless 
 
 [<img alt="Setup Your Mac, please" src="images/Setup_Your_Mac_please.png" />](https://snelson.us/2022/07/setup-your-mac-please/)
 
-- [Prompt-to-Setup-Your-Mac.bash](Prompt-to-Setup-Your-Mac.bash)
-
 [Continue reading …](https://snelson.us/2022/07/setup-your-mac-please/)
+
+## Script
+- [Prompt-to-Setup-Your-Mac.bash](Prompt-to-Setup-Your-Mac.bash)
