@@ -4,6 +4,11 @@
 
 ![Setup Your Mac (1.3.0)](images/Setup_Your_Mac_1.3.0.png "Setup Your Mac (1.3.0)")
 
+## Introduction
+
+Provide your users a seamless post-enrollment experience in setting up their new Macs.
+
+
 [Continue reading …](https://snelson.us/setup-your-mac)
 
 ## Script
