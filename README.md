@@ -1,5 +1,5 @@
 # dialog-scripts
-Scripts with leverage Bart Reardon's [swiftDialog](https://github.com/bartreardon/swiftDialog).
+Scripts which leverage Bart Reardon's [swiftDialog](https://github.com/bartreardon/swiftDialog).
 
 - [Setup Your Mac](Setup%20Your%20Mac/README.md)
 - [Display Message](Display%20Message/README.md)
@@ -8,4 +8,4 @@ Scripts with leverage Bart Reardon's [swiftDialog](https://github.com/bartreardo
 - :new: [Disk Usage](Disk%20Usage/README.md)
 - [swiftDialog Commander](swiftDialog%20Commander/README.md)
 
-[Continue reading …](https://snelson.us/)
+Continue reading at [snelson.us](https://snelson.us/) …
