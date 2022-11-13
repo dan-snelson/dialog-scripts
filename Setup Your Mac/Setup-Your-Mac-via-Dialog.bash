@@ -9,12 +9,14 @@
 #
 # HISTORY
 #
-# Version 1.3.0, 09-Nov-2022, Dan K. Snelson (@dan-snelson)
-#   Script Parameter Changes
+#   Version 1.3.0, 09-Nov-2022, Dan K. Snelson (@dan-snelson)
+#       Script Parameter Changes:
 #       - Parameter 4: `debug` mode enabled by default
-#       - Parameter 7:  Script Log Location
-#   Embraced drastic speed improvements in swiftDialog v2
-#   General script standardization
+#       - Parameter 7: Script Log Location
+#       Embraced drastic speed improvements in swiftDialog v2
+#       Caffeinated script (thanks, @grahampugh!)
+#       Enhanced `wait` exiting logic
+#       General script standardization
 #
 ####################################################################################################
 
@@ -72,7 +74,6 @@ jamfBinary="/usr/local/bin/jamf"
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 loggedInUserFullname=$( id -F "${loggedInUser}" )
 loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
-exitCode="0"
 
 
 
@@ -345,7 +346,8 @@ function jamfDisplayMessage() {
 # Check for / install swiftDialog (Thanks big bunches, @acodega!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function dialogCheck(){
+function dialogCheck() {
+
   # Get the URL of the latest PKG From the Dialog GitHub repo
   dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
@@ -449,7 +451,7 @@ function finalise(){
         dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         eval "${completionAction}"
         dialogUpdateFailure "quit:"
-        quitScript "${exitCode}"
+        quitScript "1"
 
     else
 
@@ -458,8 +460,12 @@ function finalise(){
         dialogUpdateSetupYourMac "progress: complete"
         dialogUpdateSetupYourMac "button1text: Quit"
         dialogUpdateSetupYourMac "button1: enable"
-        eval "${completionAction}" # Comment-out this line to NOT require user-interaction for successful completions
-        quitScript "${exitCode}"
+        if [[ "${completionAction}" == "wait" ]]; then
+            wait "${dialogProcessID}" # Comment-out this line to NOT require user-interaction for successful completions
+        else
+            eval "${completionAction}"
+        fi
+        quitScript "0"
 
     fi
 
@@ -487,7 +493,7 @@ function run_jamf_trigger() {
     trigger="$1"
     if [[ "$debugMode" = true ]]; then
         updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
-        sleep 3
+        sleep 2
     elif [[ "$trigger" == "recon" ]]; then
         if [[ ${assetTagCapture} == "true" ]]; then
             updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
@@ -505,12 +511,35 @@ function run_jamf_trigger() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Kill a specified process (thanks, @grahampugh!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function killProcess() {
+
+    process="$1"
+    if process_pid=$( pgrep -a "${process}" 2>/dev/null ) ; then
+        updateScriptLog "Attempting to terminate the '$process' process …"
+        updateScriptLog "(Termination message indicates success.)"
+        kill "$process_pid" 2> /dev/null
+        if pgrep -a "$process" >/dev/null ; then
+            updateScriptLog "ERROR: '$process' could not be terminated."
+        fi
+    fi
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Quit Script (thanks, @bartreadon!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function quitScript() {
 
     updateScriptLog "Exiting …"
+
+    # Stop `caffeinate` process
+    updateScriptLog "De-caffeinate …"
+    killProcess "caffeinate"
 
     # Remove welcomeCommandFile
     if [[ -e ${welcomeCommandFile} ]]; then
@@ -539,7 +568,7 @@ function quitScript() {
 
 ####################################################################################################
 #
-# Program
+# Pre-flight Checks
 #
 ####################################################################################################
 
@@ -602,12 +631,28 @@ dialogCheck
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Ensure computer does not go to sleep while running this script (thanks, @grahampugh!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "Caffeinating this script (pid=$$)"
+caffeinate -dimsu -w $$ &
+
+
+
+####################################################################################################
+#
+# Program
+#
+####################################################################################################
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Display Welcome Screen and capture user's interaction
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ${assetTagCapture} == "true" ]]; then
 
     assetTag=$( eval "$dialogWelcomeCMD" | awk -F " : " '{print $NF}' )
+    dialogProcessID=$!
 
     if [[ -z ${assetTag} ]]; then
         returncode="2"
@@ -630,6 +675,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
         0)  ## Process exit code 0 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
+            dialogProcessID=$!
             dialogUpdateSetupYourMac "message: Asset Tag reported as \`${assetTag}\`. $message"
             if [[ ${debugMode} == "true" ]]; then
                 dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
@@ -638,7 +684,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
 
         2)  ## Process exit code 2 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
-            exit 0
+            quitScript "0"
             ;;
 
         3)  ## Process exit code 3 scenario here
@@ -650,11 +696,12 @@ if [[ ${assetTagCapture} == "true" ]]; then
         4)  ## Process exit code 4 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} allowed timer to expire"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
+            dialogProcessID=$!
             ;;
 
         *)  ## Catch all processing
             updateScriptLog "WELCOME DIALOG: Something else happened; Exit code: ${returncode}"
-            exit 1
+            quitScript "1"
             ;;
 
     esac
@@ -662,6 +709,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
 else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
+    dialogProcessID=$!
     if [[ ${debugMode} == "true" ]]; then
         dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
     fi
@@ -769,7 +817,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
         dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
         jamfProPolicyTriggerFailure="failed"
         jamfProPolicyPolicyNameFailures+="• $listitem  \n"
-        exitCode="1"
+        quitScript "1"
     fi
 
 done

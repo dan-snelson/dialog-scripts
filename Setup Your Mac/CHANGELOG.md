@@ -2,10 +2,12 @@
 
 ## 1.3.0
 ### 09-Nov-2022 
-- **Script Parameter Changes**
+- **Script Parameter Changes:**
   - :warning: **Parameter 4:** `debug` mode **enabled** by default
   - :new: **Parameter 7:** Script Log Location
 - :new: Embraced _**drastic**_ speed improvements in :bullettrain_front:`swiftDialog v2`:dash:
+- Caffeinated script (thanks, @grahampugh!)
+- Enhanced `wait` exiting logic
 - General script standardization
 
 ## 1.2.10
