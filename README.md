@@ -1,8 +1,11 @@
 # dialog-scripts
 Scripts with leverage Bart Reardon's [swiftDialog](https://github.com/bartreardon/swiftDialog).
 
-- [Setup Your Mac](https://github.com/dan-snelson/dialog-scripts/tree/main/Setup%20Your%20Mac)
-- [Display Message](https://github.com/dan-snelson/dialog-scripts/tree/main/Display%20Message)
-- [swiftDialog Commander](https://github.com/dan-snelson/dialog-scripts/tree/main/swiftDialog%20Commander)
-- :new: [Inventory Update Progress](https://github.com/dan-snelson/dialog-scripts/tree/main/Inventory%20Update%20Progress)
-- :new: [sysdiagnose Progress](https://github.com/dan-snelson/dialog-scripts/tree/main/sysdiagnose%20Progress)
+- [Setup Your Mac](Setup%20Your%20Mac/README.md)
+- [Display Message](Display%20Message/README.md)
+- [sysdiagnose Progress](sysdiagnose%20Progress/README.md)
+- [Inventory Update Progress](Inventory%20Update%20Progress/README.md)
+- :new: [Disk Usage](Disk%20Usage/README.md)
+- [swiftDialog Commander](swiftDialog%20Commander/README.md)
+
+[Continue reading …](https://snelson.us/)
