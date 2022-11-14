@@ -452,7 +452,7 @@ function finalise(){
         dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         eval "${completionAction}"
         dialogUpdateFailure "quit:"
-        exit "${exitCode}"
+        quitScript "${exitCode}"
 
     else
 
@@ -466,7 +466,7 @@ function finalise(){
         else
             eval "${completionAction}"
         fi
-        exit "${exitCode}"
+        quitScript "${exitCode}"
 
     fi
 
