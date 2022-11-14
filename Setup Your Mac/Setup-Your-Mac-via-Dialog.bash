@@ -599,9 +599,9 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ${debugMode} == "true" ]]; then
-    updateScriptLog "DEBUG MODE | Setup Your Mac (${scriptVersion})"
+    updateScriptLog "\n\n###\n# DEBUG MODE | Setup Your Mac (${scriptVersion})\n###\n"
 else
-    updateScriptLog "Setup Your Mac (${scriptVersion})"
+    updateScriptLog "\n\n###\n# Setup Your Mac (${scriptVersion})\n###\n"
 fi
 
 
