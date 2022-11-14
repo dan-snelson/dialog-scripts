@@ -238,8 +238,8 @@ function updateDialog() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ $(id -u) -ne 0 ]]; then
-  echo "This script must be run as root; exiting."
-  exit 1
+    echo "This script must be run as root; exiting."
+    exit 1
 fi
 
 
@@ -250,7 +250,7 @@ fi
 
 if [[ ! -f "${scriptLog}" ]]; then
     touch "${scriptLog}"
-    echo "$( date +%Y-%m-%d\ %H:%M:%S )  *** Created log file via script ***" >>"${scriptLog}"
+    updateScriptLog "*** Created log file via script ***"
 fi
 
 
