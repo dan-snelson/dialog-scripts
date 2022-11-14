@@ -20,6 +20,9 @@
 #       Hard-coded estimated execution time for user's home folder to 60 percent
 #       Opened the macOS built-in Storage information
 #
+#   Version 0.0.3, 14-Nov-2022, 
+#       Modifided du's stderr redirection (thanks, @Pico!)
+#
 ####################################################################################################
 
 
@@ -34,7 +37,7 @@
 # Global Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.2"
+scriptVersion="0.0.3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 loggedInUserHome=$( dscl . read /Users/"${loggedInUser}" NFSHomeDirectory | awk -F ": " '{print $2}' )
@@ -351,7 +354,8 @@ function updateProgressDialog() {
 
 function analyzeDiskUsageEntireVolume() {
     updateScriptLog "Output disk usage statistics of \"${volumeName}\" to: ${diskUsageEntireVolumeTop50}"    
-    du -I System -axrg / 2>&1 | sort -nr | head -n 50 >> "$diskUsageEntireVolumeTop50"
+    du -I System -axrg / 2>/dev/null | sort -nr | head -n 50 >> "$diskUsageEntireVolumeTop50"
+
 }
 
 
@@ -362,7 +366,8 @@ function analyzeDiskUsageEntireVolume() {
 
 function analyzeDiskUsageUsersHome() {
     updateScriptLog "Output disk usage statistics of \"$loggedInUserHome\" to: ${diskUsageUsersHomeTop50}"    
-    du -axrg "$loggedInUserHome" 2>&1 | sort -nr | head -n 50 >> "$diskUsageUsersHomeTop50"
+    du -axrg "$loggedInUserHome" 2>/dev/null | sort -nr | head -n 50 >> "$diskUsageUsersHomeTop50"
+
 }
 
 
