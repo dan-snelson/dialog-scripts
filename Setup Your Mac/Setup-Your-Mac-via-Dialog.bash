@@ -74,7 +74,7 @@ jamfBinary="/usr/local/bin/jamf"
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 loggedInUserFullname=$( id -F "${loggedInUser}" )
 loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
-
+exitCode="0"
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -451,7 +451,7 @@ function finalise(){
         dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         eval "${completionAction}"
         dialogUpdateFailure "quit:"
-        quitScript "1"
+        exit "${exitCode}"
 
     else
 
@@ -465,7 +465,7 @@ function finalise(){
         else
             eval "${completionAction}"
         fi
-        quitScript "0"
+        exit "${exitCode}"
 
     fi
 
@@ -817,7 +817,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
         dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
         jamfProPolicyTriggerFailure="failed"
         jamfProPolicyPolicyNameFailures+="• $listitem  \n"
-        quitScript "1"
+        exitCode="1"
     fi
 
 done
