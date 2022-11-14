@@ -21,7 +21,7 @@
 #       Opened the macOS built-in Storage information
 #
 #   Version 0.0.3, 14-Nov-2022, 
-#       Modifided du's stderr redirection (thanks, @Pico!)
+#       Modified du's stderr redirection (thanks, @Pico!)
 #
 ####################################################################################################
 
