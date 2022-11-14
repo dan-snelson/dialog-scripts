@@ -443,6 +443,7 @@ function finalise(){
         updateScriptLog "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
         eval "${completionAction}"
         dialogUpdateSetupYourMac "quit:"
+        killProcess "caffeinate"
         eval "${dialogFailureCMD}" & sleep 0.3
         if [[ ${debugMode} == "true" ]]; then
             dialogUpdateFailure "title: DEBUG MODE | $failureTitle"
