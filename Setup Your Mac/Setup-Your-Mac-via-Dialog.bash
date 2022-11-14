@@ -435,6 +435,7 @@ function finalise(){
 
     if [[ "${jamfProPolicyTriggerFailure}" == "failed" ]]; then
 
+        killProcess "caffeinate"
         dialogUpdateSetupYourMac "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         dialogUpdateSetupYourMac "progresstext: Failures detected. Please click Continue for troubleshooting information."
         dialogUpdateSetupYourMac "button1text: Continue …"
@@ -443,7 +444,6 @@ function finalise(){
         updateScriptLog "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
         eval "${completionAction}"
         dialogUpdateSetupYourMac "quit:"
-        killProcess "caffeinate"
         eval "${dialogFailureCMD}" & sleep 0.3
         if [[ ${debugMode} == "true" ]]; then
             dialogUpdateFailure "title: DEBUG MODE | $failureTitle"
