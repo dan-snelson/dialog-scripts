@@ -23,6 +23,10 @@
 # Version 1.3.0, 15-Oct-2022, Dan K. Snelson (@dan-snelson)
 #   Near-complete re-write to leverage swiftDialog
 #
+# Version 1.3.1, 17-Oct-2022, Dan K. Snelson (@dan-snelson)
+#   Updated `sed` regex (thanks, @Nick Koval!)
+#   Updated `updateScriptLog` function (thanks, @tlark!)
+#
 ####################################################################################################
 
 
@@ -33,12 +37,12 @@
 #
 ####################################################################################################
 
-scriptVersion="1.3.0"
+scriptVersion="1.3.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 loggedInUserHome=$( dscl . read /Users/"${loggedInUser}" NFSHomeDirectory | awk -F ": " '{print $2}' )
-osVersion=$( /usr/bin/sw_vers -productVersion )
-osMajorVersion=$( echo "${osVersion}" | /usr/bin/awk -F '.' '{print $1}' )
+osVersion=$( sw_vers -productVersion )
+osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
 dialogApp="/usr/local/bin/dialog"
 dialogWelcomeLog=$( mktemp /var/tmp/dialogWelcomeLog.XXX )
 dialogProgressLog=$( mktemp /var/tmp/dialogProgressLog.XXX )
@@ -180,7 +184,7 @@ dialogSysdiagnoseUpload="$dialogApp \
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function updateScriptLog() {
-    echo -e "$( date +%Y-%m-%d\ %H:%M:%S )  ${1}" | tee -a "${scriptLog}"
+    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
 }
 
 
@@ -214,11 +218,11 @@ function dialogCheck(){
     updateScriptLog "Dialog not found. Installing..."
 
     # Create temporary working directory
-    workDirectory=$( /usr/bin/basename "$0" )
-    tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+    workDirectory=$( basename "$0" )
+    tempDirectory=$( mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
 
     # Download the installer package
-    /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
+    curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
 
     # Verify the download
     teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
@@ -284,7 +288,7 @@ function sysdiagnoseWithProgress() {
         progressPercentage=$( echo "scale=2 ; ( $currentTotal / $estimatedTotalBytes ) *100 " | bc )
         updateProgressDialog "progress: ${progressPercentage}"
 
-        sysdialogProgressText=$( tail -n1 "$sysdiagnoseExecutionLog" | sed -e 's|Executing container: ||g' -e 's|^[.)]|Processing …|g' -e 's|\/private\/var\/tmp\/sysdiagnoseProgress\/IN_PROGRESS_sysdiagnose_||g' )
+        sysdialogProgressText=$( tail -n1 "$sysdiagnoseExecutionLog" | sed -e 's|Executing container: ||g' -e 's|^[.)]|Processing …|g' -Ee 's|/?.*/[^/]*\.tmp||g' )
         updateProgressDialog "progresstext: ${sysdialogProgressText}"
         updateScriptLog "${sysdialogProgressText}"
 
@@ -334,7 +338,7 @@ $gigafilesLink
 "
     jamfDisplayMessage "${message}"
 
-    # runAsUser "/usr/bin/open -R ${loggedInUserHome}/Desktop/sysdiagnose_${serialNumber}_${timestamp}.tar.gz"
+    # runAsUser "open -R ${loggedInUserHome}/Desktop/sysdiagnose_${serialNumber}_${timestamp}.tar.gz"
     open -R "${loggedInUserHome}/Desktop/sysdiagnose_${serialNumber}_${timestamp}.tar.gz"
 
     updateScriptLog "Saved as: sysdiagnose_${serialNumber}_${timestamp}.tar.gz"
@@ -430,7 +434,7 @@ fi
 
 if [[ ! -f "${scriptLog}" ]]; then
     touch "${scriptLog}"
-    echo "$( date +%Y-%m-%d\ %H:%M:%S )  *** Created log file via script ***" >>"${scriptLog}"
+    updateScriptLog "*** Created log file via script ***"
 fi
 
 
