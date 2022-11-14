@@ -96,11 +96,11 @@ function jamfDisplayMessage() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (thanks, Adam!)
-# https://github.com/acodega/dialog-scripts/blob/main/dialogCheckFunction.sh
+# Check for / install swiftDialog (Thanks big bunches, @acodega!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function dialogCheck(){
+function dialogCheck() {
+
   # Get the URL of the latest PKG From the Dialog GitHub repo
   dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
@@ -159,9 +159,6 @@ function quitScript() {
     sleep 1
     updateScriptLog "Exiting …"
 
-    # brutal hack - need to find a better way
-    killall tail
-
     # Remove dialogMessageLog
     if [[ -e ${dialogMessageLog} ]]; then
         updateScriptLog "Removing ${dialogMessageLog} …"
@@ -196,7 +193,7 @@ fi
 # Logging preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "Display Message via Dialog (${scriptVersion})"
+updateScriptLog "\n\n###\n# Display Message via Dialog (${scriptVersion})\n###\n"
 
 
 
