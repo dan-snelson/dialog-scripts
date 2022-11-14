@@ -35,7 +35,7 @@
 scriptVersion="1.3.0"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 debugMode="${4:-"true"}"            # [ true (default) | false ]
-assetTagCapture="${5:-"false"}"     # [ true | false (default) ]
+infoCapture="${5:-"false"}"     # [ true | false (default) ]
 completionAction="${6:-"wait"}"     # [ number of seconds to sleep | wait (default) ]
 scriptLog="${7:-"/var/tmp/org.churchofjesuschrist.log"}"
 
@@ -232,6 +232,13 @@ dialogWelcomeCMD="$dialogApp \
 --titlefont 'size=26' \
 --messagefont 'size=16' \
 --textfield \"Asset Tag\",required=true,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^(AP|IP)?[0-9]{7,}$',regexerror=\"Please enter (at least) seven digits for the Asset Tag, optionally preceed by either 'AP' or 'IP'. \" \
+--textfield \"Computer Name\",required=true,prompt=\"Please enter your Mac's Computer Name\" \
+--selecttitle \"Location\" \
+--selectvalues \"Building 1, Building 2, Buliding 3\" \
+--selectdefault \"Building 1\" \
+--selecttitle \"Department\" \
+--selectvalues \"Department 1, Department 2, Department 3\" \
+--selectdefault \"Department 1\" \
 --quitkey k \
 --commandfile \"$welcomeCommandFile\" "
 
@@ -493,12 +500,29 @@ function get_json_value() {
 function run_jamf_trigger() {
     trigger="$1"
     if [[ "$debugMode" = true ]]; then
-        updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
+        if [ "$trigger" == "recon" ]; then
+            if [[ ${infoCapture} == "true" ]]; then
+                updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary recon -assetTag ${assetTag}"
+                updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary setComputerName -name ${computerName}"
+                updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary recon -department ${department}"
+                updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary recon -building ${location}"
+            else
+                updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon"
+            fi
+        else
+            updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
+        fi
         sleep 2
-    elif [[ "$trigger" == "recon" ]]; then
-        if [[ ${assetTagCapture} == "true" ]]; then
+    elif [ "$trigger" == "recon" ]; then
+        if [[ ${infoCapture} == "true" ]]; then
             updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
             "$jamfBinary" recon -assetTag "${assetTag}"
+            updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary setComputerName -name ${computerName}"
+            "$jamfBinary" setComputerName -name "${computerName}"
+            updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -department ${department}"
+            "$jamfBinary" recon -department "${department}"
+            updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -building ${location}"
+            "$jamfBinary" recon -building "${location}"
         else
             updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon"
             "$jamfBinary" recon
@@ -650,11 +674,15 @@ caffeinate -dimsu -w $$ &
 # Display Welcome Screen and capture user's interaction
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ${assetTagCapture} == "true" ]]; then
+if [[ ${infoCapture} == "true" ]]; then
 
-    assetTag=$( eval "$dialogWelcomeCMD" | awk -F " : " '{print $NF}' )
-    dialogProcessID=$!
+    userDialogInput=$( eval "$dialogWelcomeCMD" )
 
+    computerName=$( echo "$userDialogInput" | grep "Computer Name" | awk -F " : " '{print $NF}' )
+    department=$( echo "$userDialogInput" | grep "Department" | head -1 | awk -F " : " '{print $NF}' )
+    location=$( echo "$userDialogInput" | grep "Location" | head -1 | awk -F " : " '{print $NF}' )
+    assetTag=$( echo "$userDialogInput" | grep "Asset Tag" | awk -F " : " '{print $NF}' )
+    
     if [[ -z ${assetTag} ]]; then
         returncode="2"
     else
@@ -669,7 +697,7 @@ fi
 # Evaluate User Interaction at Welcome Screen
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ${assetTagCapture} == "true" ]]; then
+if [[ ${infoCapture} == "true" ]]; then
 
     case ${returncode} in
 
