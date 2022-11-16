@@ -15,6 +15,10 @@
 #   Version 0.0.1, 14-Nov-2022, Dan K. Snelson (@dan-snelson)
 #       Original proof-of-concept version
 #
+#   Version 0.0.2, 16-Nov-2022, Dan K. Snelson (@dan-snelson)
+#       Added "last logged-in user" logic
+#       Added check for Dialog.png (with graceful exit)
+#
 ####################################################################################################
 
 
@@ -29,7 +33,7 @@
 # Global Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.1"
+scriptVersion="0.0.2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
@@ -74,10 +78,8 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
-    echo "No user logged-in; exiting."
-    exit 0
-# else
-#     uid=$(id -u "${loggedInUser}")
+    echo "No user logged-in; failing back to last logged-in user …"
+    loggedInUser=$( last -1 -t ttys000 | awk '{print $1}' )
 fi
 
 
@@ -98,6 +100,20 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 updateScriptLog "\n\n###\n# swiftDialog Pre-install (${scriptVersion})\n###\n"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate Dialog Branding Image
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "Validate 'Dialog.png' …"
+if [[ -f "/Library/Application Support/Dialog/Dialog.png" ]]; then
+    updateScriptLog "The file '/Library/Application Support/Dialog/Dialog.png' already exists; exiting."
+    exit 0
+else
+    updateScriptLog "The file '/Library/Application Support/Dialog/Dialog.png' does not exist; proceeding …"
+fi
 
 
 
