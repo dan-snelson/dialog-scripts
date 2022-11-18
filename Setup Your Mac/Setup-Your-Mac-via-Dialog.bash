@@ -35,7 +35,7 @@ scriptVersion="1.3.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 debugMode="${4:-"true"}"                # [ true (default) | false ]
 assetTagCapture="${5:-"false"}"         # [ true | false (default) ]
-completionActionOption="${6:-"wait"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Confirm | Restart | Restart Confirm | Log Out | Log Out Confirm ]
+completionActionOption="${6:-"Sleep 4"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Confirm | Restart | Restart Confirm | Log Out | Log Out Confirm ]
 scriptLog="${7:-"/var/tmp/org.churchofjesuschrist.log"}"
 exitCode="0"
 
@@ -431,7 +431,7 @@ function finalise(){
         dialogUpdateSetupYourMac "button1: enable"
         dialogUpdateSetupYourMac "progress: complete"
 
-        updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+        updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
         # If anything fails, wait for user-acknowledgment
         wait
 
@@ -444,7 +444,7 @@ function finalise(){
         dialogUpdateFailure "message: A failure has been detected, ${loggedInUserFirstname}.  \n\nPlease complete the following steps:\n1. Reboot and login to your Mac  \n2. Login to Self Service  \n3. Re-run any failed policy listed below  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please contact the Help Desk,  \n+1 (801) 555-1212, and mention [KB86753099](https://servicenow.company.com/support?id=kb_article_view&sysparm_article=KB86753099#Failures). "
         dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
 
-        updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+        updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
         # If anything fails, wait for user-acknowledgment
         wait
 
@@ -462,7 +462,7 @@ function finalise(){
         # If either "wait" or "sleep" has been specified for `completionActionOption`, honor that behavior
         if [[ "${completionActionOption}" == "wait" ]] || [[ "${completionActionOption}" == "[Ss]leep"* ]]; then
             updateScriptLog "Honoring ${completionActionOption} behavior …"
-            updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+            updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
             eval "${completionActionOption}" "${dialogSetupYourMacProcessID}"
         fi
 
@@ -496,7 +496,7 @@ function run_jamf_trigger() {
         updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
         sleep 1
     elif [[ "$trigger" == "recon" ]]; then
-        updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+        updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
         dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
         if [[ ${assetTagCapture} == "true" ]]; then
             updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
@@ -527,6 +527,8 @@ function killProcess() {
         if pgrep -a "$process" >/dev/null ; then
             updateScriptLog "ERROR: '$process' could not be terminated."
         fi
+    else
+        updateScriptLog "The '$process' process isn't running."
     fi
 }
 
@@ -580,12 +582,19 @@ function completionAction() {
             sleepDuration=$( awk '{print $NF}' <<< "${1}" )
             updateScriptLog "Sleeping for ${sleepDuration} seconds …"
             sleep "${sleepDuration}"
+
+            # updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
+            # dialogUpdateSetupYourMac "quit:"
+
+            updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
+            killProcess "Dialog"
+
             updateScriptLog "Goodnight!"
             ;;
 
         * )
             updateScriptLog "Using the default of 'wait'"
-            updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+            updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
             wait
             ;;
 
@@ -798,6 +807,9 @@ else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
+    updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
+    updateScriptLog "dialogSetupYourMacProcessID: ${dialogSetupYourMacProcessID}"
+    # eval "${dialogSetupYourMacCMD[*]}" && dialogSetupYourMacProcessID=$! & sleep 0.3
     if [[ ${debugMode} == "true" ]]; then
         dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
     fi
