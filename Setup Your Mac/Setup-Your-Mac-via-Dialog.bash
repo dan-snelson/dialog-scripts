@@ -9,14 +9,13 @@
 #
 # HISTORY
 #
-#   Version 1.3.0, 09-Nov-2022, Dan K. Snelson (@dan-snelson)
-#       Script Parameter Changes:
-#       - Parameter 4: `debug` mode enabled by default
-#       - Parameter 7: Script Log Location
-#       Embraced drastic speed improvements in swiftDialog v2
-#       Caffeinated script (thanks, @grahampugh!)
-#       Enhanced `wait` exiting logic
-#       General script standardization
+#   Version 1.3.1, 17-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   - Added a `completionAction` function (i.e., Wait, Sleep, Logout, Restart or Shutdown; see [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15))
+#   - Removed `jamfDisplayMessage` function and reverted `dialogCheck` function to use `osascript` (with an enhanced error message)
+#   - Swapped `blurscreen` for `moveable` in Debug Mode
+#   - Replaced "Installing …" with "Updating …" for `recon`-flavored `trigger`
+#   - Changed "Updating Inventory" to "Computer Inventory" in final `listitem`
+#   - Increased Debug Mode speed
 #
 ####################################################################################################
 
@@ -32,31 +31,17 @@
 # Script Version & Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.3.0"
+scriptVersion="1.3.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
-debugMode="${4:-"true"}"            # [ true (default) | false ]
-assetTagCapture="${5:-"false"}"     # [ true | false (default) ]
-completionAction="${6:-"wait"}"     # [ number of seconds to sleep | wait (default) ]
+debugMode="${4:-"true"}"                # [ true (default) | false ]
+assetTagCapture="${5:-"false"}"         # [ true | false (default) ]
+completionActionOption="${6:-"Restart Confirm"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Confirm | Restart | Restart Confirm | Log Out | Log Out Confirm ]
 scriptLog="${7:-"/var/tmp/org.churchofjesuschrist.log"}"
+exitCode="0"
 
+# Evaluate Debug Mode for `scriptVersion`
 if [[ ${debugMode} == "true" ]]; then
     scriptVersion="Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for an allowed "Completion Action" value (Parameter 6); defaults to "wait"
-# Options: [ number of seconds to sleep | wait (default) ]
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-case "${completionAction}" in
-    '' | *[!0-9]*   ) completionAction="wait" ;;
-    *               ) completionAction="sleep ${completionAction}" ;;
-esac
-
-if [[ ${debugMode} == "true" ]]; then
-    echo "Using \"${completionAction}\" as the Completion Action"
 fi
 
 
@@ -181,7 +166,7 @@ policy_array=('
             ]
         },
         {
-            "listitem": "Update Inventory",
+            "listitem": "Computer Inventory",
             "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
             "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
             "trigger_list": [
@@ -264,7 +249,7 @@ dialogSetupYourMacCMD="$dialogApp \
 --icon \"$icon\" \
 --progress \
 --progresstext \"Initializing configuration …\" \
---button1text \"Quit\" \
+--button1text \"Wait\" \
 --button1disabled \
 --infotext \"$scriptVersion\" \
 --titlefont 'size=28' \
@@ -332,12 +317,14 @@ function updateScriptLog() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# JAMF Display Message (for fallback in case swiftDialog fails to install)
+# Run command as logged-in user (thanks, @scriptingosx!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function jamfDisplayMessage() {
-    updateScriptLog "Jamf Display Message: ${1}"
-    /usr/local/jamf/bin/jamf displayMessage -message "${1}" &
+function runAsUser() {
+
+    updateScriptLog "Run \"$@\" as \"$uid\" … "
+    launchctl asuser "$uid" sudo -u "$loggedInUser" "$@"
+
 }
 
 
@@ -348,47 +335,48 @@ function jamfDisplayMessage() {
 
 function dialogCheck() {
 
-  # Get the URL of the latest PKG From the Dialog GitHub repo
-  dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+    # Get the URL of the latest PKG From the Dialog GitHub repo
+    dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
-  # Expected Team ID of the downloaded PKG
-  expectedDialogTeamID="PWA5E9TQ59"
+    # Expected Team ID of the downloaded PKG
+    expectedDialogTeamID="PWA5E9TQ59"
 
-  # Check for Dialog and install if not found
-  if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
+    # Check for Dialog and install if not found
+    if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
 
-    updateScriptLog "Dialog not found. Installing..."
+        updateScriptLog "Dialog not found. Installing..."
 
-    # Create temporary working directory
-    workDirectory=$( /usr/bin/basename "$0" )
-    tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+        # Create temporary working directory
+        workDirectory=$( /usr/bin/basename "$0" )
+        tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
 
-    # Download the installer package
-    /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
+        # Download the installer package
+        /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
 
-    # Verify the download
-    teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
+        # Verify the download
+        teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
 
-    # Install the package if Team ID validates
-    if [ "$expectedDialogTeamID" = "$teamID" ] || [ "$expectedDialogTeamID" = "" ]; then
- 
-      /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+        # Install the package if Team ID validates
+        if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
+
+            /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+
+        else
+
+            runAsUser osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
+            exitCode="1"
+            quitScript
+
+        fi
+
+        # Remove the temporary working directory when done
+        /bin/rm -Rf "$tempDirectory"  
 
     else
 
-      jamfDisplayMessage "Dialog Team ID verification failed."
-      exit 1
+        updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
 
     fi
- 
-    # Remove the temporary working directory when done
-    /bin/rm -Rf "$tempDirectory"  
-
-  else
-
-    updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
-
-  fi
 
 }
 
@@ -436,13 +424,17 @@ function finalise(){
     if [[ "${jamfProPolicyTriggerFailure}" == "failed" ]]; then
 
         killProcess "caffeinate"
+        updateScriptLog "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
         dialogUpdateSetupYourMac "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         dialogUpdateSetupYourMac "progresstext: Failures detected. Please click Continue for troubleshooting information."
         dialogUpdateSetupYourMac "button1text: Continue …"
         dialogUpdateSetupYourMac "button1: enable"
         dialogUpdateSetupYourMac "progress: complete"
-        updateScriptLog "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
-        eval "${completionAction}"
+
+        updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+        # If anything fails, wait for user-acknowledgment
+        wait
+
         dialogUpdateSetupYourMac "quit:"
         eval "${dialogFailureCMD}" & sleep 0.3
         if [[ ${debugMode} == "true" ]]; then
@@ -450,7 +442,11 @@ function finalise(){
         fi
         dialogUpdateFailure "message: A failure has been detected, ${loggedInUserFirstname}.  \n\nPlease complete the following steps:\n1. Reboot and login to your Mac  \n2. Login to Self Service  \n3. Re-run any failed policy listed below  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please contact the Help Desk,  \n+1 (801) 555-1212, and mention [KB86753099](https://servicenow.company.com/support?id=kb_article_view&sysparm_article=KB86753099#Failures). "
         dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
-        eval "${completionAction}"
+
+        updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+        # If anything fails, wait for user-acknowledgment
+        wait
+
         dialogUpdateFailure "quit:"
         quitScript "1"
 
@@ -461,11 +457,13 @@ function finalise(){
         dialogUpdateSetupYourMac "progress: complete"
         dialogUpdateSetupYourMac "button1text: Quit"
         dialogUpdateSetupYourMac "button1: enable"
-        if [[ "${completionAction}" == "wait" ]]; then
-            wait "${dialogProcessID}" # Comment-out this line to NOT require user-interaction for successful completions
-        else
-            eval "${completionAction}"
+
+        # If either "wait" or "sleep" has been specified for `completionActionOption`, honor that behavior
+        if [[ "${completionActionOption}" == "wait" ]] || [[ "${completionActionOption}" == "[Ss]leep"* ]]; then
+            updateScriptLog "Honoring ${completionActionOption} behavior …"
+            eval "${completionActionOption}"
         fi
+
         quitScript "0"
 
     fi
@@ -492,10 +490,12 @@ function get_json_value() {
 
 function run_jamf_trigger() {
     trigger="$1"
-    if [[ "$debugMode" = true ]]; then
+    if [[ "$debugMode" == "true" ]]; then
         updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
-        sleep 2
+        sleep 1
     elif [[ "$trigger" == "recon" ]]; then
+        updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+        dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
         if [[ ${assetTagCapture} == "true" ]]; then
             updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
             "$jamfBinary" recon -assetTag "${assetTag}"
@@ -531,6 +531,73 @@ function killProcess() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Completion Action (i.e., Wait, Sleep, Logout, Restart or Shutdown)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function completionAction() {
+
+    shopt -s nocasematch
+
+    case ${completionActionOption} in
+
+        "Shut Down" )
+            updateScriptLog "Shut down without showing a confirmation dialog"
+            runAsUser osascript -e 'tell app "System Events" to shut down'
+            # /sbin/shutdown -h +1 &
+            ;;
+
+        "Shut Down Confirm" )
+            updateScriptLog "Shut down after showing a confirmation dialog"
+            runAsUser osascript -e 'tell app "loginwindow" to «event aevtrsdn»'
+            ;;
+
+        "Restart" )
+            updateScriptLog "Restart without showing a confirmation dialog"
+            runAsUser osascript -e 'tell app "System Events" to restart'
+            # /sbin/shutdown -r +1 &
+            ;;
+
+        "Restart Confirm" )
+            updateScriptLog "Restart after showing a confirmation dialog"
+            runAsUser osascript -e 'tell app "loginwindow" to «event aevtrrst»'
+            ;;
+
+        "Log Out" )
+            updateScriptLog "Log out without showing a confirmation dialog"
+            runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
+            # /bin/launchctl bootout user/"${loggedInUserID}"
+            ;;
+
+        "Log Out Confirm" )
+            updateScriptLog "Log out after showing a confirmation dialog"
+            runAsUser osascript -e 'tell app "System Events" to log out'
+            ;;
+
+        "Sleep"* )
+            # sleepDuration=$( echo "${1}" | awk '{print $NF}' )
+            sleepDuration=$( awk '{print $NF}' <<< "${1}" )
+            updateScriptLog "Sleeping for ${sleepDuration} seconds …"
+            sleep "${sleepDuration}"
+            updateScriptLog "Goodnight!"
+            ;;
+
+        * )
+            updateScriptLog "Using the default of 'wait'"
+            updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+            wait "${dialogProcessID}" 
+            ;;
+
+    esac
+
+    shopt -u nocasematch
+
+    exit "${exitCode}"
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Quit Script (thanks, @bartreadon!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -560,8 +627,8 @@ function quitScript() {
         rm "${failureCommandFile}"
     fi
 
-    updateScriptLog "Goodbye!"
-    exit "${1}"
+    updateScriptLog "Performing ${completionActionOption} …"
+    completionAction "${completionActionOption}"
 
 }
 
@@ -591,6 +658,19 @@ fi
 if [[ ! -f "${scriptLog}" ]]; then
     touch "${scriptLog}"
     updateScriptLog "*** Created log file via script ***"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate logged-in user
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
+    echo "No user logged-in; exiting."
+    quitScript
+else
+    uid=$(id -u "${loggedInUser}")
 fi
 
 
@@ -690,8 +770,8 @@ if [[ ${assetTagCapture} == "true" ]]; then
 
         3)  ## Process exit code 3 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked infobutton"
-            /usr/bin/osascript -e "set Volume 3"
-            /usr/bin/afplay /System/Library/Sounds/Tink.aiff
+            osascript -e "set Volume 3"
+            afplay /System/Library/Sounds/Glass.aiff
             ;;
 
         4)  ## Process exit code 4 scenario here
@@ -708,6 +788,11 @@ if [[ ${assetTagCapture} == "true" ]]; then
     esac
 
 else
+
+    # If Debug Mode is enabled, replace `blurscreen` with `movable`
+    if [[ ${debugMode} == "true" ]]; then
+        dialogSetupYourMacCMD=${dialogSetupYourMacCMD//blurscreen/moveable}
+    fi
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogProcessID=$!
@@ -790,12 +875,12 @@ for (( i=0; i<dialog_step_length; i++ )); do
     trigger_list_length=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list.length")
 
     # If there's a value in the variable, update running swiftDialog
-
     if [[ -n "$listitem" ]]; then dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Installing …, "; fi
     if [[ -n "$icon" ]]; then dialogUpdateSetupYourMac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon}"; fi
     if [[ -n "$progresstext" ]]; then dialogUpdateSetupYourMac "progresstext: $progresstext"; fi
     if [[ -n "$trigger_list_length" ]]; then
         for (( j=0; j<trigger_list_length; j++ )); do
+
             # Setting variables within the trigger_list
             trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
             path=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].path")
@@ -803,7 +888,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
             # If the path variable has a value, check if that path exists on disk
             if [[ -f "$path" ]]; then
                 updateScriptLog "SETUP YOUR MAC DIALOG: INFO: $path exists, moving on"
-                if [[ "$debugMode" = true ]]; then sleep 3; fi
+                if [[ "$debugMode" == "true" ]]; then sleep 0.5; fi
             else
                 run_jamf_trigger "$trigger"
             fi
@@ -814,9 +899,13 @@ for (( i=0; i<dialog_step_length; i++ )); do
     updateScriptLog "SETUP YOUR MAC DIALOG: Testing for \"$path\" …"
     if [[ -f "$path" ]] || [[ -z "$path" ]]; then
         dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
+        if [[ "$trigger" == "recon" ]]; then
+            dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Updated"
+        fi
     else
         dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
         jamfProPolicyTriggerFailure="failed"
+        exitCode="1"
         jamfProPolicyPolicyNameFailures+="• $listitem  \n"
     fi
 
