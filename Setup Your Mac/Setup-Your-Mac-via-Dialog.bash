@@ -35,7 +35,7 @@ scriptVersion="1.3.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 debugMode="${4:-"true"}"                # [ true (default) | false ]
 assetTagCapture="${5:-"false"}"         # [ true | false (default) ]
-completionActionOption="${6:-"Restart Confirm"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Confirm | Restart | Restart Confirm | Log Out | Log Out Confirm ]
+completionActionOption="${6:-"wait"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Confirm | Restart | Restart Confirm | Log Out | Log Out Confirm ]
 scriptLog="${7:-"/var/tmp/org.churchofjesuschrist.log"}"
 exitCode="0"
 
