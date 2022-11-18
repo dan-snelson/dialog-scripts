@@ -437,6 +437,7 @@ function finalise(){
 
         dialogUpdateSetupYourMac "quit:"
         eval "${dialogFailureCMD}" & sleep 0.3
+
         if [[ ${debugMode} == "true" ]]; then
             dialogUpdateFailure "title: DEBUG MODE | $failureTitle"
         fi
@@ -461,7 +462,8 @@ function finalise(){
         # If either "wait" or "sleep" has been specified for `completionActionOption`, honor that behavior
         if [[ "${completionActionOption}" == "wait" ]] || [[ "${completionActionOption}" == "[Ss]leep"* ]]; then
             updateScriptLog "Honoring ${completionActionOption} behavior …"
-            eval "${completionActionOption}"
+            updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
+            eval "${completionActionOption}" "${dialogSetupYourMacProcessID}"
         fi
 
         quitScript "0"
@@ -584,7 +586,7 @@ function completionAction() {
         * )
             updateScriptLog "Using the default of 'wait'"
             updateScriptLog "Hard-coded testing at Line No. ${LINENO}!"
-            wait "${dialogProcessID}" 
+            wait
             ;;
 
     esac
@@ -733,7 +735,7 @@ caffeinate -dimsu -w $$ &
 if [[ ${assetTagCapture} == "true" ]]; then
 
     assetTag=$( eval "$dialogWelcomeCMD" | awk -F " : " '{print $NF}' )
-    dialogProcessID=$!
+    # dialogWelcomeProcessID=$!
 
     if [[ -z ${assetTag} ]]; then
         returncode="2"
@@ -756,7 +758,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
         0)  ## Process exit code 0 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
-            dialogProcessID=$!
+            dialogSetupYourMacProcessID=$!
             dialogUpdateSetupYourMac "message: Asset Tag reported as \`${assetTag}\`. $message"
             if [[ ${debugMode} == "true" ]]; then
                 dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
@@ -777,7 +779,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
         4)  ## Process exit code 4 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} allowed timer to expire"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
-            dialogProcessID=$!
+            dialogSetupYourMacProcessID=$!
             ;;
 
         *)  ## Catch all processing
@@ -795,7 +797,7 @@ else
     fi
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
-    dialogProcessID=$!
+    dialogSetupYourMacProcessID=$!
     if [[ ${debugMode} == "true" ]]; then
         dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
     fi
