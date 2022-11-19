@@ -9,14 +9,10 @@
 #
 # HISTORY
 #
-#   Version 1.3.1, 17-Nov-2022, Dan K. Snelson (@dan-snelson)
-#   - Added a `completionAction` function (i.e., Wait, Sleep, Logout, Restart or Shutdown; see [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15))
-#       - Added brute-force `killProcess "Self Service"` for so-called "forced" options
-#   - Removed `jamfDisplayMessage` function and reverted `dialogCheck` function to use `osascript` (with an enhanced error message)
-#   - Swapped `blurscreen` for `moveable` in Debug Mode
-#   - Replaced "Installing …" with "Updating …" for `recon`-flavored `trigger`
-#   - Changed "Updating Inventory" to "Computer Inventory" in final `listitem`
-#   - Increased Debug Mode speed
+#   Version 1.3.1, 19-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   - Signficantly enchanced Completion Action options
+#   - Improved Debug Mode behavior
+#   - Miscellaneous Improvements
 #
 ####################################################################################################
 
