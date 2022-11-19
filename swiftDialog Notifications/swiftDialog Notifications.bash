@@ -3,10 +3,9 @@
 #
 # ABOUT
 #
-#   swiftDialog Pre-install
-#   Pre-install Company Logo for swiftDialog v2 Notifications
+#   swiftDialog Notifications
 #
-#   See: https://snelson.us/
+#   See: https://snelson.us/2022/11/macos-notifications-via-swiftdialog-0-0-1/
 #
 ####################################################################################################
 #
@@ -32,7 +31,13 @@
 scriptVersion="0.0.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+dialogApp="/usr/local/bin/dialog"
+dialogNotificationLog=$( mktemp /var/tmp/dialogNotificationLog.XXX )
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
+
+if [[ -n ${5} ]]; then titleoption="--title"; title="${5}"; fi
+if [[ -n ${6} ]]; then subtitleoption="--subtitle"; subtitle="${6}"; fi
+if [[ -n ${7} ]]; then messageoption="--message"; message="${7}"; fi
 
 
 
@@ -50,6 +55,26 @@ function updateScriptLog() {
     echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
 }
 
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Quit Script (thanks, @bartreadon!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function quitScript() {
+
+    updateScriptLog "Quitting …"
+
+    # Remove dialogNotificationLog
+    if [[ -e ${dialogNotificationLog} ]]; then
+        updateScriptLog "Removing ${dialogNotificationLog} …"
+        rm "${dialogNotificationLog}"
+    fi
+
+    updateScriptLog "Goodbye!"
+    exit "${1}"
+
+}
 
 
 ####################################################################################################
@@ -97,44 +122,52 @@ fi
 # Logging preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "\n\n###\n# swiftDialog Pre-install (${scriptVersion})\n###\n"
+updateScriptLog "\n\n###\n# swiftDialog Notifications (${scriptVersion})\n###\n"
+
+
+
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Create Dialog directory
+# Validate Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ! -d "/Library/Application Support/Dialog/" ]]; then
-    updateScriptLog "Creating '/Library/Application Support/Dialog/' …"
-    mkdir -p "/Library/Application Support/Dialog/"
+if [[ -z "${title}" ]] ; then
+
+    updateScriptLog "Parameter 5 is NOT populated; displaying instructions …"
+
+    titleoption="--title"
+    title="Title [Parameter 5] goes here"
+
+    subtitleoption="--subtitle"
+    subtitle="Subtitle [Parameter 6] goes here"
+
+    messageoption="--message"
+    message="Message [Parameter 7] goes here"
+
 else
-    updateScriptLog "The directory '/Library/Application Support/Dialog/' exists …"
+
+    updateScriptLog "Parameters 5, \"title,\" is populated; proceeding ..."
+
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Copy Self Service Branding Image
+# Display Notification
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "Copy 'brandingimage.png' …"
-cp -v "/Users/${loggedInUser}/Library/Application Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png" "/Library/Application Support/Dialog/Dialog.png"
+updateScriptLog "Title: ${title}"
+updateScriptLog "Subtitle: ${subtitle}"
+updateScriptLog "Message: ${message}"
 
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate Dialog Branding Image
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-updateScriptLog "Validate 'Dialog.png' …"
-if [[ ! -f "/Library/Application Support/Dialog/Dialog.png" ]]; then
-    updateScriptLog "Error: The file '/Library/Application Support/Dialog/Dialog.png' was NOT found."
-    exit 1
-else
-    updateScriptLog "The file '/Library/Application Support/Dialog/Dialog.png' was create sucessfully."
-    ls -lah "/Library/Application Support/Dialog/Dialog.png"
-fi
+${dialogApp} \
+    --notification \
+    ${titleoption} "${title}" \
+    ${subtitleoption} "${subtitle}" \
+    ${messageoption} "${message}" \
+    --commandfile "$dialogNotificationLog}"
 
 
 
@@ -142,6 +175,6 @@ fi
 # Exit
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "End-of-line."
+quitScript "0"
 
 exit 0
