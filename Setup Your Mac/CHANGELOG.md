@@ -1,7 +1,7 @@
 # CHANGELOG
 
 ## 1.3.1
-- Signficantly enchanced **Completion Action** options
+- Significantly enhanced **Completion Action** options
   - :white_check_mark: Addresses [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15) (thanks, @mvught, @riddl0rd, @iDrewbs and @master-vodawagner)
   - :man_dancing: Dynamically set `button1text` based on the value of `completionActionOption` (thanks, @jared-a-young)
   - :new: Three new flavors: **Shut Down**, **Restart** or **Log Out**
