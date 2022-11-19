@@ -1,12 +1,30 @@
 # CHANGELOG
 
 ## 1.3.1
-- Added a `completionAction` function (i.e., Wait, Sleep, Logout, Restart or Shutdown; see [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15))
-- Removed `jamfDisplayMessage` function and reverted `dialogCheck` function to use `osascript` (with an enhanced error message)
-- Swapped `blurscreen` for `moveable` in Debug Mode
-- Replaced "Installing …" with "Updating …" for `recon`-flavored `trigger`
-- Changed "Updating Inventory" to "Computer Inventory" in final `listitem`
-- Increased Debug Mode speed
+- Signficantly enchanced **Completion Action** options
+  - :white_check_mark: Addresses [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15) (thanks, @mvught, @riddl0rd, @iDrewbs and @master-vodawagner)
+  - :man_dancing: Dynamically set `button1text` based on the value of `completionActionOption` (thanks, @jared-a-young)
+  - :new: Three new flavors: **Shut Down**, **Restart** or **Log Out**
+    - :rotating_light: **Forced:** Zero user-interaction
+      - Added brute-force `killProcess "Self Service"`
+      - Added `hack` to allow Policy Logs to be shipped to Jamf Pro server
+    - :warning: **Attended:** Forced, but only _after_ user-interaction (thanks, @owainiorwerth)
+      - Added `hack` to allow Policy Logs to be shipped to Jamf Pro server
+    - :bust_in_silhouette: **Confirm:** Displays built-in macOS _user-dismissible_ dialog box
+  - Sleep
+  - Wait (default)
+- Improved **Debug Mode** behavior
+  - :bug: `DEBUG MODE |` now only displayed as `infotext` (i.e., bottom, left-hand corner)
+  - `completionAction` informational-only with simple dialog box (thanks, @_____?)
+  - Swapped `blurscreen` for `moveable`
+  - General peformance increases
+- Miscellaneous Improvements
+  - Removed `jamfDisplayMessage` function and reverted `dialogCheck` function to use `osascript` (with an enhanced error message)
+  - Replaced "Installing …" with "Updating …" for `recon`-flavored `trigger`
+  - Changed "Updating Inventory" to "Computer Inventory" for `recon`-flavored `listitem`
+  - Changed exit code to `1` when user quits "Welcome" screen
+  - Changed `welcomeIcon` URLs
+  - Add way too many [emojis](https://github-emoji-picker.vercel.app) to ChangeLog
 
 ## 1.3.0
 ### 09-Nov-2022 

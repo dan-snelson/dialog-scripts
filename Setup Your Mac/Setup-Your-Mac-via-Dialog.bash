@@ -11,6 +11,7 @@
 #
 #   Version 1.3.1, 17-Nov-2022, Dan K. Snelson (@dan-snelson)
 #   - Added a `completionAction` function (i.e., Wait, Sleep, Logout, Restart or Shutdown; see [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15))
+#       - Added brute-force `killProcess "Self Service"` for so-called "forced" options
 #   - Removed `jamfDisplayMessage` function and reverted `dialogCheck` function to use `osascript` (with an enhanced error message)
 #   - Swapped `blurscreen` for `moveable` in Debug Mode
 #   - Replaced "Installing …" with "Updating …" for `recon`-flavored `trigger`
@@ -28,20 +29,25 @@
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Script Version & Jamf Pro Script Parameters
+# Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 scriptVersion="1.3.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 debugMode="${4:-"true"}"                # [ true (default) | false ]
 assetTagCapture="${5:-"false"}"         # [ true | false (default) ]
-completionActionOption="${6:-"Sleep 4"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Confirm | Restart | Restart Confirm | Log Out | Log Out Confirm ]
+completionActionOption="${6:-"wait"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
 scriptLog="${7:-"/var/tmp/org.churchofjesuschrist.log"}"
 exitCode="0"
 
-# Evaluate Debug Mode for `scriptVersion`
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Reflect Debug Mode in `infotext` (i.e., bottom, left-hand corner of each dialog)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 if [[ ${debugMode} == "true" ]]; then
-    scriptVersion="Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
+    scriptVersion="DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
 fi
 
 
@@ -192,9 +198,9 @@ welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Co
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
 
 if [[ "${appleInterfaceStyle}" == "Dark" ]]; then
-    welcomeIcon="https://wallpapercave.com/dwp2x/MGxxFCB.jpg"
+    welcomeIcon="https://cdn-icons-png.flaticon.com/512/740/740878.png"
 else
-    welcomeIcon="https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Apple_Computer_Logo_rainbow.svg/1028px-Apple_Computer_Logo_rainbow.svg.png?20201228132849"
+    welcomeIcon="https://cdn-icons-png.flaticon.com/512/979/979585.png"
 fi
 
 
@@ -300,6 +306,52 @@ dialogFailureCMD="$dialogApp \
 
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Dynamically set `button1text` based on the value of `completionActionOption`
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+case ${completionActionOption} in
+
+    "Shut Down" )
+        button1textCompletionActionOption="Shutting Down …"
+        ;;
+
+    "Shut Down "* )
+        button1textCompletionActionOption="Shut Down"
+        ;;
+    
+    "Restart" )
+        button1textCompletionActionOption="Restarting …"
+        ;;
+
+    "Restart "* )
+        button1textCompletionActionOption="Restart"
+        ;;
+
+    "Log Out" )
+        button1textCompletionActionOption="Logging Out …"
+        ;;
+
+    "Log Out "* )
+        button1textCompletionActionOption="Log Out"
+        ;;
+
+    "Sleep"* )
+        button1textCompletionActionOption="Sleep"
+        ;;
+
+    "Quit" ) 
+        button1textCompletionActionOption="Quit"
+        ;;
+
+    * )
+        button1textCompletionActionOption="Wait"
+        ;;
+
+esac
+
+
+
 ####################################################################################################
 #
 # Functions
@@ -322,8 +374,8 @@ function updateScriptLog() {
 
 function runAsUser() {
 
-    updateScriptLog "Run \"$@\" as \"$uid\" … "
-    launchctl asuser "$uid" sudo -u "$loggedInUser" "$@"
+    updateScriptLog "Run \"$@\" as \"$loggedInUserID\" … "
+    launchctl asuser "$loggedInUserID" sudo -u "$loggedInUser" "$@"
 
 }
 
@@ -364,6 +416,7 @@ function dialogCheck() {
         else
 
             runAsUser osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
+            completionActionOption="Quit"
             exitCode="1"
             quitScript
 
@@ -438,11 +491,9 @@ function finalise(){
         dialogUpdateSetupYourMac "quit:"
         eval "${dialogFailureCMD}" & sleep 0.3
 
-        if [[ ${debugMode} == "true" ]]; then
-            dialogUpdateFailure "title: DEBUG MODE | $failureTitle"
-        fi
         dialogUpdateFailure "message: A failure has been detected, ${loggedInUserFirstname}.  \n\nPlease complete the following steps:\n1. Reboot and login to your Mac  \n2. Login to Self Service  \n3. Re-run any failed policy listed below  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please contact the Help Desk,  \n+1 (801) 555-1212, and mention [KB86753099](https://servicenow.company.com/support?id=kb_article_view&sysparm_article=KB86753099#Failures). "
         dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
+        dialogUpdateFailure "button1text: ${button1textCompletionActionOption}"
 
         updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
         # If anything fails, wait for user-acknowledgment
@@ -456,7 +507,7 @@ function finalise(){
         dialogUpdateSetupYourMac "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
         dialogUpdateSetupYourMac "progresstext: Complete! Please restart and enjoy your new Mac, ${loggedInUserFirstname}!"
         dialogUpdateSetupYourMac "progress: complete"
-        dialogUpdateSetupYourMac "button1text: Quit"
+        dialogUpdateSetupYourMac "button1text: ${button1textCompletionActionOption}"
         dialogUpdateSetupYourMac "button1: enable"
 
         # If either "wait" or "sleep" has been specified for `completionActionOption`, honor that behavior
@@ -540,67 +591,110 @@ function killProcess() {
 
 function completionAction() {
 
-    shopt -s nocasematch
+    if [[ ${debugMode} == "true" ]]; then
 
-    case ${completionActionOption} in
+        # If Debug Mode is enabled, ignore specified `completionActionOption`, display simple dialog box and exit
+        runAsUser osascript -e 'display dialog "Setup Your Mac is operating in Debug Mode.\r\r• completionActionOption == '"'${completionActionOption}'"'\r\r" with title "Setup Your Mac: Debug Mode" buttons {"Close"} with icon note'
+        exitCode="0"
 
-        "Shut Down" )
-            updateScriptLog "Shut down without showing a confirmation dialog"
-            runAsUser osascript -e 'tell app "System Events" to shut down'
-            # /sbin/shutdown -h +1 &
-            ;;
+    else
 
-        "Shut Down Confirm" )
-            updateScriptLog "Shut down after showing a confirmation dialog"
-            runAsUser osascript -e 'tell app "loginwindow" to «event aevtrsdn»'
-            ;;
+        shopt -s nocasematch
 
-        "Restart" )
-            updateScriptLog "Restart without showing a confirmation dialog"
-            runAsUser osascript -e 'tell app "System Events" to restart'
-            # /sbin/shutdown -r +1 &
-            ;;
+        case ${completionActionOption} in
 
-        "Restart Confirm" )
-            updateScriptLog "Restart after showing a confirmation dialog"
-            runAsUser osascript -e 'tell app "loginwindow" to «event aevtrrst»'
-            ;;
+            "Shut Down" )
+                updateScriptLog "Shut Down sans user interaction"
+                killProcess "Self Service"
+                # runAsUser osascript -e 'tell app "System Events" to shut down'
+                sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
+                # shutdown -h +1 &
+                ;;
 
-        "Log Out" )
-            updateScriptLog "Log out without showing a confirmation dialog"
-            runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
-            # /bin/launchctl bootout user/"${loggedInUserID}"
-            ;;
+            "Shut Down Attended" )
+                updateScriptLog "Shut Down, requiring user-interaction"
+                killProcess "Self Service"
+                wait
+                # runAsUser osascript -e 'tell app "System Events" to shut down'
+                sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
+                # shutdown -h +1 &
+                ;;
 
-        "Log Out Confirm" )
-            updateScriptLog "Log out after showing a confirmation dialog"
-            runAsUser osascript -e 'tell app "System Events" to log out'
-            ;;
+            "Shut Down Confirm" )
+                updateScriptLog "Shut down, only after macOS time-out or user confirmation"
+                runAsUser osascript -e 'tell app "loginwindow" to «event aevtrsdn»'
+                ;;
 
-        "Sleep"* )
-            # sleepDuration=$( echo "${1}" | awk '{print $NF}' )
-            sleepDuration=$( awk '{print $NF}' <<< "${1}" )
-            updateScriptLog "Sleeping for ${sleepDuration} seconds …"
-            sleep "${sleepDuration}"
+            "Restart" )
+                updateScriptLog "Restart sans user interaction"
+                killProcess "Self Service"
+                # runAsUser osascript -e 'tell app "System Events" to restart'
+                sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
+                # shutdown -r +1 &
+                ;;
 
-            # updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
-            # dialogUpdateSetupYourMac "quit:"
+            "Restart Attended" )
+                updateScriptLog "Restart, requiring user-interaction"
+                killProcess "Self Service"
+                wait
+                # runAsUser osascript -e 'tell app "System Events" to restart'
+                sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
+                # shutdown -r +1 &
+                ;;
 
-            updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
-            killProcess "Dialog"
+            "Restart Confirm" )
+                updateScriptLog "Restart, only after macOS time-out or user confirmation"
+                runAsUser osascript -e 'tell app "loginwindow" to «event aevtrrst»'
+                ;;
 
-            updateScriptLog "Goodnight!"
-            ;;
+            "Log Out" )
+                updateScriptLog "Log out sans user interaction"
+                killProcess "Self Service"
+                # runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
+                sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
+                # launchctl bootout user/"${loggedInUserID}"
+                ;;
 
-        * )
-            updateScriptLog "Using the default of 'wait'"
-            updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
-            wait
-            ;;
+            "Log Out Attended" )
+                updateScriptLog "Log out sans user interaction"
+                killProcess "Self Service"
+                wait
+                # runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
+                sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
+                # launchctl bootout user/"${loggedInUserID}"
+                ;;
 
-    esac
+            "Log Out Confirm" )
+                updateScriptLog "Log out, only after macOS time-out or user confirmation"
+                runAsUser osascript -e 'tell app "System Events" to log out'
+                ;;
 
-    shopt -u nocasematch
+            "Sleep"* )
+                sleepDuration=$( awk '{print $NF}' <<< "${1}" )
+                updateScriptLog "Sleeping for ${sleepDuration} seconds …"
+                sleep "${sleepDuration}"
+                killProcess "Dialog"
+                updateScriptLog "Goodnight!"
+                ;;
+
+            "Quit" ) 
+                updateScriptLog "Quitting script"
+                exitCode="0"
+                ;;
+
+            * )
+                updateScriptLog "Using the default of 'wait'"
+                updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
+                wait
+                ;;
+
+        esac
+
+        shopt -u nocasematch
+    
+    fi
+
+    updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
 
     exit "${exitCode}"
 
@@ -638,8 +732,13 @@ function quitScript() {
         rm "${failureCommandFile}"
     fi
 
-    updateScriptLog "Performing ${completionActionOption} …"
-    completionAction "${completionActionOption}"
+    # Check for user clicking "Quit" at Welcome screen
+    if [[ "${welcomeReturnCode}" == "2" ]]; then
+        exit "${exitCode}"
+    else
+        updateScriptLog "Executing Completion Action Option: '${completionActionOption}' …"
+        completionAction "${completionActionOption}"
+    fi
 
 }
 
@@ -681,7 +780,7 @@ if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
     echo "No user logged-in; exiting."
     quitScript
 else
-    uid=$(id -u "${loggedInUser}")
+    loggedInUserID=$(id -u "${loggedInUser}")
 fi
 
 
@@ -738,6 +837,17 @@ caffeinate -dimsu -w $$ &
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# If Debug Mode is enabled, replace `blurscreen` with `movable`
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ ${debugMode} == "true" ]]; then
+    dialogWelcomeCMD=${dialogWelcomeCMD//blurscreen/moveable}
+    dialogSetupYourMacCMD=${dialogSetupYourMacCMD//blurscreen/moveable}
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Display Welcome Screen and capture user's interaction
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -747,9 +857,9 @@ if [[ ${assetTagCapture} == "true" ]]; then
     # dialogWelcomeProcessID=$!
 
     if [[ -z ${assetTag} ]]; then
-        returncode="2"
+        welcomeReturnCode="2"
     else
-        returncode="0"
+        welcomeReturnCode="0"
     fi
 
 fi
@@ -762,21 +872,22 @@ fi
 
 if [[ ${assetTagCapture} == "true" ]]; then
 
-    case ${returncode} in
+    case ${welcomeReturnCode} in
 
         0)  ## Process exit code 0 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
             dialogUpdateSetupYourMac "message: Asset Tag reported as \`${assetTag}\`. $message"
-            if [[ ${debugMode} == "true" ]]; then
-                dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
-            fi
+            # if [[ ${debugMode} == "true" ]]; then
+            #     dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
+            # fi
             ;;
 
         2)  ## Process exit code 2 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
-            quitScript "0"
+            completionActionOption="Quit"
+            quitScript "1"
             ;;
 
         3)  ## Process exit code 3 scenario here
@@ -792,7 +903,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
             ;;
 
         *)  ## Catch all processing
-            updateScriptLog "WELCOME DIALOG: Something else happened; Exit code: ${returncode}"
+            updateScriptLog "WELCOME DIALOG: Something else happened; Exit code: ${welcomeReturnCode}"
             quitScript "1"
             ;;
 
@@ -800,19 +911,14 @@ if [[ ${assetTagCapture} == "true" ]]; then
 
 else
 
-    # If Debug Mode is enabled, replace `blurscreen` with `movable`
-    if [[ ${debugMode} == "true" ]]; then
-        dialogSetupYourMacCMD=${dialogSetupYourMacCMD//blurscreen/moveable}
-    fi
-
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
     updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
     updateScriptLog "dialogSetupYourMacProcessID: ${dialogSetupYourMacProcessID}"
     # eval "${dialogSetupYourMacCMD[*]}" && dialogSetupYourMacProcessID=$! & sleep 0.3
-    if [[ ${debugMode} == "true" ]]; then
-        dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
-    fi
+    # if [[ ${debugMode} == "true" ]]; then
+    #     dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
+    # fi
 
 fi
 
