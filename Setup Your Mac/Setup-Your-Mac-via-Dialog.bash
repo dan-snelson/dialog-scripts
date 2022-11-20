@@ -10,6 +10,7 @@
 # HISTORY
 #
 #   Version 1.3.1, 19-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1/
 #   - Signficantly enchanced Completion Action options
 #   - Improved Debug Mode behavior
 #   - Miscellaneous Improvements
@@ -70,7 +71,7 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 # For each configuration step, specify:
 # - listitem: The text to be displayed in the list
 # - icon: The hash of the icon to be displayed on the left
-#   - See: https://rumble.com/v119x6y-harvesting-self-service-icons.html
+#   - See: https://vimeo.com/772998915
 # - progresstext: The text to be displayed below the progress bar 
 # - trigger: The Jamf Pro Policy Custom Event Name
 # - path: The filepath for validation
@@ -310,38 +311,47 @@ case ${completionActionOption} in
 
     "Shut Down" )
         button1textCompletionActionOption="Shutting Down …"
+        progressTextCompletionAction="shut down and "
         ;;
 
     "Shut Down "* )
         button1textCompletionActionOption="Shut Down"
+        progressTextCompletionAction="shut down and "
         ;;
     
     "Restart" )
         button1textCompletionActionOption="Restarting …"
+        progressTextCompletionAction="restart and "
         ;;
 
     "Restart "* )
         button1textCompletionActionOption="Restart"
+        progressTextCompletionAction="restart and "
         ;;
 
     "Log Out" )
         button1textCompletionActionOption="Logging Out …"
+        progressTextCompletionAction="log out and "
         ;;
 
     "Log Out "* )
         button1textCompletionActionOption="Log Out"
+        progressTextCompletionAction="log out and "
         ;;
 
     "Sleep"* )
-        button1textCompletionActionOption="Sleep"
+        button1textCompletionActionOption="Close"
+        progressTextCompletionAction=""
         ;;
 
     "Quit" ) 
         button1textCompletionActionOption="Quit"
+        progressTextCompletionAction=""
         ;;
 
     * )
-        button1textCompletionActionOption="Wait"
+        button1textCompletionActionOption="Close"
+        progressTextCompletionAction=""
         ;;
 
 esac
@@ -480,8 +490,7 @@ function finalise(){
         dialogUpdateSetupYourMac "button1: enable"
         dialogUpdateSetupYourMac "progress: complete"
 
-        updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
-        # If anything fails, wait for user-acknowledgment
+        # Wait for user-acknowledgment due to detected failure
         wait
 
         dialogUpdateSetupYourMac "quit:"
@@ -491,8 +500,7 @@ function finalise(){
         dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         dialogUpdateFailure "button1text: ${button1textCompletionActionOption}"
 
-        updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
-        # If anything fails, wait for user-acknowledgment
+        # Wait for user-acknowledgment due to detected failure
         wait
 
         dialogUpdateFailure "quit:"
@@ -501,7 +509,7 @@ function finalise(){
     else
 
         dialogUpdateSetupYourMac "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-        dialogUpdateSetupYourMac "progresstext: Complete! Please restart and enjoy your new Mac, ${loggedInUserFirstname}!"
+        dialogUpdateSetupYourMac "progresstext: Complete! Please ${progressTextCompletionAction}enjoy your new Mac, ${loggedInUserFirstname}!"
         dialogUpdateSetupYourMac "progress: complete"
         dialogUpdateSetupYourMac "button1text: ${button1textCompletionActionOption}"
         dialogUpdateSetupYourMac "button1: enable"
@@ -509,7 +517,6 @@ function finalise(){
         # If either "wait" or "sleep" has been specified for `completionActionOption`, honor that behavior
         if [[ "${completionActionOption}" == "wait" ]] || [[ "${completionActionOption}" == "[Ss]leep"* ]]; then
             updateScriptLog "Honoring ${completionActionOption} behavior …"
-            updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
             eval "${completionActionOption}" "${dialogSetupYourMacProcessID}"
         fi
 
@@ -543,7 +550,6 @@ function run_jamf_trigger() {
         updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
         sleep 1
     elif [[ "$trigger" == "recon" ]]; then
-        updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
         dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
         if [[ ${assetTagCapture} == "true" ]]; then
             updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
@@ -565,7 +571,6 @@ function run_jamf_trigger() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function killProcess() {
-
     process="$1"
     if process_pid=$( pgrep -a "${process}" 2>/dev/null ) ; then
         updateScriptLog "Attempting to terminate the '$process' process …"
@@ -680,7 +685,6 @@ function completionAction() {
 
             * )
                 updateScriptLog "Using the default of 'wait'"
-                updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
                 wait
                 ;;
 
@@ -689,8 +693,6 @@ function completionAction() {
         shopt -u nocasematch
     
     fi
-
-    updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
 
     exit "${exitCode}"
 
@@ -730,6 +732,7 @@ function quitScript() {
 
     # Check for user clicking "Quit" at Welcome screen
     if [[ "${welcomeReturnCode}" == "2" ]]; then
+        exitCode="1"
         exit "${exitCode}"
     else
         updateScriptLog "Executing Completion Action Option: '${completionActionOption}' …"
@@ -774,6 +777,7 @@ fi
 
 if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
     echo "No user logged-in; exiting."
+    exitCode="1"
     quitScript
 else
     loggedInUserID=$(id -u "${loggedInUser}")
@@ -786,7 +790,7 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ${debugMode} == "true" ]]; then
-    updateScriptLog "\n\n###\n# DEBUG MODE | Setup Your Mac (${scriptVersion})\n###\n"
+    updateScriptLog "\n\n###\n# ${scriptVersion}\n###\n"
 else
     updateScriptLog "\n\n###\n# Setup Your Mac (${scriptVersion})\n###\n"
 fi
@@ -852,7 +856,7 @@ if [[ ${assetTagCapture} == "true" ]]; then
     assetTag=$( eval "$dialogWelcomeCMD" | awk -F " : " '{print $NF}' )
     # dialogWelcomeProcessID=$!
 
-    if [[ -z ${assetTag} ]]; then
+    if [[ -z "${assetTag}" ]]; then
         welcomeReturnCode="2"
     else
         welcomeReturnCode="0"
@@ -866,18 +870,15 @@ fi
 # Evaluate User Interaction at Welcome Screen
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ${assetTagCapture} == "true" ]]; then
+if [[ "${assetTagCapture}" == "true" ]]; then
 
-    case ${welcomeReturnCode} in
+    case "${welcomeReturnCode}" in
 
         0)  ## Process exit code 0 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
             dialogUpdateSetupYourMac "message: Asset Tag reported as \`${assetTag}\`. $message"
-            # if [[ ${debugMode} == "true" ]]; then
-            #     dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
-            # fi
             ;;
 
         2)  ## Process exit code 2 scenario here
@@ -909,12 +910,7 @@ else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
-    updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
     updateScriptLog "dialogSetupYourMacProcessID: ${dialogSetupYourMacProcessID}"
-    # eval "${dialogSetupYourMacCMD[*]}" && dialogSetupYourMacProcessID=$! & sleep 0.3
-    # if [[ ${debugMode} == "true" ]]; then
-    #     dialogUpdateSetupYourMac "title: DEBUG MODE | $title"
-    # fi
 
 fi
 

@@ -1,9 +1,11 @@
 # CHANGELOG
 
 ## 1.3.1
+[Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1)
 - Significantly enhanced **Completion Action** options
   - :white_check_mark: Addresses [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15) (thanks, @mvught, @riddl0rd, @iDrewbs and @master-vodawagner)
-  - :man_dancing: Dynamically set `button1text` based on the value of `completionActionOption` (thanks, @jared-a-young)
+  - :tada: Dynamically set `button1text` based on the value of `completionActionOption` (thanks, @jared-a-young)
+  - :partying_face: Dynamically set `progresstext` based on the value of `completionActionOption` (thanks, @iDrewbs)
   - :new: Three new flavors: **Shut Down**, **Restart** or **Log Out**
     - :rotating_light: **Forced:** Zero user-interaction
       - Added brute-force `killProcess "Self Service"`
@@ -15,7 +17,7 @@
   - Wait (default)
 - Improved **Debug Mode** behavior
   - :bug: `DEBUG MODE |` now only displayed as `infotext` (i.e., bottom, left-hand corner)
-  - `completionAction` informational-only with simple dialog box (thanks, @_____?)
+  - `completionAction` informational-only with simple dialog box (thanks, @_____???)
   - Swapped `blurscreen` for `moveable`
   - General peformance increases
 - Miscellaneous Improvements
@@ -24,7 +26,9 @@
   - Changed "Updating Inventory" to "Computer Inventory" for `recon`-flavored `listitem`
   - Changed exit code to `1` when user quits "Welcome" screen
   - Changed `welcomeIcon` URLs
-  - Add way too many [emojis](https://github-emoji-picker.vercel.app) to ChangeLog
+  - Changed URL for Harvesting Self Service icons screencast (thanks, @nstrauss)
+
+
 
 ## 1.3.0
 ### 09-Nov-2022 
