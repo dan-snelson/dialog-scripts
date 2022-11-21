@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.3.1, 21-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   Version 1.4.0, 21-Nov-2022, Dan K. Snelson (@dan-snelson)
 #   https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1/
 #   - Signficantly enchanced Completion Action options
 #   - Improved Debug Mode behavior
@@ -29,7 +29,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.3.1"
+scriptVersion="1.4.0"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 debugMode="${4:-"true"}"                # [ true (default) | false ]
 assetTagCapture="${5:-"false"}"         # [ true | false (default) ]

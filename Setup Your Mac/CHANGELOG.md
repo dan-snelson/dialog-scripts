@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 1.3.1
+## 1.4.0
 ### 21-Nov-2022
 [Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1)
 - Significantly enhanced **Completion Action** options
