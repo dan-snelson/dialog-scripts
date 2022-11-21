@@ -9,11 +9,8 @@
 #
 # HISTORY
 #
-#   Version 1.3.1, 19-Nov-2022, Dan K. Snelson (@dan-snelson)
-#   https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1/
-#   - Signficantly enchanced Completion Action options
-#   - Improved Debug Mode behavior
-#   - Miscellaneous Improvements
+#   Version 1.3.2, 22-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   - Prompt user for additional fields at Welcome screen
 #
 ####################################################################################################
 
@@ -29,12 +26,13 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.3.1"
+scriptVersion="1.3.2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
-debugMode="${4:-"true"}"                # [ true (default) | false ]
-assetTagCapture="${5:-"false"}"         # [ true | false (default) ]
-completionActionOption="${6:-"wait"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
-scriptLog="${7:-"/var/tmp/org.churchofjesuschrist.log"}"
+scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
+debugMode="${5:-"true"}"               # [ true (default) | false ]
+welcomeDialog="${6:-"true"}"            # [ true (default) | false ]
+completionActionOption="${7:-"Restart Attended"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
+reconOptions=""                         # Initialize dynamic recon options; built based on user's input at Welcome dialog
 exitCode="0"
 
 
@@ -65,8 +63,169 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 
 
 
+####################################################################################################
+#
+# Welcome dialog
+#
+####################################################################################################
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# APPS TO BE INSTALLED (Thanks, Obi-@smithjw!)
+# "Welcome" dialog Title, Message and Icon
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
+welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
+
+# Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!) 
+appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
+if [[ "${appleInterfaceStyle}" == "Dark" ]]; then
+    welcomeIcon="https://cdn-icons-png.flaticon.com/512/740/740878.png"
+else
+    welcomeIcon="https://cdn-icons-png.flaticon.com/512/979/979585.png"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# "Welcome" JSON (thanks, @bartreardon!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+welcomeJSON='{
+    "title" : "'"${welcomeTitle}"'",
+    "message" : "'"${welcomeMessage}"'",
+    "icon" : "'"${welcomeIcon}"'",
+    "iconsize" : "198.0",
+    "button1text" : "Continue",
+    "button2text" : "Quit",
+    "infotext" : "'"${scriptVersion}"'",
+    "blurscreen" : "true",
+    "ontop" : "true",
+    "titlefont" : "size=26",
+    "messagefont" : "size=16",
+    "textfield" : [
+        {   "title" : "Comment",
+            "required" : false,
+            "prompt" : "Enter a comment",
+            "editor" : true
+        },
+        {   "title" : "Computer Name",
+            "required" : false,
+            "prompt" : "Computer Name"
+        },
+        {   "title" : "User Name",
+            "required" : false,
+            "prompt" : "User Name"
+        },
+        {   "title" : "Asset Tag",
+            "required" : true,
+            "prompt" : "Please enter the seven-digit Asset Tag",
+            "regex" : "^(AP|IP)?[0-9]{7,}$",
+            "regexerror" : "Please enter (at least) seven digits for the Asset Tag, optionally preceed by either AP or IP."
+        }
+    ],
+  "selectitems" : [
+        {   "title" : "Department",
+            "values" : [
+                "Asset Management",
+                "Australia Area Office",
+                "Board of Directors",
+                "Business Development",
+                "Corporate Communications",
+                "Creative Services",
+                "Customer Service / Customer Experience",
+                "Engineering",
+                "Finance / Accounting",
+                "General Management",
+                "Human Resources",
+                "Information Technology / Technology",
+                "Investor Relations",
+                "Legal",
+                "Marketing",
+                "Operations",
+                "Product Management",
+                "Production",
+                "Project Management Office",
+                "Purchasing / Sourcing",
+                "Quality Assurance",
+                "Risk Management",
+                "Sales",
+                "Strategic Initiatives & Programs",
+                "Technology"
+            ]
+        },
+        {   "title" : "Select B",
+            "values" : [
+                "B1",
+                "B2",
+                "B3"
+            ]
+        },
+        {   "title" : "Select C",
+            "values" : [
+                "C1",
+                "C2",
+                "C3"
+            ]
+        }
+    ],
+    "height" : "635"
+}'
+
+# Write Welcome JSON for later processing
+echo "$welcomeJSON" > "$welcomeCommandFile"
+
+
+
+####################################################################################################
+#
+# Setup Your Mac dialog
+#
+####################################################################################################
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# "Setup Your Mac" dialog Title, Message, Overlay Icon and Icon
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+title="Setting up ${loggedInUserFirstname}'s Mac"
+message="Please wait while the following apps are installed …"
+overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
+
+# Set initial icon based on whether the Mac is a desktop or laptop
+if system_profiler SPPowerDataType | grep -q "Battery Power"; then
+  icon="SF=laptopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+else
+  icon="SF=desktopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# "Setup Your Mac" Dialog Settings and Features
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+dialogSetupYourMacCMD="$dialogApp \
+--title \"$title\" \
+--message \"$message\" \
+--icon \"$icon\" \
+--progress \
+--progresstext \"Initializing configuration …\" \
+--button1text \"Wait\" \
+--button1disabled \
+--infotext \"$scriptVersion\" \
+--titlefont 'size=28' \
+--messagefont 'size=14' \
+--height '70%' \
+--position 'centre' \
+--blurscreen \
+--ontop \
+--overlayicon \"$overlayicon\" \
+--quitkey k \
+--commandfile \"$setupYourMacCommandFile\" "
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Setup Your Mac apps to install (Thanks, Obi-@smithjw!)
 #
 # For each configuration step, specify:
 # - listitem: The text to be displayed in the list
@@ -161,10 +320,6 @@ policy_array=('
                 {
                     "trigger": "reconAtReboot",
                     "path": ""
-                },
-                {
-                    "trigger": "computerNameSet",
-                    "path": ""
                 }
             ]
         },
@@ -185,90 +340,14 @@ policy_array=('
 
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Welcome / Asset Tag" Dialog Title, Message and Icon
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
-welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Continue** to start applying Church settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
-
-appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
-
-if [[ "${appleInterfaceStyle}" == "Dark" ]]; then
-    welcomeIcon="https://cdn-icons-png.flaticon.com/512/740/740878.png"
-else
-    welcomeIcon="https://cdn-icons-png.flaticon.com/512/979/979585.png"
-fi
-
-
+####################################################################################################
+#
+# Failure dialog
+#
+####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Welcome / Asset Tag" Dialog Settings and Features
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dialogWelcomeCMD="$dialogApp \
---title \"$welcomeTitle\" \
---message \"$welcomeMessage\" \
---icon \"$welcomeIcon\" \
---iconsize 198 \
---button1text \"Continue\" \
---button2text \"Quit\" \
---button2disabled \
---infotext \"$scriptVersion\" \
---blurscreen \
---ontop \
---titlefont 'size=26' \
---messagefont 'size=16' \
---textfield \"Asset Tag\",required=true,prompt=\"Please enter your Mac's seven-digit Asset Tag\",regex='^(AP|IP)?[0-9]{7,}$',regexerror=\"Please enter (at least) seven digits for the Asset Tag, optionally preceed by either 'AP' or 'IP'. \" \
---quitkey k \
---commandfile \"$welcomeCommandFile\" "
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Setup Your Mac" Dialog Title, Message, Overlay Icon and Icon
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-title="Setting up ${loggedInUserFirstname}'s Mac"
-message="Please wait while the following apps are installed …"
-overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
-
-# Set initial icon based on whether the Mac is a desktop or laptop
-if system_profiler SPPowerDataType | grep -q "Battery Power"; then
-  icon="SF=laptopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-else
-  icon="SF=desktopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Setup Your Mac" Dialog Settings and Features
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dialogSetupYourMacCMD="$dialogApp \
---title \"$title\" \
---message \"$message\" \
---icon \"$icon\" \
---progress \
---progresstext \"Initializing configuration …\" \
---button1text \"Wait\" \
---button1disabled \
---infotext \"$scriptVersion\" \
---titlefont 'size=28' \
---messagefont 'size=14' \
---height '70%' \
---position 'centre' \
---blurscreen \
---ontop \
---overlayicon \"$overlayicon\" \
---quitkey k \
---commandfile \"$setupYourMacCommandFile\" "
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Failure" Dialog Title, Message and Icon
+# "Failure" dialog Title, Message and Icon
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 failureTitle="Failure Detected"
@@ -442,7 +521,7 @@ function dialogCheck() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Execute a "Welcome / Asset Tag" Dialog command
+# Update the "Welcome" dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialogUpdateWelcome(){
@@ -453,7 +532,7 @@ function dialogUpdateWelcome(){
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Execute a "Setup Your Mac" Dialog command
+# Update the "Setup Your Mac" dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialogUpdateSetupYourMac() {
@@ -464,7 +543,7 @@ function dialogUpdateSetupYourMac() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Execute a "Failure" Dialog command
+# Update the "Failure" dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialogUpdateFailure(){
@@ -475,7 +554,7 @@ function dialogUpdateFailure(){
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Finalise app installations
+# Finalise User Experience
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function finalise(){
@@ -541,27 +620,45 @@ function get_json_value() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# smithjw's sweet function to execute Jamf Pro Policy Custom Events
+# Parse JSON via osascript and JavaScript for the Welcome dialog (thanks, @bartreardon!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function get_json_value_welcomeDialog () {
+    for var in "${@:2}"; do jsonkey="${jsonkey}['${var}']"; done
+    JSON="$1" osascript -l 'JavaScript' \
+        -e 'const env = $.NSProcessInfo.processInfo.environment.objectForKey("JSON").js' \
+        -e "JSON.parse(env)$jsonkey"
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Execute Jamf Pro Policy Custom Events (thanks, @smithjw)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function run_jamf_trigger() {
+
     trigger="$1"
+
     if [[ "$debugMode" == "true" ]]; then
+
         updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
+        updateScriptLog "DEBUG MODE RECON: $jamfBinary recon ${reconOptions}"
         sleep 1
+
     elif [[ "$trigger" == "recon" ]]; then
+
         dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
-        if [[ ${assetTagCapture} == "true" ]]; then
-            updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon -assetTag ${assetTag}"
-            "$jamfBinary" recon -assetTag "${assetTag}"
-        else
-            updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary recon"
-            "$jamfBinary" recon
-        fi
+        updateScriptLog "Updating computer inventory with the following options: \"${reconOptions}\" …"
+        "$jamfBinary" recon "${reconOptions}"
+
     else
+
         updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary policy -event $trigger"
         "$jamfBinary" policy -event "$trigger"
+
     fi
+
 }
 
 
@@ -730,7 +827,13 @@ function quitScript() {
         rm "${failureCommandFile}"
     fi
 
-    # Check for user clicking "Quit" at Welcome screen
+    # Remove any default dialog file
+    if [[ -e /var/tmp/dialog.log ]]; then
+        updateScriptLog "Removing default dialog file …"
+        rm /var/tmp/dialog.log
+    fi
+
+    # Check for user clicking "Quit" at Welcome dialog
     if [[ "${welcomeReturnCode}" == "2" ]]; then
         exitCode="1"
         exit "${exitCode}"
@@ -848,58 +951,98 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Display Welcome Screen and capture user's interaction
+# Display Welcome dialog and capture user's interaction
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ${assetTagCapture} == "true" ]]; then
+if [[ ${welcomeDialog} == "true" ]]; then
 
-    assetTag=$( eval "$dialogWelcomeCMD" | awk -F " : " '{print $NF}' )
-    # dialogWelcomeProcessID=$!
+    welcomeResults=$( ${dialogApp} --jsonfile "$welcomeCommandFile" --json )
 
-    if [[ -z "${assetTag}" ]]; then
+    #  User Interaction
+    if [[ -z "${welcomeResults}" ]]; then
         welcomeReturnCode="2"
     else
         welcomeReturnCode="0"
     fi
 
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Evaluate User Interaction at Welcome Screen
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ "${assetTagCapture}" == "true" ]]; then
-
     case "${welcomeReturnCode}" in
 
-        0)  ## Process exit code 0 scenario here
-            updateScriptLog "WELCOME DIALOG: ${loggedInUser} entered an Asset Tag of ${assetTag} and clicked Continue"
+        0)  # Process exit code 0 scenario here
+            updateScriptLog "WELCOME DIALOG: ${loggedInUser} entered information and clicked Continue"
+            updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
+
+            # Extract the various values from the welcomeResults JSON
+            comment=$(get_json_value_welcomeDialog "$welcomeResults" "Comment")
+            computerName=$(get_json_value_welcomeDialog "$welcomeResults" "Computer Name")
+            userName=$(get_json_value_welcomeDialog "$welcomeResults" "User Name")
+            assetTag=$(get_json_value_welcomeDialog "$welcomeResults" "Asset Tag")
+            department=$(get_json_value_welcomeDialog "$welcomeResults" "Department" "selectedValue")
+            selectB=$(get_json_value_welcomeDialog "$welcomeResults" "Select B" "selectedValue")
+            selectC=$(get_json_value_welcomeDialog "$welcomeResults" "Select C" "selectedValue")
+
+            updateScriptLog "START Hard-coded testing at Line No. ${LINENO}"
+                updateScriptLog "Comment: $comment"
+                updateScriptLog "Computer Name: $computerName"
+                updateScriptLog "User Name: $userName"
+                updateScriptLog "Asset Tag: $assetTag"
+                updateScriptLog "Department: $department"
+                updateScriptLog "Select B: $selectB"
+                updateScriptLog "Select C: $selectC"
+            updateScriptLog "END Hard-coded testing at Line No. ${LINENO}"
+
+            # Evaluate Various User Input
+
+            if [[ -n "${computerName}" ]]; then
+                # UNTESTED, UNSUPPORTED "YOYO" EXAMPLE
+                updateScriptLog "Set Computer Name …"
+                currentComputerName=$( scutil --get ComputerName )
+                scutil --set ComputerName "${computerName}"
+                # Delay required to reflect change …
+                # … side-effect is a delay in Setup Your Mac appearing
+                sleep 5
+                updateScriptLog "Renamed computer from: \"${currentComputerName}\" to \"$( scutil --get ComputerName )\" "
+            else
+                updateScriptLog "${loggedInUser} did NOT specify a new computer name; current name: \"$( scutil --get ComputerName )\" "
+            fi
+
+            if [[ -n "${userName}" ]]; then
+                # UNTESTED, UNSUPPORTED "YOYO" EXAMPLE
+                reconOptions+="-endUsername \"${userName}\" "
+            fi
+
+            if [[ -n "${assetTag}" ]]; then
+                reconOptions+="-assetTag \"${assetTag}\" "
+            fi
+
+            if [[ -n "${department}" ]]; then
+                # UNTESTED, UNSUPPORTED "YOYO" EXAMPLE
+                reconOptions+="-department \"${department}\" "
+            fi
+
+            updateScriptLog "reconOptions: ${reconOptions}"
+
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
-            dialogUpdateSetupYourMac "message: Asset Tag reported as \`${assetTag}\`. $message"
             ;;
 
-        2)  ## Process exit code 2 scenario here
-            updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked Quit when prompted to enter Asset Tag"
+        2)  # Process exit code 2 scenario here
+            updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked Quit at Welcome Screen"
             completionActionOption="Quit"
             quitScript "1"
             ;;
 
-        3)  ## Process exit code 3 scenario here
+        3)  # Process exit code 3 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked infobutton"
             osascript -e "set Volume 3"
             afplay /System/Library/Sounds/Glass.aiff
             ;;
 
-        4)  ## Process exit code 4 scenario here
+        4)  # Process exit code 4 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} allowed timer to expire"
-            eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
-            dialogSetupYourMacProcessID=$!
+            quitScript "1"
             ;;
 
-        *)  ## Catch all processing
+        *)  # Catch all processing
             updateScriptLog "WELCOME DIALOG: Something else happened; Exit code: ${welcomeReturnCode}"
             quitScript "1"
             ;;
@@ -909,8 +1052,6 @@ if [[ "${assetTagCapture}" == "true" ]]; then
 else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
-    dialogSetupYourMacProcessID=$!
-    updateScriptLog "dialogSetupYourMacProcessID: ${dialogSetupYourMacProcessID}"
 
 fi
 

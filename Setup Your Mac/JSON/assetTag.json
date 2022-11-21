@@ -1,0 +1,11 @@
+{
+"textfield" : [
+    {
+        "title" : "Asset Tag",
+        "required" : true,
+        "prompt" : "Please enter your Mac's seven-digit Asset Tag",
+        "regex" : "^(AP|IP)?[0-9]{7,}$",
+        "regexerror" : "Please enter (at least) seven digits for the Asset Tag, optionally preceed by either 'AP' or 'IP'."
+    }
+]
+}

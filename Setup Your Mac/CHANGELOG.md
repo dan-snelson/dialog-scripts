@@ -1,6 +1,22 @@
 # CHANGELOG
 
+##  1.3.2
+### 22-Nov-2022
+- :new: Prompt user for additional fields at Welcome screen
+  - New fields are included in a single `welcomeScreenJSON` variable (thanks for all your efforts and feedback, @drtaru and @Andrew!)
+  - See [welcomeScreenTesting.bash](JSON/welcomeScreenTesting.bash) (thanks, @bartreardon!)
+  - Dynamic `reconOptions` based on user's input at Welcome dialog
+  - Thanks for your patience, @remusache, @midiman1000, @erikmadams, @colorenz, @benphilware
+- :fire: **Breaking Changes** :fire:
+  - Script Parameter Reordering (sorry; I'll try not to do this ever again)
+    - **Parameter 4:** Script Log Location [ `/var/tmp/org.churchofjesuschrist.log` ]
+    - **Parameter 5:** Debug Mode [ `true` (default) | `false` ]
+    - **Parameter 6:** Welcome Screen [ `true` (default) | `false` ]
+    - **Parameter 7:** Completion Action [ `wait` (default) | `sleep` (with seconds) | `Shut Down` | `Shut Down Attended` | `Shut Down Confirm` | `Restart` | `Restart Attended` | `Restart Confirm` | `Log Out` | `Log Out Attended` | `Log Out Confirm` ]  
+
+
 ## 1.3.1
+### 21-Nov-2022
 [Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1)
 - Significantly enhanced **Completion Action** options
   - :white_check_mark: Addresses [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15) (thanks, @mvught, @riddl0rd, @iDrewbs and @master-vodawagner)
