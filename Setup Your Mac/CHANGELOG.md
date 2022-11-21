@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.3.1
+### 21-Nov-2022
 [Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1)
 - Significantly enhanced **Completion Action** options
   - :white_check_mark: Addresses [Issue 15](https://github.com/dan-snelson/dialog-scripts/issues/15) (thanks, @mvught, @riddl0rd, @iDrewbs and @master-vodawagner)

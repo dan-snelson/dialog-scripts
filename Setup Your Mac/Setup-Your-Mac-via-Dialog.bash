@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.3.1, 19-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   Version 1.3.1, 21-Nov-2022, Dan K. Snelson (@dan-snelson)
 #   https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1/
 #   - Signficantly enchanced Completion Action options
 #   - Improved Debug Mode behavior
@@ -194,6 +194,7 @@ welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Co
 
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
 
+# Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!) 
 if [[ "${appleInterfaceStyle}" == "Dark" ]]; then
     welcomeIcon="https://cdn-icons-png.flaticon.com/512/740/740878.png"
 else
