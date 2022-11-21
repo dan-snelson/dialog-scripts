@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.3.2, 22-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   Version 1.5.0, 22-Nov-2022, Dan K. Snelson (@dan-snelson)
 #   - Prompt user for additional fields at Welcome screen
 #
 ####################################################################################################
@@ -26,7 +26,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.3.2"
+scriptVersion="1.5.0"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"               # [ true (default) | false ]

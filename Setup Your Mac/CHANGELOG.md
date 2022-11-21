@@ -1,6 +1,6 @@
 # CHANGELOG
 
-##  1.3.2
+##  1.5.0
 ### 22-Nov-2022
 - :new: Prompt user for additional fields at Welcome screen
   - New fields are included in a single `welcomeScreenJSON` variable (thanks for all your efforts and feedback, @drtaru and @Andrew!)
