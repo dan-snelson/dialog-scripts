@@ -9,8 +9,8 @@
 #
 # HISTORY
 #
-#   Version 1.5.0, 22-Nov-2022, Dan K. Snelson (@dan-snelson)
-#   - Prompt user for additional fields at Welcome screen
+#   Version 1.5.0, 28-Nov-2022, Dan K. Snelson (@dan-snelson)
+#   - Prompt user for additional fields at Welcome dialog
 #
 ####################################################################################################
 
@@ -26,13 +26,13 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.5.0"
+scriptVersion="1.5.0-rc2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
-debugMode="${5:-"true"}"               # [ true (default) | false ]
-welcomeDialog="${6:-"true"}"            # [ true (default) | false ]
-completionActionOption="${7:-"Restart Attended"}"   # [ wait (default) | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
-reconOptions=""                         # Initialize dynamic recon options; built based on user's input at Welcome dialog
+debugMode="${5:-"true"}"                           # [ true (default) | false ]
+welcomeDialog="${6:-"true"}"                       # [ true (default) | false ]
+completionActionOption="${7:-"Restart Attended"}"  # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
+reconOptions=""                                    # Initialize dynamic recon options; built based on user's input at Welcome dialog
 exitCode="0"
 
 
@@ -41,7 +41,7 @@ exitCode="0"
 # Reflect Debug Mode in `infotext` (i.e., bottom, left-hand corner of each dialog)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ${debugMode} == "true" ]]; then
+if [[ "${debugMode}" == "true" ]]; then
     scriptVersion="DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
 fi
 
@@ -54,7 +54,6 @@ fi
 dialogApp="/usr/local/bin/dialog"
 welcomeCommandFile=$( mktemp /var/tmp/dialogWelcome.XXX )
 setupYourMacCommandFile=$( mktemp /var/tmp/dialogSetupYourMac.XXX )
-setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
 failureCommandFile=$( mktemp /var/tmp/dialogFailure.XXX )
 jamfBinary="/usr/local/bin/jamf"
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
@@ -171,9 +170,6 @@ welcomeJSON='{
     "height" : "635"
 }'
 
-# Write Welcome JSON for later processing
-echo "$welcomeJSON" > "$welcomeCommandFile"
-
 
 
 ####################################################################################################
@@ -192,15 +188,15 @@ overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist se
 
 # Set initial icon based on whether the Mac is a desktop or laptop
 if system_profiler SPPowerDataType | grep -q "Battery Power"; then
-  icon="SF=laptopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    icon="SF=laptopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
 else
-  icon="SF=desktopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    icon="SF=desktopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Setup Your Mac" Dialog Settings and Features
+# "Setup Your Mac" dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogSetupYourMacCMD="$dialogApp \
@@ -225,7 +221,7 @@ dialogSetupYourMacCMD="$dialogApp \
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Setup Your Mac apps to install (Thanks, Obi-@smithjw!)
+# "Setup Your Mac" policies to execute (Thanks, Obi-@smithjw!)
 #
 # For each configuration step, specify:
 # - listitem: The text to be displayed in the list
@@ -238,6 +234,10 @@ dialogSetupYourMacCMD="$dialogApp \
 # shellcheck disable=1112
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# The fully qualified domain name of the server which hosts your icons, including any required sub-directories
+# (P.S. I tried to come up with a longer variable name, but couldn't.)
+setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
 
 policy_array=('
 {
@@ -351,13 +351,13 @@ policy_array=('
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 failureTitle="Failure Detected"
-failureMessage="Placeholder message; update in the finalise function"
+failureMessage="Placeholder message; update in the 'finalise' function"
 failureIcon="SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Failure" Dialog Settings and Features
+# "Failure" dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogFailureCMD="$dialogApp \
@@ -378,7 +378,8 @@ dialogFailureCMD="$dialogApp \
 
 
 
-#------------------------------- Edits below this line are optional -------------------------------#
+#------------------------ With the execption of the `finalise` function, -------------------------#
+#------------------------ edits below these line are optional. -----------------------------------#
 
 
 
@@ -497,9 +498,12 @@ function dialogCheck() {
         if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
 
             /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+            sleep 2
+            updateScriptLog "swiftDialog version $(dialog --version) installed; proceeding..."
 
         else
 
+            # Display a so-called "simple" dialog if Team ID fails to validate
             runAsUser osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
             completionActionOption="Quit"
             exitCode="1"
@@ -944,21 +948,27 @@ caffeinate -dimsu -w $$ &
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ${debugMode} == "true" ]]; then
-    dialogWelcomeCMD=${dialogWelcomeCMD//blurscreen/moveable}
+    welcomeJSON=${welcomeJSON//blurscreen/moveable}
     dialogSetupYourMacCMD=${dialogSetupYourMacCMD//blurscreen/moveable}
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Display Welcome dialog and capture user's interaction
+# Write Welcome JSON to disk
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ${welcomeDialog} == "true" ]]; then
+echo "$welcomeJSON" > "$welcomeCommandFile"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Display Welcome dialog and capture user's input
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ "${welcomeDialog}" == "true" ]]; then
 
     welcomeResults=$( ${dialogApp} --jsonfile "$welcomeCommandFile" --json )
-
-    #  User Interaction
     if [[ -z "${welcomeResults}" ]]; then
         welcomeReturnCode="2"
     else
@@ -969,9 +979,11 @@ if [[ ${welcomeDialog} == "true" ]]; then
 
         0)  # Process exit code 0 scenario here
             updateScriptLog "WELCOME DIALOG: ${loggedInUser} entered information and clicked Continue"
-            updateScriptLog "Hard-coded testing at Line No. ${LINENO}"
 
+            ###
             # Extract the various values from the welcomeResults JSON
+            ###
+
             comment=$(get_json_value_welcomeDialog "$welcomeResults" "Comment")
             computerName=$(get_json_value_welcomeDialog "$welcomeResults" "Computer Name")
             userName=$(get_json_value_welcomeDialog "$welcomeResults" "User Name")
@@ -980,53 +992,86 @@ if [[ ${welcomeDialog} == "true" ]]; then
             selectB=$(get_json_value_welcomeDialog "$welcomeResults" "Select B" "selectedValue")
             selectC=$(get_json_value_welcomeDialog "$welcomeResults" "Select C" "selectedValue")
 
-            updateScriptLog "START Hard-coded testing at Line No. ${LINENO}"
-                updateScriptLog "Comment: $comment"
-                updateScriptLog "Computer Name: $computerName"
-                updateScriptLog "User Name: $userName"
-                updateScriptLog "Asset Tag: $assetTag"
-                updateScriptLog "Department: $department"
-                updateScriptLog "Select B: $selectB"
-                updateScriptLog "Select C: $selectC"
-            updateScriptLog "END Hard-coded testing at Line No. ${LINENO}"
 
+
+            ###
+            # Output the various values from the welcomeResults JSON to the log file
+            ###
+
+            updateScriptLog "Comment: $comment"
+            updateScriptLog "Computer Name: $computerName"
+            updateScriptLog "User Name: $userName"
+            updateScriptLog "Asset Tag: $assetTag"
+            updateScriptLog "Department: $department"
+            updateScriptLog "Select B: $selectB"
+            updateScriptLog "Select C: $selectC"
+
+
+
+            ###
             # Evaluate Various User Input
+            ###
 
+            # Computer Name
             if [[ -n "${computerName}" ]]; then
+
                 # UNTESTED, UNSUPPORTED "YOYO" EXAMPLE
                 updateScriptLog "Set Computer Name …"
                 currentComputerName=$( scutil --get ComputerName )
+                currentLocalHostName=$( scutil --get LocalHostName )
+
+                # Set the Computer Name to the user-entered value
                 scutil --set ComputerName "${computerName}"
+
+                # Sets LocalHostName to a maximum of 15 characters, comprised of first eight characters of the computer's
+                # serial number and the last six characters of the client's MAC address
+                firstEightSerialNumber=$( system_profiler SPHardwareDataType | awk '/Serial\ Number\ \(system\)/ {print $NF}' | cut -c 1-8 )
+                lastSixMAC=$( ifconfig en0 | awk '/ether/ {print $2}' | sed 's/://g' | cut -c 7-12 )
+                newLocalHostName=${firstEightSerialNumber}-${lastSixMAC}
+                scutil --set LocalHostName "${newLocalHostName}"
+
                 # Delay required to reflect change …
-                # … side-effect is a delay in Setup Your Mac appearing
+                # … side-effect is a delay in the "Setup Your Mac" dialog appearing
                 sleep 5
                 updateScriptLog "Renamed computer from: \"${currentComputerName}\" to \"$( scutil --get ComputerName )\" "
+                updateScriptLog "Renamed LocalHostName from: \"${currentLocalHostName}\" to \"$( scutil --get LocalHostName )\" "
+
             else
+
                 updateScriptLog "${loggedInUser} did NOT specify a new computer name; current name: \"$( scutil --get ComputerName )\" "
+
             fi
 
+            # User Name
             if [[ -n "${userName}" ]]; then
                 # UNTESTED, UNSUPPORTED "YOYO" EXAMPLE
                 reconOptions+="-endUsername \"${userName}\" "
             fi
 
+            # Asset Tag
             if [[ -n "${assetTag}" ]]; then
                 reconOptions+="-assetTag \"${assetTag}\" "
             fi
 
+            # Department
             if [[ -n "${department}" ]]; then
                 # UNTESTED, UNSUPPORTED "YOYO" EXAMPLE
                 reconOptions+="-department \"${department}\" "
             fi
 
+            # Output `recon` options to log
             updateScriptLog "reconOptions: ${reconOptions}"
+
+            ###
+            # Display "Setup Your Mac" dialog (and capture Process ID)
+            ###
 
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
             ;;
 
         2)  # Process exit code 2 scenario here
-            updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked Quit at Welcome Screen"
+            updateScriptLog "WELCOME DIALOG: ${loggedInUser} clicked Quit at Welcome dialog"
             completionActionOption="Quit"
             quitScript "1"
             ;;
@@ -1051,7 +1096,12 @@ if [[ ${welcomeDialog} == "true" ]]; then
 
 else
 
+    ###
+    # Display "Setup Your Mac" dialog (and capture Process ID)
+    ###
+
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
+    dialogSetupYourMacProcessID=$!
 
 fi
 
@@ -1104,7 +1154,7 @@ dialogUpdateSetupYourMac "progress: $progress_index"
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Close Welcome Screen
+# Close Welcome dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogUpdateWelcome "quit:"
