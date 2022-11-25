@@ -26,7 +26,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.5.0-rc2"
+scriptVersion="1.5.0-rc3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -653,8 +653,8 @@ function run_jamf_trigger() {
     elif [[ "$trigger" == "recon" ]]; then
 
         dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
-        updateScriptLog "Updating computer inventory with the following options: \"${reconOptions}\" …"
-        "$jamfBinary" recon "${reconOptions}"
+        updateScriptLog "Updating computer inventory with the following reconOptions: \"${reconOptions}\" …"
+        eval "${jamfBinary} recon ${reconOptions}"
 
     else
 
