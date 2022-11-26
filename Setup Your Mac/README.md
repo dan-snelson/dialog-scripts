@@ -1,8 +1,8 @@
 # Setup Your Mac via swiftDialog
 
-> Leverages [swiftDialog](https://github.com/bartreardon/swiftDialog/releases) `v2.0.3792` (or later) and Jamf Pro Policy [Custom Events](https://docs.jamf.com/10.36.0/jamf-pro/documentation/Policy_Management.html?hl=custom%2Cevent#ID-0001f43f) to allow end-users to self-complete Mac setup **post-enrollment** via Jamf Pro's Self Service.
+> Setup Your Mac (1.5.0) introduces highly requested **input fields** to help provide your users a seamless post-enrollment experience when setting up their new Macs
 
-![Setup Your Mac (1.3.0)](images/Setup_Your_Mac_1.3.0.png "Setup Your Mac (1.3.0)")
+![Setup Your Mac (1.5.0)](images/Setup_Your_Mac_1.5.0.png "Setup Your Mac (1.5.0)")
 
 ## Introduction
 

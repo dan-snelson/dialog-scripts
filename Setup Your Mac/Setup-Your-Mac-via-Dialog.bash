@@ -26,7 +26,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.5.0-rc3"
+scriptVersion="1.5.0"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -124,7 +124,9 @@ welcomeJSON='{
     ],
   "selectitems" : [
         {   "title" : "Department",
+            "default" : "Please select your department",
             "values" : [
+                "Please select your department",
                 "Asset Management",
                 "Australia Area Office",
                 "Board of Directors",
@@ -231,13 +233,13 @@ dialogSetupYourMacCMD="$dialogApp \
 # - trigger: The Jamf Pro Policy Custom Event Name
 # - path: The filepath for validation
 #
-# shellcheck disable=1112
-#
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # The fully qualified domain name of the server which hosts your icons, including any required sub-directories
 # (P.S. I tried to come up with a longer variable name, but couldn't.)
 setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
+
+# shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
 
 policy_array=('
 {
@@ -456,6 +458,7 @@ function updateScriptLog() {
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Run command as logged-in user (thanks, @scriptingosx!)
+# shellcheck disable=SC2145
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function runAsUser() {
@@ -567,6 +570,7 @@ function finalise(){
 
         killProcess "caffeinate"
         updateScriptLog "Jamf Pro Policy Name Failures: ${jamfProPolicyPolicyNameFailures}"
+        dialogUpdateSetupYourMac "title: Sorry ${loggedInUserFirstname}, something went sideways"
         dialogUpdateSetupYourMac "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         dialogUpdateSetupYourMac "progresstext: Failures detected. Please click Continue for troubleshooting information."
         dialogUpdateSetupYourMac "button1text: Continue …"
@@ -591,6 +595,7 @@ function finalise(){
 
     else
 
+        dialogUpdateSetupYourMac "title: ${loggedInUserFirstname}'s Mac is ready!"
         dialogUpdateSetupYourMac "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
         dialogUpdateSetupYourMac "progresstext: Complete! Please ${progressTextCompletionAction}enjoy your new Mac, ${loggedInUserFirstname}!"
         dialogUpdateSetupYourMac "progress: complete"
