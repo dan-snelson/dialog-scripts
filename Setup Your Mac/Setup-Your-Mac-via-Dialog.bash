@@ -26,7 +26,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.5.0"
+scriptVersion="1.5.0-rc5"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -649,16 +649,18 @@ function run_jamf_trigger() {
 
     trigger="$1"
 
-    if [[ "$debugMode" == "true" ]]; then
+    if [[ "${debugMode}" == "true" ]]; then
 
-        updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: $jamfBinary policy -event $trigger"
-        updateScriptLog "DEBUG MODE RECON: $jamfBinary recon ${reconOptions}"
+        updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: TRIGGER: $jamfBinary policy -event $trigger"
+        if [[ "$trigger" == "recon" ]]; then
+            updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: RECON: $jamfBinary recon ${reconOptions}"
+        fi
         sleep 1
 
     elif [[ "$trigger" == "recon" ]]; then
 
         dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
-        updateScriptLog "Updating computer inventory with the following reconOptions: \"${reconOptions}\" …"
+        updateScriptLog "SETUP YOUR MAC DIALOG: Updating computer inventory with the following reconOptions: \"${reconOptions}\" …"
         eval "${jamfBinary} recon ${reconOptions}"
 
     else
@@ -698,7 +700,7 @@ function killProcess() {
 
 function completionAction() {
 
-    if [[ ${debugMode} == "true" ]]; then
+    if [[ "${debugMode}" == "true" ]]; then
 
         # If Debug Mode is enabled, ignore specified `completionActionOption`, display simple dialog box and exit
         runAsUser osascript -e 'display dialog "Setup Your Mac is operating in Debug Mode.\r\r• completionActionOption == '"'${completionActionOption}'"'\r\r" with title "Setup Your Mac: Debug Mode" buttons {"Close"} with icon note'
@@ -901,7 +903,7 @@ fi
 # Logging preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ${debugMode} == "true" ]]; then
+if [[ "${debugMode}" == "true" ]]; then
     updateScriptLog "\n\n###\n# ${scriptVersion}\n###\n"
 else
     updateScriptLog "\n\n###\n# Setup Your Mac (${scriptVersion})\n###\n"
@@ -952,7 +954,7 @@ caffeinate -dimsu -w $$ &
 # If Debug Mode is enabled, replace `blurscreen` with `movable`
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ${debugMode} == "true" ]]; then
+if [[ "${debugMode}" == "true" ]]; then
     welcomeJSON=${welcomeJSON//blurscreen/moveable}
     dialogSetupYourMacCMD=${dialogSetupYourMacCMD//blurscreen/moveable}
 fi
@@ -1003,13 +1005,13 @@ if [[ "${welcomeDialog}" == "true" ]]; then
             # Output the various values from the welcomeResults JSON to the log file
             ###
 
-            updateScriptLog "Comment: $comment"
-            updateScriptLog "Computer Name: $computerName"
-            updateScriptLog "User Name: $userName"
-            updateScriptLog "Asset Tag: $assetTag"
-            updateScriptLog "Department: $department"
-            updateScriptLog "Select B: $selectB"
-            updateScriptLog "Select C: $selectC"
+            updateScriptLog "WELCOME DIALOG: • Comment: $comment"
+            updateScriptLog "WELCOME DIALOG: • Computer Name: $computerName"
+            updateScriptLog "WELCOME DIALOG: • User Name: $userName"
+            updateScriptLog "WELCOME DIALOG: • Asset Tag: $assetTag"
+            updateScriptLog "WELCOME DIALOG: • Department: $department"
+            updateScriptLog "WELCOME DIALOG: • Select B: $selectB"
+            updateScriptLog "WELCOME DIALOG: • Select C: $selectC"
 
 
 
@@ -1021,29 +1023,42 @@ if [[ "${welcomeDialog}" == "true" ]]; then
             if [[ -n "${computerName}" ]]; then
 
                 # UNTESTED, UNSUPPORTED "YOYO" EXAMPLE
-                updateScriptLog "Set Computer Name …"
+                updateScriptLog "WELCOME DIALOG: Set Computer Name …"
                 currentComputerName=$( scutil --get ComputerName )
                 currentLocalHostName=$( scutil --get LocalHostName )
-
-                # Set the Computer Name to the user-entered value
-                scutil --set ComputerName "${computerName}"
 
                 # Sets LocalHostName to a maximum of 15 characters, comprised of first eight characters of the computer's
                 # serial number and the last six characters of the client's MAC address
                 firstEightSerialNumber=$( system_profiler SPHardwareDataType | awk '/Serial\ Number\ \(system\)/ {print $NF}' | cut -c 1-8 )
                 lastSixMAC=$( ifconfig en0 | awk '/ether/ {print $2}' | sed 's/://g' | cut -c 7-12 )
                 newLocalHostName=${firstEightSerialNumber}-${lastSixMAC}
-                scutil --set LocalHostName "${newLocalHostName}"
 
-                # Delay required to reflect change …
-                # … side-effect is a delay in the "Setup Your Mac" dialog appearing
-                sleep 5
-                updateScriptLog "Renamed computer from: \"${currentComputerName}\" to \"$( scutil --get ComputerName )\" "
-                updateScriptLog "Renamed LocalHostName from: \"${currentLocalHostName}\" to \"$( scutil --get LocalHostName )\" "
+                if [[ "${debugMode}" == "true" ]]; then
+
+                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Renamed computer from: \"${currentComputerName}\" to \"${computerName}\" "
+                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Renamed LocalHostName from: \"${currentLocalHostName}\" to \"${newLocalHostName}\" "
+
+                else
+
+                    # Set the Computer Name to the user-entered value
+                    scutil --set ComputerName "${computerName}"
+
+                    # Set the LocalHostName to `newLocalHostName`
+                    scutil --set LocalHostName "${newLocalHostName}"
+
+                    # Delay required to reflect change …
+                    # … side-effect is a delay in the "Setup Your Mac" dialog appearing
+                    sleep 5
+                    updateScriptLog "WELCOME DIALOG: Renamed computer from: \"${currentComputerName}\" to \"$( scutil --get ComputerName )\" "
+                    updateScriptLog "WELCOME DIALOG: Renamed LocalHostName from: \"${currentLocalHostName}\" to \"$( scutil --get LocalHostName )\" "
+
+                fi
 
             else
 
-                updateScriptLog "${loggedInUser} did NOT specify a new computer name; current name: \"$( scutil --get ComputerName )\" "
+                updateScriptLog "WELCOME DIALOG: ${loggedInUser} did NOT specify a new computer name"
+                updateScriptLog "WELCOME DIALOG: • Current Computer Name: \"$( scutil --get ComputerName )\" "
+                updateScriptLog "WELCOME DIALOG: • Current Local Host Name: \"$( scutil --get LocalHostName )\" "
 
             fi
 
@@ -1065,7 +1080,7 @@ if [[ "${welcomeDialog}" == "true" ]]; then
             fi
 
             # Output `recon` options to log
-            updateScriptLog "reconOptions: ${reconOptions}"
+            updateScriptLog "WELCOME DIALOG: reconOptions: ${reconOptions}"
 
             ###
             # Display "Setup Your Mac" dialog (and capture Process ID)
@@ -1196,7 +1211,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
             # If the path variable has a value, check if that path exists on disk
             if [[ -f "$path" ]]; then
                 updateScriptLog "SETUP YOUR MAC DIALOG: INFO: $path exists, moving on"
-                if [[ "$debugMode" == "true" ]]; then sleep 0.5; fi
+                if [[ "${debugMode}" == "true" ]]; then sleep 0.5; fi
             else
                 run_jamf_trigger "$trigger"
             fi
