@@ -9,16 +9,8 @@
 #
 # HISTORY
 #
-<<<<<<< HEAD
-#   Version 1.4.0, 21-Nov-2022, Dan K. Snelson (@dan-snelson)
-#   https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1/
-#   - Signficantly enchanced Completion Action options
-#   - Improved Debug Mode behavior
-#   - Miscellaneous Improvements
-=======
 #   Version 1.5.0, 28-Nov-2022, Dan K. Snelson (@dan-snelson)
 #   - Prompt user for additional fields at Welcome dialog
->>>>>>> v1.5.0-rc
 #
 ####################################################################################################
 
@@ -350,31 +342,11 @@ policy_array=('
 
 
 
-<<<<<<< HEAD
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Welcome / Asset Tag" Dialog Title, Message and Icon
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
-welcomeMessage="To begin, please enter your Mac's **Asset Tag**, then click **Continue** to start applying Church settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
-
-appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
-
-# Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!) 
-if [[ "${appleInterfaceStyle}" == "Dark" ]]; then
-    welcomeIcon="https://cdn-icons-png.flaticon.com/512/740/740878.png"
-else
-    welcomeIcon="https://cdn-icons-png.flaticon.com/512/979/979585.png"
-fi
-
-
-=======
 ####################################################################################################
 #
 # Failure dialog
 #
 ####################################################################################################
->>>>>>> v1.5.0-rc
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # "Failure" dialog Title, Message and Icon
