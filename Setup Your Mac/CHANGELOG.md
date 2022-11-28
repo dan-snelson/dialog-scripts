@@ -1,7 +1,5 @@
 # CHANGELOG
 
-<<<<<<< HEAD
-=======
 ##  1.5.0
 ### 28-Nov-2022
 [Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-5-0/)
@@ -22,7 +20,6 @@
   - Random code clean-up
 
 
->>>>>>> v1.5.0-rc
 ## 1.4.0
 ### 21-Nov-2022
 [Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-1)
