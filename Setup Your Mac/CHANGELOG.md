@@ -2,13 +2,15 @@
 
 ##  1.5.0
 ### 28-Nov-2022
+[Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-5-0/)
 - :new: Prompt user for additional fields at Welcome dialog
   - New fields are included in a single `welcomeJSON` variable (thanks for all your efforts and feedback, @drtaru and @Andrew!)
-  - See [welcomeScreenTesting.bash](JSON/welcomeScreenTesting.bash) (thanks, @bartreardon!)
+    - See [welcomeScreenTesting.bash](JSON/welcomeScreenTesting.bash) (thanks, @bartreardon!)
+    - In **Debug Mode**, changes are logged only (thanks, @Andrew!)
   - Dynamic `reconOptions` based on user's input at the **Welcome** dialog
   - Thanks for your patience, @remusache, @midiman1000, @erikmadams, @colorenz and @benphilware
-- :fire: **Breaking Changes** for previous users only :fire:
-  - Script Parameter Reordering (sorry; I'll try not to do this ever again)
+- :fire: **Breaking Changes** :fire: (for users of **Setup Your Mac** prior to `1.5.0`)
+  - Script Parameter Reordering (sorry; I'll strive not to ever do this again)
     - **Parameter 4:** Script Log Location [ `/var/tmp/org.churchofjesuschrist.log` ]
     - **Parameter 5:** Debug Mode [ `true` (default) | `false` ]
     - **Parameter 6:** Welcome dialog [ `true` (default) | `false` ]
@@ -50,7 +52,8 @@
 
 
 ## 1.3.0
-### 09-Nov-2022 
+### 09-Nov-2022
+[Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-3-0/)
 - **Script Parameter Changes:**
   - :warning: **Parameter 4:** `debug` mode **enabled** by default
   - :new: **Parameter 7:** Script Log Location
@@ -82,6 +85,7 @@
 - Additional tweaks discovered during internal production deployment
 ## 1.2.7
 ### 10-Sep-2022
+[Release-specific Blog Post](https://snelson.us/2022/09/setup-your-mac-via-swiftdialog-1-2-7/)
 - Added "completionAction" (Script Parameter 6) to address [Pull Request No. 5](https://github.com/dan-snelson/dialog-scripts/pull/5)
 - Added "Failure" dialog to address [Issue No. 6](https://github.com/dan-snelson/dialog-scripts/issues/6)
 ## 1.2.6
@@ -94,6 +98,7 @@
 ## 1.2.4
 
 ### 18-Aug-2022
+[Release-specific Blog Post](https://snelson.us/2022/06/setup-your-mac-via-swiftdialog-1-2-1/)
 - Swap "Installing …" and "Pending …" status indicators (thanks, @joncrain)
 ## 1.2.3
 ### 15-Aug-2022

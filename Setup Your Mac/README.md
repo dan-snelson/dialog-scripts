@@ -6,7 +6,9 @@
 
 ## Introduction
 
-Provide your users a seamless post-enrollment experience in setting up their new Macs.
+Apple's Automated Device Enrollment helps to streamline Mobile Device Management (MDM) enrollment and device Supervision during activation, enabling IT to manage enterprise devices with "zero touch."
+
+**Setup Your Mac** aims to simplify initial device configuration by leveraging `swiftDialog` and Jamf Pro Policy Custom Events to allow end-users to self-complete Mac setup **post-enrollment** via Jamf Pro’s Self Service.
 
 
 [Continue reading …](https://snelson.us/setup-your-mac)

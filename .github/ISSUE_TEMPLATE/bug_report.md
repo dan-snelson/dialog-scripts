@@ -7,7 +7,7 @@ assignees: dan-snelson
 
 ---
 
-> **Note:** Setup Your Mac is designed to be executed via a Jamf Pro Self Service policy.
+> **Note:** Setup Your Mac is designed to be executed via a [Jamf Pro Self Service policy](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-5-0/#implementation).
 
 **Describe the bug**
 A clear, concise description of the bug.

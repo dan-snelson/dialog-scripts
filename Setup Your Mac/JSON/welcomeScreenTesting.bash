@@ -39,11 +39,11 @@ UserPromptJSON='{
             "editor" : true
         },
         {   "title" : "Computer Name",
-            "required" : false,
+            "required" : true,
             "prompt" : "Computer Name"
         },
         {   "title" : "User Name",
-            "required" : false,
+            "required" : true,
             "prompt" : "User Name"
         },
         {   "title" : "Asset Tag",

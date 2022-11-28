@@ -7,7 +7,7 @@ assignees: dan-snelson
 
 ---
 
-> **Note:** Setup Your Mac is designed to be executed via a Jamf Pro Self Service policy.
+> **Note:** While all feature requests are welcome, finding available cycles to custom-code a feature we won't use in our production environment is always challenging.
 
 **Is your feature request related to a problem? Please describe.**
 A clear, concise description of the problem. (i.e., I'm frustrated when ...)
