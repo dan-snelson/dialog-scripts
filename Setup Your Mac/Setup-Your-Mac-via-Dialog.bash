@@ -48,6 +48,23 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Confirm Setup Assistant complete
+# Useful for triggering on Enrollment Complete and will not pause if run via Self Service
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+while true
+do
+    currentUser=$(/bin/ls -l /dev/console | /usr/bin/awk '{ print $3 }')
+    if [[ "$currentUser" = "root" ]] || [[ "$currentUser" = "_mbsetupuser" ]] || [[ "$currentUser" = "loginwindow" ]]; then
+        sleep 5
+    else
+        break
+    fi
+done
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Set Dialog path, Command Files, JAMF binary, log files and currently logged-in user
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -912,8 +929,7 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm Setup Assistant complete and user at Desktop
-# Useful for triggering on Enrollment Complete and will not pause if run via Self Service
+# Confirm Dock is running user at Desktop
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dockStatus=$( pgrep -x Dock )
