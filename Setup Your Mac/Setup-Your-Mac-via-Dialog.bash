@@ -54,7 +54,7 @@ fi
 
 while true
 do
-    currentUser=$(/bin/ls -l /dev/console | /usr/bin/awk '{ print $3 }')
+    currentUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
     if [[ "$currentUser" = "root" ]] || [[ "$currentUser" = "_mbsetupuser" ]] || [[ "$currentUser" = "loginwindow" ]]; then
         sleep 5
     else
@@ -929,7 +929,7 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm Dock is running user at Desktop
+# Confirm Dock is running and user at Desktop
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dockStatus=$( pgrep -x Dock )
