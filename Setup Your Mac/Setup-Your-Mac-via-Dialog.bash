@@ -9,10 +9,80 @@
 #
 # HISTORY
 #
-#   Version 1.5.0, 28-Nov-2022, Dan K. Snelson (@dan-snelson)
-#   - Prompt user for additional fields at Welcome dialog
+#   Version 1.5.1, 05-Dec-2022, Dan K. Snelson (@dan-snelson)
+#   - Updates to "Pre-flight Checks"
+#     - Moved section to start of script
+#     - Added additional check for Setup Assistant
+#       (for Mac Admins using an "Enrollment Complete" trigger)
 #
 ####################################################################################################
+
+
+
+####################################################################################################
+#
+# Pre-flight Checks
+#
+####################################################################################################
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Confirm script is running as root
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ $(id -u) -ne 0 ]]; then
+    echo "This script must be run as root; exiting."
+    exit 1
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Ensure computer does not go to sleep while running this script (thanks, @grahampugh!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+echo "Caffeinating this script (PID: $$)"
+caffeinate -dimsu -w $$ &
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate Setup Assistant has completed
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+while pgrep -q -x "Setup Assistant" ; do
+    echo "Setup Assistant is running; pausing for 10 seconds"
+    sleep 10
+done
+
+echo "Setup Assistant is no longer running; proceeding …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Confirm Dock is running / user is at Desktop
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+while ! pgrep -q -x "Dock" ; do
+    echo "Dock is NOT running; pausing for 10 seconds"
+    sleep 10
+done
+
+echo "Dock is running; proceeding …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate logged-in user
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+
+if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
+    echo "No user logged-in; exiting."
+    exit 1
+else
+    loggedInUserID=$(id -u "${loggedInUser}")
+fi
 
 
 
@@ -26,7 +96,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.5.0"
+scriptVersion="1.5.1-rc1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -859,20 +929,9 @@ function quitScript() {
 
 ####################################################################################################
 #
-# Pre-flight Checks
+# Program
 #
 ####################################################################################################
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm script is running as root
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ $(id -u) -ne 0 ]]; then
-    echo "This script must be run as root; exiting."
-    exit 1
-fi
-
-
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Client-side Logging
@@ -881,20 +940,6 @@ fi
 if [[ ! -f "${scriptLog}" ]]; then
     touch "${scriptLog}"
     updateScriptLog "*** Created log file via script ***"
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate logged-in user
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
-    echo "No user logged-in; exiting."
-    exitCode="1"
-    quitScript
-else
-    loggedInUserID=$(id -u "${loggedInUser}")
 fi
 
 
@@ -912,43 +957,12 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm Setup Assistant complete and user at Desktop
-# Useful for triggering on Enrollment Complete and will not pause if run via Self Service
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dockStatus=$( pgrep -x Dock )
-updateScriptLog "Waiting for Desktop …"
-
-while [[ "$dockStatus" == "" ]]; do
-    updateScriptLog "Desktop is not loaded; waiting 5 seconds …"
-    sleep 5
-    dockStatus=$( pgrep -x Dock )
-done
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Validate swiftDialog is installed
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogCheck
 
 
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Ensure computer does not go to sleep while running this script (thanks, @grahampugh!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-updateScriptLog "Caffeinating this script (pid=$$)"
-caffeinate -dimsu -w $$ &
-
-
-
-####################################################################################################
-#
-# Program
-#
-####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # If Debug Mode is enabled, replace `blurscreen` with `movable`
