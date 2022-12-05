@@ -28,6 +28,9 @@
 # Version 0.0.4, 03-Nov-2022, Dan K. Snelson (@dan-snelson)
 #   Reverted `action` code to version 0.0.2
 #
+# Version 0.0.5, 05-Dec-2022, Dan K. Snelson (@dan-snelson)
+#   Added `returncode` of `20` for "Do Not Disturb"
+#
 ####################################################################################################
 
 
@@ -38,7 +41,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.4"
+scriptVersion="0.0.5"
 scriptLog="/var/tmp/org.churchofjesuschrist.log"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
@@ -101,47 +104,50 @@ function jamfDisplayMessage() {
 
 function dialogCheck() {
 
-  # Get the URL of the latest PKG From the Dialog GitHub repo
-  dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+    # Get the URL of the latest PKG From the Dialog GitHub repo
+    dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
-  # Expected Team ID of the downloaded PKG
-  expectedDialogTeamID="PWA5E9TQ59"
+    # Expected Team ID of the downloaded PKG
+    expectedDialogTeamID="PWA5E9TQ59"
 
-  # Check for Dialog and install if not found
-  if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
+    # Check for Dialog and install if not found
+    if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
 
-    updateScriptLog "Dialog not found. Installing..."
+        updateScriptLog "Dialog not found. Installing..."
 
-    # Create temporary working directory
-    workDirectory=$( /usr/bin/basename "$0" )
-    tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+        # Create temporary working directory
+        workDirectory=$( /usr/bin/basename "$0" )
+        tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
 
-    # Download the installer package
-    /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
+        # Download the installer package
+        /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
 
-    # Verify the download
-    teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
+        # Verify the download
+        teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
 
-    # Install the package if Team ID validates
-    if [ "$expectedDialogTeamID" = "$teamID" ] || [ "$expectedDialogTeamID" = "" ]; then
- 
-      /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+        # Install the package if Team ID validates
+        if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
+
+            /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+            sleep 2
+            updateScriptLog "swiftDialog version $(dialog --version) installed; proceeding..."
+
+        else
+
+            # Display a so-called "simple" dialog if Team ID fails to validate
+            runAsUser osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Display Message: Error" buttons {"Close"} with icon caution'
+            quitScript "1"
+
+        fi
+
+        # Remove the temporary working directory when done
+        /bin/rm -Rf "$tempDirectory"  
 
     else
 
-      jamfDisplayMessage "Dialog Team ID verification failed."
-      exit 1
+        updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
 
     fi
- 
-    # Remove the temporary working directory when done
-    /bin/rm -Rf "$tempDirectory"  
-
-  else
-
-    updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
-
-  fi
 
 }
 
@@ -154,7 +160,7 @@ function dialogCheck() {
 function quitScript() {
 
     updateScriptLog "Quitting …"
-    echo "quit: " >> "${dialogMessageLog}"
+    echo "quit:" >> "${dialogMessageLog}"
 
     sleep 1
     updateScriptLog "Exiting …"
@@ -303,10 +309,16 @@ case ${returncode} in
         updateScriptLog "${loggedInUser} allowed timer to expire;"
         ;;
 
+    20) ## Process exit code 20 scenario here
+        echo "${loggedInUser} had Do Not Disturb enabled"
+        updateScriptLog "${loggedInUser} had Do Not Disturb enabled"
+        quitScript "0"
+        ;;
+
     *)  ## Catch all processing
         echo "Something else happened; Exit code: ${returncode}"
         updateScriptLog "Something else happened; Exit code: ${returncode};"
-        quitScript "1"
+        quitScript "${returncode}"
         ;;
 
 esac
