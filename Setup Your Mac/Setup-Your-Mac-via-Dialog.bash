@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.5.1, 05-Dec-2022, Dan K. Snelson (@dan-snelson)
+#   Version 1.5.1, 07-Dec-2022, Dan K. Snelson (@dan-snelson)
 #   - Updates to "Pre-flight Checks"
 #     - Moved section to start of script
 #     - Added additional check for Setup Assistant
@@ -96,7 +96,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.5.1-rc1"
+scriptVersion="1.5.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+##  1.5.1
+### 07-Dev-2022
+[Release-specific Blog Post](https://snelson.us/2022/12/setup-your-mac-via-swiftdialog-1-5-1/)
+- Updates to "Pre-flight Checks"
+  - Moved section to start of script
+  - :new: Added additional check for Setup Assistant (for Mac Admins using an "Enrollment Complete" trigger)
+
 ##  1.5.0
 ### 28-Nov-2022
 [Release-specific Blog Post](https://snelson.us/2022/11/setup-your-mac-via-swiftdialog-1-5-0/)
