@@ -49,9 +49,9 @@ caffeinate -dimsu -w $$ &
 # Validate Setup Assistant has completed
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-while pgrep -q -x "Setup Assistant" ; do
-    echo "Setup Assistant is running; pausing for 10 seconds"
-    sleep 10
+while (pgrep -ql "Setup Assistant"); do
+    echo "Setup Assistant is still running; pausing for 2 seconds"
+    sleep 2
 done
 
 echo "Setup Assistant is no longer running; proceeding …"
@@ -62,9 +62,9 @@ echo "Setup Assistant is no longer running; proceeding …"
 # Confirm Dock is running / user is at Desktop
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-while ! pgrep -q -x "Dock" ; do
-    echo "Dock is NOT running; pausing for 10 seconds"
-    sleep 10
+until (pgrep -qlf "Finder.app" && pgrep -lf "Dock.app"); do
+    echo "Finder & Dock are NOT running; pausing for 1 second"
+    sleep 1
 done
 
 echo "Dock is running; proceeding …"
