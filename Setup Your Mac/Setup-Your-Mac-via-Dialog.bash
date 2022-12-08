@@ -49,9 +49,9 @@ caffeinate -dimsu -w $$ &
 # Validate Setup Assistant has completed
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-while pgrep -q -x "Setup Assistant" ; do
-    echo "Setup Assistant is running; pausing for 10 seconds"
-    sleep 10
+while (pgrep -ql "Setup Assistant"); do
+    echo "Setup Assistant is still running; pausing for 2 seconds"
+    sleep 2
 done
 
 echo "Setup Assistant is no longer running; proceeding …"
@@ -62,12 +62,12 @@ echo "Setup Assistant is no longer running; proceeding …"
 # Confirm Dock is running / user is at Desktop
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-while ! pgrep -q -x "Dock" ; do
-    echo "Dock is NOT running; pausing for 10 seconds"
-    sleep 10
+until (pgrep -qlf "Finder.app" && pgrep -lf "Dock.app"); do
+    echo "Finder & Dock are NOT running; pausing for 1 second"
+    sleep 1
 done
 
-echo "Dock is running; proceeding …"
+echo "Finder & Dock are running; proceeding …"
 
 
 
@@ -145,7 +145,7 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
 welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
 
-# Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!) 
+# Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
 if [[ "${appleInterfaceStyle}" == "Dark" ]]; then
     welcomeIcon="https://cdn-icons-png.flaticon.com/512/740/740878.png"
@@ -299,7 +299,7 @@ dialogSetupYourMacCMD="$dialogApp \
 # - listitem: The text to be displayed in the list
 # - icon: The hash of the icon to be displayed on the left
 #   - See: https://vimeo.com/772998915
-# - progresstext: The text to be displayed below the progress bar 
+# - progresstext: The text to be displayed below the progress bar
 # - trigger: The Jamf Pro Policy Custom Event Name
 # - path: The filepath for validation
 #
@@ -470,7 +470,7 @@ case ${completionActionOption} in
         button1textCompletionActionOption="Shut Down"
         progressTextCompletionAction="shut down and "
         ;;
-    
+
     "Restart" )
         button1textCompletionActionOption="Restarting …"
         progressTextCompletionAction="restart and "
@@ -496,7 +496,7 @@ case ${completionActionOption} in
         progressTextCompletionAction=""
         ;;
 
-    "Quit" ) 
+    "Quit" )
         button1textCompletionActionOption="Quit"
         progressTextCompletionAction=""
         ;;
@@ -585,7 +585,7 @@ function dialogCheck() {
         fi
 
         # Remove the temporary working directory when done
-        /bin/rm -Rf "$tempDirectory"  
+        /bin/rm -Rf "$tempDirectory"
 
     else
 
@@ -856,7 +856,7 @@ function completionAction() {
                 updateScriptLog "Goodnight!"
                 ;;
 
-            "Quit" ) 
+            "Quit" )
                 updateScriptLog "Quitting script"
                 exitCode="0"
                 ;;
@@ -869,7 +869,7 @@ function completionAction() {
         esac
 
         shopt -u nocasematch
-    
+
     fi
 
     exit "${exitCode}"
