@@ -840,6 +840,10 @@ function validatePolicyResult() {
                     esac
                 else
                     updateScriptLog "Sophos Endpoint Not Found"
+                    dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                    jamfProPolicyTriggerFailure="failed"
+                    exitCode="1"
+                    jamfProPolicyPolicyNameFailures+="• $listitem  \n"
                 fi
             else
                 dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
