@@ -334,6 +334,17 @@ policy_array=('
             ]
         },
         {
+            "listitem": "Sophos Endpoint Services",
+            "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
+            "progresstext": "Validating Sophos Endpoint Services …",
+            "trigger_list": [
+                {
+                    "trigger": "None",
+                    "validation": "sophosEndpointServices"
+                }
+            ]
+        },
+        {
             "listitem": "Palo Alto GlobalProtect",
             "icon": "fcccf5d72ad9a4f6d3a4d780dcd8385378a0a8fd18e8c33ad32326f5bd53cca0",
             "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
@@ -384,11 +395,11 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "finalConfiguration",
-                    "validation": ""
+                    "validation": "None"
                 },
                 {
                     "trigger": "reconAtReboot",
-                    "validation": ""
+                    "validation": "None"
                 }
             ]
         },
@@ -399,7 +410,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "recon",
-                    "validation": ""
+                    "validation": "None"
                 }
             ]
         }
@@ -736,6 +747,123 @@ function run_jamf_trigger() {
         "$jamfBinary" policy -event "$trigger"
 
     fi
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Confirm Policy Execution
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function confirmPolicyExecution() {
+
+    validation="${1}"
+    trigger="${2}"
+
+    updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
+
+    case ${validation} in
+
+        */* ) # If the validation variable contains a forward slash (i.e., "/"), presume it's a path and check if that path exists on disk
+            if [[ -f "${validation}" ]]; then
+                updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation} exists, moving on"
+                if [[ "${debugMode}" == "true" ]]; then sleep 0.5; fi
+            else
+                run_jamf_trigger "${trigger}"
+            fi
+            ;;
+
+        "None" )
+            updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
+            ;;
+
+        * )
+            updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution Catch-all: ${validation}"
+            ;;
+
+    esac
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate Policy Result
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function validatePolicyResult() {
+
+    validation="${1}"
+    trigger="${2}"
+
+    updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Result: ${validation}"
+
+    case ${validation} in
+
+        */* ) # If the validation variable contains a forward slash (i.e., "/"), presume it's a path and check if that path exists on disk
+            updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Result: Testing for \"$validation\" …"
+            if [[ -f "${validation}" ]]; then
+                dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
+            else
+                dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                jamfProPolicyTriggerFailure="failed"
+                exitCode="1"
+                jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+            fi
+            ;;
+
+        "sophosEndpointServices" ) # Validate Sophos Endpoint RTS Status
+            updateScriptLog "Validate Sophos Endpoint RTS Status … "
+            if [[ -d /Applications/Sophos/Sophos\ Endpoint.app ]]; then
+                if [[ -f /Library/Preferences/com.sophos.sav.plist ]]; then
+                    sophosOnAccessRunning=$( /usr/bin/defaults read /Library/Preferences/com.sophos.sav.plist OnAccessRunning )
+                    case ${sophosOnAccessRunning} in
+                        "0" ) 
+                            updateScriptLog "Sophos Endpoint RTS Status: Disabled"
+                            dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                            jamfProPolicyTriggerFailure="failed"
+                            exitCode="1"
+                            jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                            ;;
+                        "1" )
+                            updateScriptLog "Sophos Endpoint RTS Status: Enabled"
+                            dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
+                            ;;
+                         *  )
+                            updateScriptLog "Sophos Endpoint RTS Status: Unknown"
+                            dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Unknown"
+                            jamfProPolicyTriggerFailure="failed"
+                            exitCode="1"
+                            jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                            ;;
+                    esac
+                else
+                    updateScriptLog "Sophos Endpoint Not Found"
+                fi
+            fi
+            ;;
+
+        "None" )
+            updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
+            dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
+            if [[ "${trigger}" == "recon" ]]; then
+                dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
+                updateScriptLog "SETUP YOUR MAC DIALOG: Updating computer inventory with the following reconOptions: \"${reconOptions}\" …"
+                if [[ "${debugMode}" == "true" ]]; then
+                    updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: eval ${jamfBinary} recon ${reconOptions}"
+                else
+                    eval "${jamfBinary} recon ${reconOptions}"
+                fi
+                dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Updated"
+            fi
+            ;;
+
+        * )
+            updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution Catch-all: ${validation}"
+            ;;
+
+    esac
 
 }
 
@@ -1213,35 +1341,21 @@ for (( i=0; i<dialog_step_length; i++ )); do
     if [[ -n "$icon" ]]; then dialogUpdateSetupYourMac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon}"; fi
     if [[ -n "$progresstext" ]]; then dialogUpdateSetupYourMac "progresstext: $progresstext"; fi
     if [[ -n "$trigger_list_length" ]]; then
+
         for (( j=0; j<trigger_list_length; j++ )); do
 
             # Setting variables within the trigger_list
             trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
             validation=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].validation")
-
-            # If the validation variable has a value, check if that path exists on disk
-            if [[ -f "$validation" ]]; then
-                updateScriptLog "SETUP YOUR MAC DIALOG: INFO: $validation exists, moving on"
-                if [[ "${debugMode}" == "true" ]]; then sleep 0.5; fi
-            else
-                run_jamf_trigger "$trigger"
+            if [[ "${trigger}" != "None" ]]; then
+                confirmPolicyExecution "${validation}" "${trigger}"
             fi
+
         done
+
     fi
 
-    # Validate the expected validation exists
-    updateScriptLog "SETUP YOUR MAC DIALOG: Testing for \"$validation\" …"
-    if [[ -f "$validation" ]] || [[ -z "$validation" ]]; then
-        dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
-        if [[ "$trigger" == "recon" ]]; then
-            dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Updated"
-        fi
-    else
-        dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
-        jamfProPolicyTriggerFailure="failed"
-        exitCode="1"
-        jamfProPolicyPolicyNameFailures+="• $listitem  \n"
-    fi
+    validatePolicyResult "${validation}" "${trigger}"
 
 done
 
