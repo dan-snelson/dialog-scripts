@@ -9,11 +9,8 @@
 #
 # HISTORY
 #
-#   Version 1.5.1, 07-Dec-2022, Dan K. Snelson (@dan-snelson)
-#   - Updates to "Pre-flight Checks"
-#     - Moved section to start of script
-#     - Added additional check for Setup Assistant
-#       (for Mac Admins using an "Enrollment Complete" trigger)
+#   Version 1.6.0, 14-Dec-2022, Dan K. Snelson (@dan-snelson)
+#   - Addresses Issue No. 21
 #
 ####################################################################################################
 
@@ -96,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.5.1"
+scriptVersion="1.6.0-rc1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -301,7 +298,7 @@ dialogSetupYourMacCMD="$dialogApp \
 #   - See: https://vimeo.com/772998915
 # - progresstext: The text to be displayed below the progress bar
 # - trigger: The Jamf Pro Policy Custom Event Name
-# - path: The filepath for validation
+# - validation: The check for validation
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -321,7 +318,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "filevault",
-                    "path": "/Library/Preferences/com.apple.fdesetup.plist"
+                    "validation": "/Library/Preferences/com.apple.fdesetup.plist"
                 }
             ]
         },
@@ -332,7 +329,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "sophosEndpoint",
-                    "path": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
+                    "validation": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
                 }
             ]
         },
@@ -343,7 +340,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "globalProtect",
-                    "path": "/Applications/GlobalProtect.app/Contents/Info.plist"
+                    "validation": "/Applications/GlobalProtect.app/Contents/Info.plist"
                 }
             ]
         },
@@ -354,7 +351,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "microsoftTeams",
-                    "path": "/Applications/Microsoft Teams.app/Contents/Info.plist"
+                    "validation": "/Applications/Microsoft Teams.app/Contents/Info.plist"
                 }
             ]
         },
@@ -365,7 +362,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "zoom",
-                    "path": "/Applications/zoom.us.app/Contents/Info.plist"
+                    "validation": "/Applications/zoom.us.app/Contents/Info.plist"
                 }
             ]
         },
@@ -376,7 +373,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "googleChrome",
-                    "path": "/Applications/Google Chrome.app/Contents/Info.plist"
+                    "validation": "/Applications/Google Chrome.app/Contents/Info.plist"
                 }
             ]
         },
@@ -387,11 +384,11 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "finalConfiguration",
-                    "path": ""
+                    "validation": ""
                 },
                 {
                     "trigger": "reconAtReboot",
-                    "path": ""
+                    "validation": ""
                 }
             ]
         },
@@ -402,7 +399,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "recon",
-                    "path": ""
+                    "validation": ""
                 }
             ]
         }
@@ -1220,11 +1217,11 @@ for (( i=0; i<dialog_step_length; i++ )); do
 
             # Setting variables within the trigger_list
             trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
-            path=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].path")
+            validation=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].validation")
 
-            # If the path variable has a value, check if that path exists on disk
-            if [[ -f "$path" ]]; then
-                updateScriptLog "SETUP YOUR MAC DIALOG: INFO: $path exists, moving on"
+            # If the validation variable has a value, check if that path exists on disk
+            if [[ -f "$validation" ]]; then
+                updateScriptLog "SETUP YOUR MAC DIALOG: INFO: $validation exists, moving on"
                 if [[ "${debugMode}" == "true" ]]; then sleep 0.5; fi
             else
                 run_jamf_trigger "$trigger"
@@ -1232,9 +1229,9 @@ for (( i=0; i<dialog_step_length; i++ )); do
         done
     fi
 
-    # Validate the expected path exists
-    updateScriptLog "SETUP YOUR MAC DIALOG: Testing for \"$path\" …"
-    if [[ -f "$path" ]] || [[ -z "$path" ]]; then
+    # Validate the expected validation exists
+    updateScriptLog "SETUP YOUR MAC DIALOG: Testing for \"$validation\" …"
+    if [[ -f "$validation" ]] || [[ -z "$validation" ]]; then
         dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
         if [[ "$trigger" == "recon" ]]; then
             dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Updated"
