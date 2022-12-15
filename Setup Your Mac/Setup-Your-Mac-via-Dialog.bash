@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc3"
+scriptVersion="1.6.0-rc4"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -824,7 +824,7 @@ function validatePolicyResult() {
             fi
             ;;
 
-        "Local" ) # Validate Sophos Endpoint RTS Status
+        "Local" ) # Local Policy Validation
             case ${trigger} in
                 sophosEndpointServices )
                     updateScriptLog "Validate Sophos Endpoint RTS Status … "
@@ -870,7 +870,7 @@ function validatePolicyResult() {
             esac
             ;;
 
-        "Remote" )
+        "Remote" ) # Remote Policy Validation
             updateScriptLog "Validate '${trigger}' '${validation}'"
             dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
             result=$( jamf policy -trigger "${trigger}" | grep "Script result:" )
@@ -884,7 +884,7 @@ function validatePolicyResult() {
             fi
             ;;
 
-        "None" )
+        "None" ) # No Policy Validation
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
             dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
             if [[ "${trigger}" == "recon" ]]; then
@@ -899,7 +899,9 @@ function validatePolicyResult() {
             fi
             ;;
 
-        * ) updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Results Catch-all: ${validation}" ;;
+        * ) # Catch-all Policy Validation
+            updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Results Catch-all: ${validation}"
+            ;;
 
     esac
 
