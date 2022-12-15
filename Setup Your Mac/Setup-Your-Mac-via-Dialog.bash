@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc2"
+scriptVersion="1.6.0-rc3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -334,13 +334,24 @@ policy_array=('
             ]
         },
         {
-            "listitem": "Sophos Endpoint Services",
+            "listitem": "Sophos Endpoint Services Local",
             "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
-            "progresstext": "Validating Sophos Endpoint Services …",
+            "progresstext": "Locally Validating Sophos Endpoint Services …",
             "trigger_list": [
                 {
-                    "trigger": "None",
-                    "validation": "sophosEndpointServices"
+                    "trigger": "sophosEndpointServices",
+                    "validation": "Local"
+                }
+            ]
+        },
+        {
+            "listitem": "Sophos Endpoint Services Remote",
+            "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
+            "progresstext": "Remotely Validating Sophos Endpoint Services …",
+            "trigger_list": [
+                {
+                    "trigger": "symvSophosEndpointRTS",
+                    "validation": "Remote"
                 }
             ]
         },
@@ -758,10 +769,10 @@ function run_jamf_trigger() {
 
 function confirmPolicyExecution() {
 
-    validation="${1}"
-    trigger="${2}"
+    trigger="${1}"
+    validation="${2}"
 
-    updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
+    updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: '${trigger}' '${validation}'"
 
     case ${validation} in
 
@@ -794,10 +805,10 @@ function confirmPolicyExecution() {
 
 function validatePolicyResult() {
 
-    validation="${1}"
-    trigger="${2}"
+    trigger="${1}"
+    validation="${2}"
 
-    updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Result: ${validation}"
+    updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Result: '${trigger}' '${validation}'"
 
     case ${validation} in
 
@@ -813,38 +824,58 @@ function validatePolicyResult() {
             fi
             ;;
 
-        "sophosEndpointServices" ) # Validate Sophos Endpoint RTS Status
-            updateScriptLog "Validate Sophos Endpoint RTS Status … "
-            if [[ -d /Applications/Sophos/Sophos\ Endpoint.app ]]; then
-                if [[ -f /Library/Preferences/com.sophos.sav.plist ]]; then
-                    sophosOnAccessRunning=$( /usr/bin/defaults read /Library/Preferences/com.sophos.sav.plist OnAccessRunning )
-                    case ${sophosOnAccessRunning} in
-                        "0" ) 
-                            updateScriptLog "Sophos Endpoint RTS Status: Disabled"
+        "Local" ) # Validate Sophos Endpoint RTS Status
+            case ${trigger} in
+                sophosEndpointServices )
+                    updateScriptLog "Validate Sophos Endpoint RTS Status … "
+                    dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
+                    if [[ -d /Applications/Sophos/Sophos\ Endpoint.app ]]; then
+                        if [[ -f /Library/Preferences/com.sophos.sav.plist ]]; then
+                            sophosOnAccessRunning=$( /usr/bin/defaults read /Library/Preferences/com.sophos.sav.plist OnAccessRunning )
+                            case ${sophosOnAccessRunning} in
+                                "0" ) 
+                                    updateScriptLog "Sophos Endpoint RTS Status: Disabled"
+                                    dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                                    jamfProPolicyTriggerFailure="failed"
+                                    exitCode="1"
+                                    jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                                    ;;
+                                "1" )
+                                    updateScriptLog "Sophos Endpoint RTS Status: Enabled"
+                                    dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
+                                    ;;
+                                *  )
+                                    updateScriptLog "Sophos Endpoint RTS Status: Unknown"
+                                    dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Unknown"
+                                    jamfProPolicyTriggerFailure="failed"
+                                    exitCode="1"
+                                    jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                                    ;;
+                            esac
+                        else
+                            updateScriptLog "Sophos Endpoint Not Found"
                             dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
                             jamfProPolicyTriggerFailure="failed"
                             exitCode="1"
                             jamfProPolicyPolicyNameFailures+="• $listitem  \n"
-                            ;;
-                        "1" )
-                            updateScriptLog "Sophos Endpoint RTS Status: Enabled"
-                            dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
-                            ;;
-                         *  )
-                            updateScriptLog "Sophos Endpoint RTS Status: Unknown"
-                            dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Unknown"
-                            jamfProPolicyTriggerFailure="failed"
-                            exitCode="1"
-                            jamfProPolicyPolicyNameFailures+="• $listitem  \n"
-                            ;;
-                    esac
-                else
-                    updateScriptLog "Sophos Endpoint Not Found"
-                    dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
-                    jamfProPolicyTriggerFailure="failed"
-                    exitCode="1"
-                    jamfProPolicyPolicyNameFailures+="• $listitem  \n"
-                fi
+                        fi
+                    else
+                        dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                        jamfProPolicyTriggerFailure="failed"
+                        exitCode="1"
+                        jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                    fi
+                    ;;
+                * ) updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Results Local Catch-all: ${validation}" ;;
+            esac
+            ;;
+
+        "Remote" )
+            updateScriptLog "Validate '${trigger}' '${validation}'"
+            dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
+            result=$( jamf policy -trigger "${trigger}" | grep "Script result:" )
+            if [[ "${result}" == *"Enabled"* ]]; then
+                dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
             else
                 dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
                 jamfProPolicyTriggerFailure="failed"
@@ -868,9 +899,7 @@ function validatePolicyResult() {
             fi
             ;;
 
-        * )
-            updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution Catch-all: ${validation}"
-            ;;
+        * ) updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Results Catch-all: ${validation}" ;;
 
     esac
 
@@ -1356,15 +1385,20 @@ for (( i=0; i<dialog_step_length; i++ )); do
             # Setting variables within the trigger_list
             trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
             validation=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].validation")
-            if [[ "${trigger}" != "None" ]]; then
-                confirmPolicyExecution "${validation}" "${trigger}"
-            fi
+            case ${validation} in
+                "Local" | "Remote" )
+                    updateScriptLog "SETUP YOUR MAC DIALOG: Skipping Policy Execution due to '${validation}' validation"
+                    ;;
+                * )
+                    confirmPolicyExecution "${trigger}" "${validation}"
+                    ;;
+            esac
 
         done
 
     fi
 
-    validatePolicyResult "${validation}" "${trigger}"
+    validatePolicyResult "${trigger}" "${validation}"
 
 done
 
