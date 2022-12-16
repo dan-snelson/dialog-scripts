@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc5"
+scriptVersion="1.6.0-rc6"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -279,7 +279,7 @@ dialogSetupYourMacCMD="$dialogApp \
 --infotext \"$scriptVersion\" \
 --titlefont 'size=28' \
 --messagefont 'size=14' \
---height '70%' \
+--height '75%' \
 --position 'centre' \
 --blurscreen \
 --ontop \
@@ -318,7 +318,7 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "filevault",
-                    "validation": "/Library/Preferences/com.apple.fdesetup.plist"
+                    "validation": "Local"
                 }
             ]
         },
@@ -334,9 +334,9 @@ policy_array=('
             ]
         },
         {
-            "listitem": "Sophos Endpoint Services Local",
+            "listitem": "Sophos Endpoint Services (Local)",
             "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
-            "progresstext": "Locally Validating Sophos Endpoint Services …",
+            "progresstext": "Locally validating Sophos Endpoint Services …",
             "trigger_list": [
                 {
                     "trigger": "sophosEndpointServices",
@@ -345,9 +345,9 @@ policy_array=('
             ]
         },
         {
-            "listitem": "Sophos Endpoint Services Remote",
+            "listitem": "Sophos Endpoint Services (Remote)",
             "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
-            "progresstext": "Remotely Validating Sophos Endpoint Services …",
+            "progresstext": "Remotely validating Sophos Endpoint Services …",
             "trigger_list": [
                 {
                     "trigger": "symvSophosEndpointRTS",
@@ -367,9 +367,9 @@ policy_array=('
             ]
         },
         {
-            "listitem": "Palo Alto GlobalProtect Services Local",
+            "listitem": "Palo Alto GlobalProtect Services (Local)",
             "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
-            "progresstext": "Locally Validating Palo Alto GlobalProtect Services …",
+            "progresstext": "Locally validating Palo Alto GlobalProtect Services …",
             "trigger_list": [
                 {
                     "trigger": "globalProtect",
@@ -378,9 +378,9 @@ policy_array=('
             ]
         },
         {
-            "listitem": "Palo Alto GlobalProtect Services Remote",
+            "listitem": "Palo Alto GlobalProtect Services (Remote)",
             "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
-            "progresstext": "Remotely Validating Palo Alto GlobalProtect Services …",
+            "progresstext": "Remotely validating Palo Alto GlobalProtect Services …",
             "trigger_list": [
                 {
                     "trigger": "symvGlobalProtect",
@@ -848,6 +848,35 @@ function validatePolicyResult() {
 
         "Local" ) # Local Policy Validation
             case ${trigger} in
+                filevault )
+                   updateScriptLog "Validate FileVault … "
+                    dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
+                    if [[ -f /Library/Preferences/com.apple.fdesetup.plist ]]; then
+                        fileVaultStatus=$( fdesetup status -extended -verbose 2>&1 )
+                        case ${fileVaultStatus} in
+                            *"FileVault is On."* ) 
+                                updateScriptLog "FileVault: FileVault is On."
+                                dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Enabled"
+                                ;;
+                            *"Deferred enablement appears to be active for user"* )
+                                updateScriptLog "FileVault: Enabled"
+                                dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Enabled (next login)"
+                                ;;
+                            *  )
+                                dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Unknown"
+                                jamfProPolicyTriggerFailure="failed"
+                                exitCode="1"
+                                jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                                ;;
+                        esac
+                    else
+                        updateScriptLog "'/Library/Preferences/com.apple.fdesetup.plist' NOT Found"
+                        dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                        jamfProPolicyTriggerFailure="failed"
+                        exitCode="1"
+                        jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                    fi
+                    ;;
                 sophosEndpointServices )
                     updateScriptLog "Validate Sophos Endpoint RTS Status … "
                     dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
