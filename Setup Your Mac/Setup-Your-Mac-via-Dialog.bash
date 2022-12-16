@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc4"
+scriptVersion="1.6.0-rc5"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -363,6 +363,28 @@ policy_array=('
                 {
                     "trigger": "globalProtect",
                     "validation": "/Applications/GlobalProtect.app/Contents/Info.plist"
+                }
+            ]
+        },
+        {
+            "listitem": "Palo Alto GlobalProtect Services Local",
+            "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
+            "progresstext": "Locally Validating Palo Alto GlobalProtect Services …",
+            "trigger_list": [
+                {
+                    "trigger": "globalProtect",
+                    "validation": "Local"
+                }
+            ]
+        },
+        {
+            "listitem": "Palo Alto GlobalProtect Services Remote",
+            "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
+            "progresstext": "Remotely Validating Palo Alto GlobalProtect Services …",
+            "trigger_list": [
+                {
+                    "trigger": "symvGlobalProtect",
+                    "validation": "Remote"
                 }
             ]
         },
@@ -854,6 +876,46 @@ function validatePolicyResult() {
                             esac
                         else
                             updateScriptLog "Sophos Endpoint Not Found"
+                            dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                            jamfProPolicyTriggerFailure="failed"
+                            exitCode="1"
+                            jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                        fi
+                    else
+                        dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                        jamfProPolicyTriggerFailure="failed"
+                        exitCode="1"
+                        jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                    fi
+                    ;;
+                globalProtect )
+                    updateScriptLog "Validate Palo Alto Networks GlobalProtect Status … "
+                    dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
+                    if [[ -d /Applications/GlobalProtect.app ]]; then
+                        if [[ -f /Library/Preferences/com.paloaltonetworks.GlobalProtect.settings.plist ]]; then
+                            globalProtectStatus=$( /usr/libexec/PlistBuddy -c "print :Palo\ Alto\ Networks:GlobalProtect:PanGPS:disable-globalprotect" /Library/Preferences/com.paloaltonetworks.GlobalProtect.settings.plist )
+                            case "${globalProtectStatus}" in
+                                "0" )
+                                    updateScriptLog "Palo Alto Networks GlobalProtect Status: Enabled"
+                                    dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
+                                    ;;
+                                "1" )
+                                    updateScriptLog "Palo Alto Networks GlobalProtect Status: Disabled"
+                                    dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+                                    jamfProPolicyTriggerFailure="failed"
+                                    exitCode="1"
+                                    jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                                    ;;
+                                *  )
+                                    updateScriptLog "Palo Alto Networks GlobalProtect Status: Unknown"
+                                    dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Unknown"
+                                    jamfProPolicyTriggerFailure="failed"
+                                    exitCode="1"
+                                    jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                                    ;;
+                            esac
+                        else
+                            updateScriptLog "Palo Alto Networks GlobalProtect Not Found"
                             dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
                             jamfProPolicyTriggerFailure="failed"
                             exitCode="1"
