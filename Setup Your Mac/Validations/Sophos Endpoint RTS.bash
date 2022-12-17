@@ -26,7 +26,7 @@ if [[ -d /Applications/Sophos/Sophos\ Endpoint.app ]]; then
         sophosOnAccessRunning=$( /usr/bin/defaults read /Library/Preferences/com.sophos.sav.plist OnAccessRunning )
         case ${sophosOnAccessRunning} in
             "0" ) RESULT="Disabled" ;;
-            "1" ) RESULT="Enabled" ;;
+            "1" ) RESULT="Running" ;;
              *  ) RESULT="Unknown" ;;
         esac
     else

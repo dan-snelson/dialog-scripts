@@ -34,7 +34,7 @@ if [[ -d /Applications/GlobalProtect.app ]]; then # GlobalProtect.app found in /
     # Read `disable-globalprotect` value
     globalProtectStatus=$( /usr/libexec/PlistBuddy -c "print :Palo\ Alto\ Networks:GlobalProtect:PanGPS:disable-globalprotect" /Library/Preferences/com.paloaltonetworks.GlobalProtect.settings.plist )
     case "${globalProtectStatus}" in
-        0 ) globalProtectDisabled="GlobalProtect Enabled; " ;;
+        0 ) globalProtectDisabled="GlobalProtect Running; " ;;
         1 ) globalProtectDisabled="GlobalProtect Disabled; " ;;
         * ) globalProtectDisabled="GlobalProtect Unknown; " ;;
     esac

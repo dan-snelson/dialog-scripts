@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc6"
+scriptVersion="1.6.0-rc7"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -965,7 +965,7 @@ function validatePolicyResult() {
             updateScriptLog "Validate '${trigger}' '${validation}'"
             dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
             result=$( jamf policy -trigger "${trigger}" | grep "Script result:" )
-            if [[ "${result}" == *"Enabled"* ]]; then
+            if [[ "${result}" == *"Running"* ]]; then
                 dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
             else
                 dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
