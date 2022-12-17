@@ -921,6 +921,8 @@ function validatePolicyResult() {
                     updateScriptLog "Validate Palo Alto Networks GlobalProtect Status … "
                     dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
                     if [[ -d /Applications/GlobalProtect.app ]]; then
+                        updateScriptLog "Pausing for 10 seconds to allow Palo Alto Networks GlobalProtect Services … "
+                        sleep 10 # Arbitrary value; tuning needed
                         if [[ -f /Library/Preferences/com.paloaltonetworks.GlobalProtect.settings.plist ]]; then
                             globalProtectStatus=$( /usr/libexec/PlistBuddy -c "print :Palo\ Alto\ Networks:GlobalProtect:PanGPS:disable-globalprotect" /Library/Preferences/com.paloaltonetworks.GlobalProtect.settings.plist )
                             case "${globalProtectStatus}" in
