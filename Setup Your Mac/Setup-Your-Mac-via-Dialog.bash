@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.6.0, 14-Dec-2022, Dan K. Snelson (@dan-snelson)
+#   Version 1.6.0, 09-Jan-2023, Dan K. Snelson (@dan-snelson)
 #   - Addresses Issue No. 21
 #
 ####################################################################################################
@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc8"
+scriptVersion="1.6.0-rc9"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -299,20 +299,18 @@ dialogSetupYourMacCMD="$dialogApp \
 # - progresstext: The text to be displayed below the progress bar
 # - trigger: The Jamf Pro Policy Custom Event Name
 # - validation: The check for validation
-#   - See: [insert Vimeo link here]
-#   - Absolute path (simulates pre-v1.6.0 behavior, for example: "/Applications/Microsoft Teams.app/Contents/Info.plist")
+#   - Absolute Path (simulates pre-v1.6.0 behavior, for example: "/Applications/Microsoft Teams.app/Contents/Info.plist")
 #   - Local (for local validation within this script, for example: "filevault")
-#   - Remote (for remote validation via a Jamf Pro policies with single-script payloads, for example: "symvSophosEndpointRTS")
-#   - None (for triggers which don’t require validation, for example: recon)
+#   - Remote (for remote validation via a Jamf Pro policy which has a single-script payload, for example: "symvSophosEndpointRTS")
+#       - See: https://vimeo.com/782561166
+#   - None (for triggers which don't require validation, for example: recon)
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # The fully qualified domain name of the server which hosts your icons, including any required sub-directories
-# (P.S. I tried to come up with a longer variable name, but couldn't.)
 setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
 
 # shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
-
 policy_array=('
 {
     "steps": [
@@ -839,7 +837,12 @@ function validatePolicyResult() {
 
     case ${validation} in
 
-        */* ) # If the validation variable contains a forward slash (i.e., "/"), presume it's a path and check if that path exists on disk
+        ###
+        # Absolute Path
+        # Simulates pre-v1.6.0 behavior, for example: "/Applications/Microsoft Teams.app/Contents/Info.plist"
+        ###
+
+        */* ) 
             updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Result: Testing for \"$validation\" …"
             if [[ -f "${validation}" ]]; then
                 dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
@@ -851,7 +854,14 @@ function validatePolicyResult() {
             fi
             ;;
 
-        "Local" ) # Local Policy Validation
+
+
+        ###
+        # Local
+        # Validation within this script, for example: "filevault"
+        ###
+
+        "Local" )
             case ${trigger} in
                 filevault )
                    updateScriptLog "Validate FileVault … "
@@ -968,7 +978,15 @@ function validatePolicyResult() {
             esac
             ;;
 
-        "Remote" ) # Remote Policy Validation
+
+
+        ###
+        # Remote
+        # Validation via a Jamf Pro policy which has a single-script payload, for example: "symvSophosEndpointRTS"
+        # See: https://vimeo.com/782561166
+        ###
+
+        "Remote" )
             updateScriptLog "Validate '${trigger}' '${validation}'"
             dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
             result=$( jamf policy -trigger "${trigger}" | grep "Script result:" )
@@ -982,7 +1000,14 @@ function validatePolicyResult() {
             fi
             ;;
 
-        "None" ) # No Policy Validation
+
+
+        ###
+        # None
+        # For triggers which don't require validation, for example: recon
+        ###
+
+        "None" )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
             dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
             if [[ "${trigger}" == "recon" ]]; then
@@ -997,8 +1022,18 @@ function validatePolicyResult() {
             fi
             ;;
 
-        * ) # Catch-all Policy Validation
+
+
+        ###
+        # Catch-all
+        ###
+
+        * )
             updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Results Catch-all: ${validation}"
+            dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
+            jamfProPolicyTriggerFailure="failed"
+            exitCode="1"
+            jamfProPolicyPolicyNameFailures+="• $listitem  \n"
             ;;
 
     esac
