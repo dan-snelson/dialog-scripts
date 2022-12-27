@@ -1,7 +1,27 @@
 # CHANGELOG
 
+## 1.6.0
+### 09-Jan-2023
+[Release-specific Blog Post](https://snelson.us/2023/01/setup-your-mac-via-swiftdialog-1-6-0/)
+- Addresses [Issue No. 21](https://github.com/dan-snelson/dialog-scripts/issues/21)
+  - 🔥 **Breaking Change** 🔥 (for users of Setup Your Mac prior to `1.6.0`)
+      - `policy_array`'s `path` has been replaced with `validation`
+  - 🆕 The `confirmPolicyExecution` function confirms if the policy needs to be executed
+  - 🆕 The `validatePolicyResult` function validates if the policy succeeded and the related service is _running_, based on the specified `validation` option
+    - [Feature-specific Blog Post](https://snelson.us/2023/01/setup-your-mac-validation/)
+    - **Validation Options:**
+       - {absolute path} (simulates pre-`1.6.0` behavior, for example: `"/Applications/Microsoft Teams.app/Contents/Info.plist"`)
+       - `Local` (for validation within this script, for example: `"filevault"`)
+       - `Remote` (for validation validation via a single-script Jamf Pro policy, for example: `"symvGlobalProtect"`)
+       - `None` (for triggers which don't require validation, for example: `recon`)
+- Enhanced policy logging options to address [Issue No. 25](https://github.com/dan-snelson/dialog-scripts/issues/25)
+  - Search for and comment-out: `eval "${jamfBinary} policy -trigger ${trigger}"`
+  - Uncomment: `eval "${jamfBinary} policy -trigger ${trigger} -verbose | tee -a ${scriptLog}"`
+  - Ensure `debug mode` is set to `false`
+
+
 ##  1.5.1
-### 07-Dev-2022
+### 07-Dec-2022
 [Release-specific Blog Post](https://snelson.us/2022/12/setup-your-mac-via-swiftdialog-1-5-1/)
 - Updates to "Pre-flight Checks"
   - Moved section to start of script

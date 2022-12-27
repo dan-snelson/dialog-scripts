@@ -93,11 +93,11 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc9"
+scriptVersion="1.6.0-rc10"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
-debugMode="${5:-"true"}"                           # [ true (default) | false ]
-welcomeDialog="${6:-"true"}"                       # [ true (default) | false ]
+debugMode="${5:-"false"}"                           # [ true (default) | false ]
+welcomeDialog="${6:-"false"}"                       # [ true (default) | false ]
 completionActionOption="${7:-"Restart Attended"}"  # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
 reconOptions=""                                    # Initialize dynamic recon options; built based on user's input at Welcome dialog
 exitCode="0"
@@ -298,13 +298,12 @@ dialogSetupYourMacCMD="$dialogApp \
 #   - See: https://vimeo.com/772998915
 # - progresstext: The text to be displayed below the progress bar
 # - trigger: The Jamf Pro Policy Custom Event Name
-# - validation: The check for validation
-#   - Absolute Path (simulates pre-v1.6.0 behavior, for example: "/Applications/Microsoft Teams.app/Contents/Info.plist")
-#   - Local (for local validation within this script, for example: "filevault")
-#   - Remote (for remote validation via a Jamf Pro policy which has a single-script payload, for example: "symvSophosEndpointRTS")
-#       - See: https://vimeo.com/782561166
-#   - None (for triggers which don't require validation, for example: recon)
-#
+# - validation: [ {absolute path} | Local | Remote | None ]
+#   See: https://snelson.us/2023/01/setup-your-mac-validation/
+#       - {absolute path} (simulates pre-v1.6.0 behavior, for example: "/Applications/Microsoft Teams.app/Contents/Info.plist")
+#       - Local (for validation within this script, for example: "filevault")
+#       - Remote (for validation validation via a single-script Jamf Pro policy, for example: "symvGlobalProtect")
+#       - None (for triggers which don't require validation, for example: recon)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # The fully qualified domain name of the server which hosts your icons, including any required sub-directories
@@ -765,7 +764,7 @@ function run_jamf_trigger() {
 
     if [[ "${debugMode}" == "true" ]]; then
 
-        updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: TRIGGER: $jamfBinary policy -event $trigger"
+        updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: TRIGGER: $jamfBinary policy -trigger $trigger"
         if [[ "$trigger" == "recon" ]]; then
             updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: RECON: $jamfBinary recon ${reconOptions}"
         fi
@@ -779,8 +778,9 @@ function run_jamf_trigger() {
 
     else
 
-        updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary policy -event $trigger"
-        "$jamfBinary" policy -event "$trigger"
+        updateScriptLog "SETUP YOUR MAC DIALOG: RUNNING: $jamfBinary policy -trigger $trigger"
+        eval "${jamfBinary} policy -trigger ${trigger}"                                     # Add comment for policy testing
+        # eval "${jamfBinary} policy -trigger ${trigger} -verbose | tee -a ${scriptLog}"    # Remove comment for policy testing
 
     fi
 
@@ -982,14 +982,14 @@ function validatePolicyResult() {
 
         ###
         # Remote
-        # Validation via a Jamf Pro policy which has a single-script payload, for example: "symvSophosEndpointRTS"
+        # Validation via a Jamf Pro policy which has a single-script payload, for example: "symvGlobalProtect"
         # See: https://vimeo.com/782561166
         ###
 
         "Remote" )
             updateScriptLog "Validate '${trigger}' '${validation}'"
             dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
-            result=$( jamf policy -trigger "${trigger}" | grep "Script result:" )
+            result=$( "${jamfBinary}" policy -trigger "${trigger}" | grep "Script result:" )
             if [[ "${result}" == *"Running"* ]]; then
                 dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
             else
