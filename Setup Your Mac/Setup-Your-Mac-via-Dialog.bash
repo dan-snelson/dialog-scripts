@@ -10,7 +10,7 @@
 # HISTORY
 #
 #   Version 1.6.0, 09-Jan-2023, Dan K. Snelson (@dan-snelson)
-#   - Addresses Issue No. 21
+#   - Addresses Issue Nos. 21 & 25
 #
 ####################################################################################################
 
