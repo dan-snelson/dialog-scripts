@@ -96,8 +96,8 @@ fi
 scriptVersion="1.6.0-rc10"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
-debugMode="${5:-"false"}"                           # [ true (default) | false ]
-welcomeDialog="${6:-"false"}"                       # [ true (default) | false ]
+debugMode="${5:-"true"}"                           # [ true (default) | false ]
+welcomeDialog="${6:-"true"}"                       # [ true (default) | false ]
 completionActionOption="${7:-"Restart Attended"}"  # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
 reconOptions=""                                    # Initialize dynamic recon options; built based on user's input at Welcome dialog
 exitCode="0"
