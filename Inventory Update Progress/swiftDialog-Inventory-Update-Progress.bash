@@ -37,7 +37,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.4"
+scriptVersion="0.0.5"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 osVersion=$( /usr/bin/sw_vers -productVersion )
