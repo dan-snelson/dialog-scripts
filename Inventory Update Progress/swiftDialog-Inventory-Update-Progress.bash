@@ -24,6 +24,9 @@
 #   Modified `updateScriptLog` function to (hopefully) make parsing easier (thanks, @tlark!)
 #   Corrected fat-fingered spelling of "Elasped"
 #
+# Version 0.0.5, 27-Dec-2022, Dan K. Snelson (@dan-snelson)
+#   Provided alternate `recon` option to address Issue No. 24
+#
 ####################################################################################################
 
 
@@ -97,7 +100,8 @@ if [[ "${osMajorVersion}" -ge 11 ]] ; then
     echo "macOS ${osMajorVersion} installed; proceeding ..."
 else
     echo "macOS ${osMajorVersion} installed; updating inventory sans progress …"
-    /usr/local/bin/jamf recon -endUsername "${loggedInUser}" --verbose >> "$inventoryLog" &
+    /usr/local/bin/jamf recon -endUsername "${loggedInUser}" --verbose >> "$inventoryLog" &     # Include the user name of the primary user
+    # /usr/local/bin/jamf recon --verbose >> "$inventoryLog" &                                  # Omit the user name of the primary user
     exit 0
 fi
 
@@ -291,7 +295,8 @@ fi
 SECONDS="0"
 updateDialog "progress: 1"
 
-/usr/local/bin/jamf recon -endUsername "${loggedInUser}" --verbose >> "$inventoryLog" &
+/usr/local/bin/jamf recon -endUsername "${loggedInUser}" --verbose >> "$inventoryLog" &     # Include the user name of the primary user
+# /usr/local/bin/jamf recon --verbose >> "$inventoryLog" &                                  # Omit the user name of the primary user
 
 until [[ "$inventoryProgressText" == "Submitting data to"* ]]; do
 
