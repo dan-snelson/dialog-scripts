@@ -745,7 +745,7 @@ function get_json_value() {
 # Parse JSON via osascript and JavaScript for the Welcome dialog (thanks, @bartreardon!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function get_json_value_welcomeDialog () {
+function get_json_value_welcomeDialog() {
     for var in "${@:2}"; do jsonkey="${jsonkey}['${var}']"; done
     JSON="$1" osascript -l 'JavaScript' \
         -e 'const env = $.NSProcessInfo.processInfo.environment.objectForKey("JSON").js' \
