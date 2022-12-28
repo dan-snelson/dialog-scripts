@@ -5,7 +5,7 @@
 # Display Message via swiftDialog
 #
 #   Purpose: Displays an end-user message via swiftDialog
-#   See: https://snelson.us/2022/10/display-message-swiftdialog-003/
+#   See: https://snelson.us/2022/12/display-message-via-swiftdialog-0-0-6/
 #
 ####################################################################################################
 #
@@ -31,7 +31,7 @@
 # Version 0.0.5, 05-Dec-2022, Dan K. Snelson (@dan-snelson)
 #   Added `returncode` of `20` for "Do Not Disturb"
 #
-# Version 0.0.6, 21-Dec-2022, Dan K. Snelson (@dan-snelson)
+# Version 0.0.6, 28-Dec-2022, Dan K. Snelson (@dan-snelson)
 #   - Hard-code `overlayicon` to use Self Service's icon (to help overcome the inability to include
 #     spaces in Jamf Pro Script Parameters)
 #
@@ -237,7 +237,7 @@ if [[ -z "${title}" ]] || [[ -z "${message}" ]]; then
     title="Title [Parameter 4] goes here"
 
     messageoption="--message"
-    message="### Message [Parameter 5] goes here  \n\n**Note:** Please review this [blog post](https://snelson.us/2022/03/display-message-via-swiftdialog/) for additional information.  \n\n--- \n\nDisplaying with the following \"extraflags:\"  \n\n${extraflags}  \n\nThank you, [Bart Reardon](https://www.buymeacoffee.com/bartreardon), for making [swiftDialog](https://github.com/bartreardon/swiftDialog)! (Two words: **Rock. Star.**)"
+    message="### Message [Parameter 5] goes here  \n\n**Note:** Please review this [blog post](https://snelson.us/2022/12/display-message-via-swiftdialog-0-0-6/) for additional information.  \n\n--- \n\nDisplaying with the following \"extraflags:\"  \n\n${extraflags}  \n\nThank you, [Bart Reardon](https://www.buymeacoffee.com/bartreardon), for making [swiftDialog](https://github.com/bartreardon/swiftDialog)! (Two words: **Rock. Star.**)"
 
     button1option="--button1text"
     button1text="Button 1 [Parameter 7]"
