@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc10"
+scriptVersion="1.6.0-rc11"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -313,6 +313,17 @@ setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/ha
 policy_array=('
 {
     "steps": [
+        {
+            "listitem": "Rosetta",
+            "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
+            "progresstext": "Rosetta 2 enables a Mac with Apple silicon to use apps built for a Mac with an Intel processor.",
+            "trigger_list": [
+                {
+                    "trigger": "rosetta2",
+                    "validation": "Local"
+                }
+            ]
+        },
         {
             "listitem": "FileVault Disk Encryption",
             "icon": "f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913",
@@ -863,6 +874,31 @@ function validatePolicyResult() {
 
         "Local" )
             case ${trigger} in
+                rosetta2 ) 
+                    updateScriptLog "Validate Rosetta 2 … " # Thanks, @smithjw!
+                    dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
+                    arch=$( /usr/bin/arch )
+                    if [[ "${arch}" == "arm64" ]]; then
+                        # Mac with Apple silicon; check for Rosetta
+                        rosetta2Test=$( arch -x86_64 /usr/bin/true 2> /dev/null ; echo $? )
+                        if [[ "${rosetta2Test}" -eq 0 ]]; then
+                            # Installed
+                            updateScriptLog "Rosetta 2 is installed"
+                            dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
+                        else
+                            # Not Installed
+                            updateScriptLog "Rosetta 2 is NOT installed"
+                            dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Failed"
+                            jamfProPolicyTriggerFailure="failed"
+                            exitCode="1"
+                            jamfProPolicyPolicyNameFailures+="• $listitem  \n"
+                        fi
+                    else
+                        # Inelligible
+                        updateScriptLog "Rosetta 2 is not applicable"
+                        dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Inelligible"
+                    fi
+                    ;;
                 filevault )
                    updateScriptLog "Validate FileVault … "
                     dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
