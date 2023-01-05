@@ -98,13 +98,36 @@ fi
 
 scriptVersion="1.5.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
-scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
+scriptLog="${4:-"/var/tmp/org.ec.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
 welcomeDialog="${6:-"true"}"                       # [ true (default) | false ]
 completionActionOption="${7:-"Restart Attended"}"  # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
 reconOptions=""                                    # Initialize dynamic recon options; built based on user's input at Welcome dialog
 exitCode="0"
 
+org_name="$8"
+if [[ $org_name = "Emerson Collective" ]]; then
+    org_short_name="EC"
+    echo "Org short name is $org_short_name for $org_name"
+elif [[ $org_name = "XQ Institute" ]]; then
+    org_short_name="XQ"
+    echo "Org short name is $org_short_name for $org_name"
+elif [[ $org_name = *"CRED"* ]]; then
+    org_short_name="CC"
+    echo "Org short name is $org_short_name for $org_name"
+else
+    org_short_name="EC"
+    org_name="Emerson Collective"
+    echo "Defaulting to $org_short_name for $org_name"
+fi
+
+logo_file="/Library/${org_short_name}/logo.png"
+if [[ -e "$logo_file" ]]; then
+    echo "logo file exists at ${logo_file}"
+else
+    echo "logo file not found, running appropriate JAMF policy to install"
+    jamf policy -trigger install_${org_short_name}_logos
+fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
