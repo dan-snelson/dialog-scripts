@@ -142,8 +142,8 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 # "Welcome" dialog Title, Message and Icon
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
-welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
+welcomeTitle="Welcome to the Collective, ${loggedInUserFirstname}!"
+welcomeMessage="To begin, please select 'OK' and the computer setup process will begin. If you need assistance, please email ithelp@emersoncollective.com. The process will begin in 5 minutes automatically"
 
 # Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
@@ -155,92 +155,102 @@ fi
 
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Welcome" JSON (thanks, @bartreardon!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-welcomeJSON='{
-    "title" : "'"${welcomeTitle}"'",
-    "message" : "'"${welcomeMessage}"'",
-    "icon" : "'"${welcomeIcon}"'",
-    "iconsize" : "198.0",
-    "button1text" : "Continue",
-    "button2text" : "Quit",
-    "infotext" : "'"${scriptVersion}"'",
-    "blurscreen" : "true",
-    "ontop" : "true",
-    "titlefont" : "size=26",
-    "messagefont" : "size=16",
-    "textfield" : [
-        {   "title" : "Comment",
-            "required" : false,
-            "prompt" : "Enter a comment",
-            "editor" : true
-        },
-        {   "title" : "Computer Name",
-            "required" : false,
-            "prompt" : "Computer Name"
-        },
-        {   "title" : "User Name",
-            "required" : false,
-            "prompt" : "User Name"
-        },
-        {   "title" : "Asset Tag",
-            "required" : true,
-            "prompt" : "Please enter the seven-digit Asset Tag",
-            "regex" : "^(AP|IP)?[0-9]{7,}$",
-            "regexerror" : "Please enter (at least) seven digits for the Asset Tag, optionally preceed by either AP or IP."
-        }
-    ],
-  "selectitems" : [
-        {   "title" : "Department",
-            "default" : "Please select your department",
-            "values" : [
-                "Please select your department",
-                "Asset Management",
-                "Australia Area Office",
-                "Board of Directors",
-                "Business Development",
-                "Corporate Communications",
-                "Creative Services",
-                "Customer Service / Customer Experience",
-                "Engineering",
-                "Finance / Accounting",
-                "General Management",
-                "Human Resources",
-                "Information Technology / Technology",
-                "Investor Relations",
-                "Legal",
-                "Marketing",
-                "Operations",
-                "Product Management",
-                "Production",
-                "Project Management Office",
-                "Purchasing / Sourcing",
-                "Quality Assurance",
-                "Risk Management",
-                "Sales",
-                "Strategic Initiatives & Programs",
-                "Technology"
-            ]
-        },
-        {   "title" : "Select B",
-            "values" : [
-                "B1",
-                "B2",
-                "B3"
-            ]
-        },
-        {   "title" : "Select C",
-            "values" : [
-                "C1",
-                "C2",
-                "C3"
-            ]
-        }
-    ],
-    "height" : "635"
-}'
+## # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+## "Welcome" JSON (thanks, @bartreardon!)
+## # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#"title" : "Welcome To The Collective",
+#"message" : "'"${welcomeMessage}"'",
+#"icon" : '/Library/EC/logo.png',
+#"iconsize" : "198.0",
+#"button1text" : "Continue",
+#"button2text" : "Get Help",
+#"infotext" : "'"${scriptVersion}"'",
+#"blurscreen" : "false",
+#"ontop" : "true",
+#"titlefont" : "size=26",
+#"messagefont" : "size=16",
+#welcomeJSON='{
+#   "title" : "'"${welcomeTitle}"'",
+#   "message" : "'"${welcomeMessage}"'",
+#   "icon" : '/Library/EC/logo.png',
+#   "iconsize" : "198.0",
+#   "button1text" : "Continue",
+#   "button2text" : "Get Help",
+#   "infotext" : "'"${scriptVersion}"'",
+#   "blurscreen" : "false",
+#   "ontop" : "true",
+#   "titlefont" : "size=26",
+#   "messagefont" : "size=16",
+#   "textfield" : [
+#       {   "title" : "Comment",
+#           "required" : false,
+#           "prompt" : "Enter a comment",
+#           "editor" : true
+#       },
+#       {   "title" : "Computer Name",
+#           "required" : false,
+#           "prompt" : "Computer Name"
+#       },
+#       {   "title" : "User Name",
+#           "required" : false,
+#           "prompt" : "User Name"
+#       },
+#       {   "title" : "Asset Tag",
+#           "required" : true,
+#           "prompt" : "Please enter the seven-digit Asset Tag",
+#           "regex" : "^(AP|IP)?[0-9]{7,}$",
+#           "regexerror" : "Please enter (at least) seven digits for the Asset Tag, optionally preceed by either AP or IP."
+#       }
+#   ],
+# "selectitems" : [
+#       {   "title" : "Department",
+#           "default" : "Please select your department",
+#           "values" : [
+#               "Please select your department",
+#               "Asset Management",
+#               "Australia Area Office",
+#               "Board of Directors",
+#               "Business Development",
+#               "Corporate Communications",
+#               "Creative Services",
+#               "Customer Service / Customer Experience",
+#               "Engineering",
+#               "Finance / Accounting",
+#               "General Management",
+#               "Human Resources",
+#               "Information Technology / Technology",
+#               "Investor Relations",
+#               "Legal",
+#               "Marketing",
+#               "Operations",
+#               "Product Management",
+#               "Production",
+#               "Project Management Office",
+#               "Purchasing / Sourcing",
+#               "Quality Assurance",
+#               "Risk Management",
+#               "Sales",
+#               "Strategic Initiatives & Programs",
+#               "Technology"
+#           ]
+#       },
+#       {   "title" : "Select B",
+#           "values" : [
+#               "B1",
+#               "B2",
+#               "B3"
+#           ]
+#       },
+#       {   "title" : "Select C",
+#           "values" : [
+#               "C1",
+#               "C2",
+#               "C3"
+#           ]
+#       }
+#   ],
+#   "height" : "635"
+#}'
 
 
 
@@ -284,8 +294,6 @@ dialogSetupYourMacCMD="$dialogApp \
 --messagefont 'size=14' \
 --height '70%' \
 --position 'centre' \
---blurscreen \
---ontop \
 --overlayicon \"$overlayicon\" \
 --quitkey k \
 --commandfile \"$setupYourMacCommandFile\" "
@@ -315,46 +323,24 @@ policy_array=('
 {
     "steps": [
         {
-            "listitem": "FileVault Disk Encryption",
-            "icon": "f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913",
-            "progresstext": "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac.",
+            "listitem": "Install Rosetta",
+            "icon": "0db9d24f6393b42c0299708b26ce756789fa2437ed24df4f25dcf67d95eb443c",
+            "progresstext": "Install Rosetta 2.",
             "trigger_list": [
                 {
-                    "trigger": "filevault",
-                    "path": "/Library/Preferences/com.apple.fdesetup.plist"
+                    "trigger": "install_rosetta",
+                    "path": ""
                 }
             ]
         },
         {
-            "listitem": "Sophos Endpoint",
-            "icon": "c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c",
-            "progresstext": "You’ll enjoy next-gen protection with Sophos Endpoint which doesn’t rely on signatures to catch malware.",
+            "listitem": "Microsoft Office 365",
+            "icon": "46ef03648ff5d1e4c12530e766bff4d8d3d3c6d2ab933045348c79795aee8bc6",
+            "progresstext": "Utilize the full Microsoft 365 suite of applicaitons.",
             "trigger_list": [
                 {
-                    "trigger": "sophosEndpoint",
-                    "path": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
-                }
-            ]
-        },
-        {
-            "listitem": "Palo Alto GlobalProtect",
-            "icon": "fcccf5d72ad9a4f6d3a4d780dcd8385378a0a8fd18e8c33ad32326f5bd53cca0",
-            "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
-            "trigger_list": [
-                {
-                    "trigger": "globalProtect",
-                    "path": "/Applications/GlobalProtect.app/Contents/Info.plist"
-                }
-            ]
-        },
-        {
-            "listitem": "Microsoft Teams",
-            "icon": "dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e",
-            "progresstext": "Microsoft Teams is a hub for teamwork in Office 365. Keep all your team’s chats, meetings and files together in one place.",
-            "trigger_list": [
-                {
-                    "trigger": "microsoftTeams",
-                    "path": "/Applications/Microsoft Teams.app/Contents/Info.plist"
+                    "trigger": "install_365",
+                    "path": ""
                 }
             ]
         },
@@ -364,8 +350,8 @@ policy_array=('
             "progresstext": "Zoom is a videotelephony software program developed by Zoom Video Communications.",
             "trigger_list": [
                 {
-                    "trigger": "zoom",
-                    "path": "/Applications/zoom.us.app/Contents/Info.plist"
+                    "trigger": "install_zoom",
+                    "path": ""
                 }
             ]
         },
@@ -375,22 +361,19 @@ policy_array=('
             "progresstext": "Google Chrome is a browser that combines a minimal design with sophisticated technology to make the Web faster.",
             "trigger_list": [
                 {
-                    "trigger": "googleChrome",
+                    "trigger": "install_google_chrome",
                     "path": "/Applications/Google Chrome.app/Contents/Info.plist"
                 }
             ]
         },
+
         {
-            "listitem": "Final Configuration",
-            "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
-            "progresstext": "Finalizing Configuration …",
+            "listitem": "Re-name Computer",
+            "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
+            "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
             "trigger_list": [
                 {
-                    "trigger": "finalConfiguration",
-                    "path": ""
-                },
-                {
-                    "trigger": "reconAtReboot",
+                    "trigger": "rename_computer",
                     "path": ""
                 }
             ]
@@ -401,7 +384,61 @@ policy_array=('
             "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
             "trigger_list": [
                 {
-                    "trigger": "recon",
+                    "trigger": "run_recon",
+                    "path": ""
+                }
+            ]
+        },       
+        {
+            "listitem": "Install Code42",
+            "icon": "c6eea7e3663ad37c248dc6881ed97498048f502da8a427caefaf6d31963f3681",
+            "progresstext": "Install The Computer Backup System",
+            "trigger_list": [
+                {
+                    "trigger": "code42_${type}",
+                    "path": ""
+                }
+            ]
+        },{
+            "listitem": "Install Crowdstrike Falcon",
+            "icon": "5dbbf8eebbecb20ac443f958bfb3aa9a44ed23ce4f49005a12b29a8f33522c8b",
+            "progresstext": "Install The Computer Security Software",
+            "trigger_list": [
+                {
+                    "trigger": "install_crowdstrike",
+                    "path": ""
+                }
+            ]
+        },
+        {
+            "listitem": "Enable Filevault 2",
+            "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
+            "progresstext": "Install and Configure macOS FileVault 2.",
+            "trigger_list": [
+                {
+                    "trigger": "enable_filevault",
+                    "path": ""
+                }
+            ]
+        },        
+        {
+            "listitem": "Install Slack",
+            "icon": "a1ecbe1a4418113177cc061def4996d20a01a1e9b9adf9517899fcca31f3c026",
+            "progresstext": "The Preferred Communication Platform Of The Collective.",
+            "trigger_list": [
+                {
+                    "trigger": "install_slack",
+                    "path": ""
+                }
+            ]
+        },        
+        {
+            "listitem": "Install Google Drive",
+            "icon": "a6954a50da661bd785407e23f83c6a1ac27006180eae1813086e64f4d6e65dcc",
+            "progresstext": "The Preferred Cloud Storage Of The Collective.",
+            "trigger_list": [
+                {
+                    "trigger": "install_google_drive",
                     "path": ""
                 }
             ]
@@ -409,7 +446,6 @@ policy_array=('
     ]
 }
 ')
-
 
 
 ####################################################################################################
