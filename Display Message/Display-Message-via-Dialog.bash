@@ -5,7 +5,7 @@
 # Display Message via swiftDialog
 #
 #   Purpose: Displays an end-user message via swiftDialog
-#   See: https://snelson.us/2022/10/display-message-swiftdialog-003/
+#   See: https://snelson.us/2022/12/display-message-via-swiftdialog-0-0-6/
 #
 ####################################################################################################
 #
@@ -31,6 +31,10 @@
 # Version 0.0.5, 05-Dec-2022, Dan K. Snelson (@dan-snelson)
 #   Added `returncode` of `20` for "Do Not Disturb"
 #
+# Version 0.0.6, 28-Dec-2022, Dan K. Snelson (@dan-snelson)
+#   - Hard-code `overlayicon` to use Self Service's icon (to help overcome the inability to include
+#     spaces in Jamf Pro Script Parameters)
+#
 ####################################################################################################
 
 
@@ -41,22 +45,23 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.5"
+scriptVersion="0.0.6"
 scriptLog="/var/tmp/org.churchofjesuschrist.log"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 osVersion=$( sw_vers -productVersion )
 osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
-dialogApp="/usr/local/bin/dialog"
+dialogBinary="/usr/local/bin/dialog"
 dialogMessageLog=$( mktemp /var/tmp/dialogWelcomeLog.XXX )
+overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 if [[ -n ${4} ]]; then titleoption="--title"; title="${4}"; fi
 if [[ -n ${5} ]]; then messageoption="--message"; message="${5}"; fi
 if [[ -n ${6} ]]; then iconoption="--icon"; icon="${6}"; fi
 if [[ -n ${7} ]]; then button1option="--button1text"; button1text="${7}"; fi
 if [[ -n ${8} ]]; then button2option="--button2text"; button2text="${8}"; fi
 if [[ -n ${9} ]]; then infobuttonoption="--infobuttontext"; infobuttontext="${9}"; fi
-extraflags=${10}
-action=${11}
+extraflags="${10}"
+action="${11}"
 
 
 
@@ -232,7 +237,7 @@ if [[ -z "${title}" ]] || [[ -z "${message}" ]]; then
     title="Title [Parameter 4] goes here"
 
     messageoption="--message"
-    message="### Message [Parameter 5] goes here  \n\n**Note:** Please review this [blog post](https://snelson.us/2022/03/display-message-via-swiftdialog/) for additional information.  \n\n--- \n\nDisplaying with the following \"extraflags:\"  \n\n${extraflags}  \n\nThank you, [Bart Reardon](https://www.buymeacoffee.com/bartreardon), for making [swiftDialog](https://github.com/bartreardon/swiftDialog)! (Two words: **Rock. Star.**)"
+    message="### Message [Parameter 5] goes here  \n\n**Note:** Please review this [blog post](https://snelson.us/2022/12/display-message-via-swiftdialog-0-0-6/) for additional information.  \n\n--- \n\nDisplaying with the following \"extraflags:\"  \n\n${extraflags}  \n\nThank you, [Bart Reardon](https://www.buymeacoffee.com/bartreardon), for making [swiftDialog](https://github.com/bartreardon/swiftDialog)! (Two words: **Rock. Star.**)"
 
     button1option="--button1text"
     button1text="Button 1 [Parameter 7]"
@@ -265,8 +270,10 @@ dialogCheck
 
 updateScriptLog "Title: ${title}"
 updateScriptLog "Message: ${message}"
+updateScriptLog "Extra Flags: ${extraflags}"
 
-${dialogApp} \
+# shellcheck disable=SC2086
+${dialogBinary} \
     ${titleoption} "${title}" \
     ${messageoption} "${message}" \
     ${iconoption} "${icon}" \
@@ -276,11 +283,11 @@ ${dialogApp} \
     --infobuttonaction "https://servicenow.company.com/support?id=kb_article_view&sysparm_article=${infobuttontext}" \
     --messagefont "size=14" \
     --commandfile "$dialogMessageLog}" \
+    --overlayicon "$overlayicon" \
     ${extraflags}
 
 returncode=$?
-
-
+updateScriptLog "Return Code: ${returncode}"
 
 case ${returncode} in
 
@@ -288,7 +295,7 @@ case ${returncode} in
         echo "${loggedInUser} clicked ${button1text}"
         updateScriptLog "${loggedInUser} clicked ${button1text};"
         if [[ -n "${action}" ]]; then
-           su - "${loggedInUser}" -c "open \"${action}\""
+            su - "${loggedInUser}" -c "open \"${action}\""
         fi
         quitScript "0"
         ;;
