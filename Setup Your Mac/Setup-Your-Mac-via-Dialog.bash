@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc11"
+scriptVersion="1.6.0-rc12"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -118,7 +118,8 @@ fi
 # Set Dialog path, Command Files, JAMF binary, log files and currently logged-in user
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogApp="/usr/local/bin/dialog"
+# dialogApp="/usr/local/bin/dialog"
+dialogApp="/Library/Application\ Support/Dialog/Dialog.app/Contents/MacOS/Dialog"
 welcomeCommandFile=$( mktemp /var/tmp/dialogWelcome.XXX )
 setupYourMacCommandFile=$( mktemp /var/tmp/dialogSetupYourMac.XXX )
 failureCommandFile=$( mktemp /var/tmp/dialogFailure.XXX )
@@ -279,7 +280,7 @@ dialogSetupYourMacCMD="$dialogApp \
 --infotext \"$scriptVersion\" \
 --titlefont 'size=28' \
 --messagefont 'size=14' \
---height '80%' \
+--height '750' \
 --position 'centre' \
 --blurscreen \
 --ontop \
@@ -316,10 +317,21 @@ policy_array=('
         {
             "listitem": "Rosetta",
             "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
-            "progresstext": "Rosetta 2 enables a Mac with Apple silicon to use apps built for a Mac with an Intel processor.",
+            "progresstext": "Rosetta enables a Mac with Apple silicon to use apps built for a Mac with an Intel processor.",
             "trigger_list": [
                 {
-                    "trigger": "rosetta2",
+                    "trigger": "rosettaInstall",
+                    "validation": "None"
+                }
+            ]
+        },
+        {
+            "listitem": "Rosetta Services (Local)",
+            "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
+            "progresstext": "Locally validating Rosetta Services …",
+            "trigger_list": [
+                {
+                    "trigger": "rosetta",
                     "validation": "Local"
                 }
             ]
@@ -823,6 +835,11 @@ function confirmPolicyExecution() {
 
         "None" )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
+            if [[ "${debugMode}" == "true" ]]; then
+                sleep 0.5
+            else
+                run_jamf_trigger "${trigger}"
+            fi
             ;;
 
         * )
@@ -869,19 +886,19 @@ function validatePolicyResult() {
 
         ###
         # Local
-        # Validation within this script, for example: "filevault"
+        # Validation within this script, for example: "rosetta" or "filevault"
         ###
 
         "Local" )
             case ${trigger} in
-                rosetta2 ) 
+                rosetta ) 
                     updateScriptLog "Validate Rosetta 2 … " # Thanks, @smithjw!
                     dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Checking …"
                     arch=$( /usr/bin/arch )
                     if [[ "${arch}" == "arm64" ]]; then
                         # Mac with Apple silicon; check for Rosetta
-                        rosetta2Test=$( arch -x86_64 /usr/bin/true 2> /dev/null ; echo $? )
-                        if [[ "${rosetta2Test}" -eq 0 ]]; then
+                        rosettaTest=$( arch -x86_64 /usr/bin/true 2> /dev/null ; echo $? )
+                        if [[ "${rosettaTest}" -eq 0 ]]; then
                             # Installed
                             updateScriptLog "Rosetta 2 is installed"
                             dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Running"
@@ -896,7 +913,7 @@ function validatePolicyResult() {
                     else
                         # Inelligible
                         updateScriptLog "Rosetta 2 is not applicable"
-                        dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Inelligible"
+                        dialogUpdateSetupYourMac "listitem: index: $i, status: error, statustext: Inelligible"
                     fi
                     ;;
                 filevault )
@@ -1323,7 +1340,9 @@ echo "$welcomeJSON" > "$welcomeCommandFile"
 
 if [[ "${welcomeDialog}" == "true" ]]; then
 
-    welcomeResults=$( ${dialogApp} --jsonfile "$welcomeCommandFile" --json )
+    # welcomeResults=$( ${dialogApp} --jsonfile "$welcomeCommandFile" --json )
+    welcomeResults=$( eval "${dialogApp} --jsonfile ${welcomeCommandFile} --json" )
+
     if [[ -z "${welcomeResults}" ]]; then
         welcomeReturnCode="2"
     else
