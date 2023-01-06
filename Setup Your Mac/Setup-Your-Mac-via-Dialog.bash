@@ -392,7 +392,7 @@ policy_array=('
         {
             "listitem": "Google Chrome",
             "icon": "12d3d198f40ab2ac237cff3b5cb05b09f7f26966d6dffba780e4d4e5325cc701",
-            "progresstext": "Google Chrome is a browser that combines a minimal design with sophisticated technology to make the Web faster.",
+            "progresstext": "Browse the Internet with ease",
             "trigger_list": [
                 {
                     "trigger": "install_google_chrome",
