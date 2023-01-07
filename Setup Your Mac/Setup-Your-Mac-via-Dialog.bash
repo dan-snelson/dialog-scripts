@@ -10,7 +10,7 @@
 # HISTORY
 #
 #   Version 1.6.0, 09-Jan-2023, Dan K. Snelson (@dan-snelson)
-#   - Addresses Issue Nos. 21 & 25
+#   - Addresses Issue Nos. 21, 25 & 29
 #
 ####################################################################################################
 
@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc13"
+scriptVersion="1.6.0-rc14"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -118,7 +118,6 @@ fi
 # Set Dialog path, Command Files, JAMF binary, log files and currently logged-in user
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# dialogApp="/usr/local/bin/dialog"
 dialogApp="/Library/Application\ Support/Dialog/Dialog.app/Contents/MacOS/Dialog"
 welcomeCommandFile=$( mktemp /var/tmp/dialogWelcome.XXX )
 setupYourMacCommandFile=$( mktemp /var/tmp/dialogSetupYourMac.XXX )
@@ -141,7 +140,7 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
-welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Quit** button will be re-enabled and you'll be prompted to restart your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
+welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
 
 # Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
@@ -823,7 +822,7 @@ function confirmPolicyExecution() {
     trigger="${1}"
     validation="${2}"
 
-    updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: '${trigger}' '${validation}' ${LINENO}"
+    updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: '${trigger}' '${validation}'"
 
     case ${validation} in
 
@@ -840,7 +839,7 @@ function confirmPolicyExecution() {
             ;;
 
         "None" )
-            updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation} ${LINENO}"
+            updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
             if [[ "${debugMode}" == "true" ]]; then
                 sleep 0.5
             else
@@ -1356,7 +1355,6 @@ echo "$welcomeJSON" > "$welcomeCommandFile"
 
 if [[ "${welcomeDialog}" == "true" ]]; then
 
-    # welcomeResults=$( ${dialogApp} --jsonfile "$welcomeCommandFile" --json )
     welcomeResults=$( eval "${dialogApp} --jsonfile ${welcomeCommandFile} --json" )
 
     if [[ -z "${welcomeResults}" ]]; then
@@ -1571,6 +1569,9 @@ dialogUpdateWelcome "quit:"
 
 for (( i=0; i<dialog_step_length; i++ )); do 
 
+    # Initialize SECONDS
+    SECONDS="0"
+
     # Creating initial variables
     listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
     icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
@@ -1608,6 +1609,9 @@ for (( i=0; i<dialog_step_length; i++ )); do
 
     # Increment the progress bar
     dialogUpdateSetupYourMac "progress: $(( i * ( 100 / progress_total ) ))"
+
+    # Record duration
+    updateScriptLog "SETUP YOUR MAC DIALOG: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
 
 done
 

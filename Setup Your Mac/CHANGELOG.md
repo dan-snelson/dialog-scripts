@@ -21,6 +21,7 @@
   - Ensure `debug mode` is set to `false`
 - Added Rosetta 2 policy execution and validation
 - Enhanced logging
+  - Addresses [Issue No. 29](https://github.com/dan-snelson/dialog-scripts/issues/29)
 
 
 ##  1.5.1
