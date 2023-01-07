@@ -5,8 +5,9 @@
 [Release-specific Blog Post](https://snelson.us/2023/01/setup-your-mac-via-swiftdialog-1-6-0/)
 - Addresses [Issue No. 21](https://github.com/dan-snelson/dialog-scripts/issues/21)
   - 🔥 **Breaking Change** 🔥 (for users of Setup Your Mac prior to `1.6.0`)
-      - `policy_array`'s `path` has been replaced with `validation`
-  - 🆕 The `confirmPolicyExecution` function confirms if the policy needs to be executed
+      - `policy_array`'s "`path`" has been replaced with "`validation`"
+  - 🆕 The `confirmPolicyExecution` function confirms if the policy needs to be executed for `filepath` validations
+    - A validation of `None` always executes the Jamf Pro trigger when `debug mode` is set to `false`
   - 🆕 The `validatePolicyResult` function validates if the policy succeeded and the related service is _running_, based on the specified `validation` option
     - [Feature-specific Blog Post](https://snelson.us/2023/01/setup-your-mac-validation/)
     - **Validation Options:**
@@ -18,6 +19,8 @@
   - Search for and comment-out: `eval "${jamfBinary} policy -trigger ${trigger}"`
   - Uncomment: `eval "${jamfBinary} policy -trigger ${trigger} -verbose | tee -a ${scriptLog}"`
   - Ensure `debug mode` is set to `false`
+- Added Rosetta 2 policy execution and validation
+- Enhanced logging
 
 
 ##  1.5.1
