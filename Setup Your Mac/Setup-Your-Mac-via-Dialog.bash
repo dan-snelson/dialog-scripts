@@ -413,7 +413,7 @@ policy_array=('
             ]
         },
         {
-            "listitem": "Conditioanl Access Tool",
+            "listitem": "Conditional Access Tool",
             "icon": "7a97c3926c07d26c111a1f5c3d11fcaeb8471f6046e7b289d67bac74669f916a",
             "progresstext": "Ensure that Collective data is accessed by approved devices.",
             "trigger_list": [
@@ -462,17 +462,6 @@ policy_array=('
             "trigger_list": [
                 {
                     "trigger": "enable_filevault",
-                    "path": ""
-                }
-            ]
-        },        
-        {
-            "listitem": "Install Slack",
-            "icon": "a1ecbe1a4418113177cc061def4996d20a01a1e9b9adf9517899fcca31f3c026",
-            "progresstext": "The Preferred Communication Platform Of The Collective.",
-            "trigger_list": [
-                {
-                    "trigger": "install_slack",
                     "path": ""
                 }
             ]
