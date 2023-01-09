@@ -1,6 +1,8 @@
 # Setup Your Mac via swiftDialog
 
-> Setup Your Mac (1.5.0) introduces highly requested **input fields** to help provide your users a seamless post-enrollment experience when setting up their new Macs
+> With the implementation of a recent feature request, Setup Your Mac (1.6.0) introduces additional policy validation options to help ensure critical enterprise applications are both installed and their related services are running.
+
+![Setup Your Mac (1.6.0)](images/Setup%20Your%20Mac%201.6.0%20SYM%20dialog%20success.png "Setup Your Mac (1.6.0)")
 
 ![Setup Your Mac (1.5.0)](images/Setup_Your_Mac_1.5.0.png "Setup Your Mac (1.5.0)")
 
