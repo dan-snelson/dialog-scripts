@@ -413,12 +413,12 @@ policy_array=('
             ]
         },
         {
-            "listitem": "Computer Inventory",
-            "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
-            "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
+            "listitem": "Conditioanl Access Tool",
+            "icon": "7a97c3926c07d26c111a1f5c3d11fcaeb8471f6046e7b289d67bac74669f916a",
+            "progresstext": "Ensure that Collective data is accessed by approved devices.",
             "trigger_list": [
                 {
-                    "trigger": "run_recon",
+                    "trigger": "okta_cba_${type}",
                     "path": ""
                 }
             ]
