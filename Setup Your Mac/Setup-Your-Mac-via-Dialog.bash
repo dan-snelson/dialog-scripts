@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0-rc14"
+scriptVersion="1.6.0"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -303,7 +303,7 @@ dialogSetupYourMacCMD="$dialogApp \
 #       - {absolute path} (simulates pre-v1.6.0 behavior, for example: "/Applications/Microsoft Teams.app/Contents/Info.plist")
 #       - Local (for validation within this script, for example: "filevault")
 #       - Remote (for validation validation via a single-script Jamf Pro policy, for example: "symvGlobalProtect")
-#       - None (for triggers which don't require validation, for example: recon)
+#       - None (for triggers which don't require validation, for example: recon; always evaluates as successful)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # The fully qualified domain name of the server which hosts your icons, including any required sub-directories
@@ -849,6 +849,11 @@ function confirmPolicyExecution() {
 
         * )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution Catch-all: ${validation}"
+            if [[ "${debugMode}" == "true" ]]; then
+                sleep 0.5
+            else
+                run_jamf_trigger "${trigger}"
+            fi
             ;;
 
     esac
@@ -910,7 +915,7 @@ function validatePolicyResult() {
                         else
                             # Not Installed
                             updateScriptLog "SETUP YOUR MAC DIALOG: Locally Validate Policy Result: Rosetta 2 is NOT installed"
-                            dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Failed"
+                            dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
                             jamfProPolicyTriggerFailure="failed"
                             exitCode="1"
                             jamfProPolicyNameFailures+="• $listitem  \n"
@@ -938,7 +943,7 @@ function validatePolicyResult() {
                                 dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Enabled (next login)"
                                 ;;
                             *  )
-                                dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Unknown"
+                                dialogUpdateSetupYourMac "listitem: index: $i, status: error, statustext: Unknown"
                                 jamfProPolicyTriggerFailure="failed"
                                 exitCode="1"
                                 jamfProPolicyNameFailures+="• $listitem  \n"
@@ -1071,7 +1076,7 @@ function validatePolicyResult() {
 
 
         ###
-        # None
+        # None (always evaluates as successful)
         # For triggers which don't require validation, for example: recon
         ###
 
@@ -1098,10 +1103,7 @@ function validatePolicyResult() {
 
         * )
             updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Results Catch-all: ${validation}"
-            dialogUpdateSetupYourMac "listitem: index: $i, status: fail, statustext: Failed"
-            jamfProPolicyTriggerFailure="failed"
-            exitCode="1"
-            jamfProPolicyNameFailures+="• $listitem  \n"
+            dialogUpdateSetupYourMac "listitem: index: $i, status: error, statustext: Error"
             ;;
 
     esac

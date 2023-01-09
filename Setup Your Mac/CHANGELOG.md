@@ -14,13 +14,13 @@
        - {absolute path} (simulates pre-`1.6.0` behavior, for example: `"/Applications/Microsoft Teams.app/Contents/Info.plist"`)
        - `Local` (for validation within this script, for example: `"filevault"`)
        - `Remote` (for validation validation via a single-script Jamf Pro policy, for example: `"symvGlobalProtect"`)
-       - `None` (for triggers which don't require validation, for example: `recon`)
+       - `None` (for triggers which don't require validation, for example: `recon`; always evaluates as successful)
 - Enhanced policy logging options to address [Issue No. 25](https://github.com/dan-snelson/dialog-scripts/issues/25)
   - Search for and comment-out: `eval "${jamfBinary} policy -trigger ${trigger}"`
   - Uncomment: `eval "${jamfBinary} policy -trigger ${trigger} -verbose | tee -a ${scriptLog}"`
   - Ensure `debug mode` is set to `false`
 - Added Rosetta 2 policy execution and validation
-- Enhanced logging
+- Enhanced Logging
   - Addresses [Issue No. 29](https://github.com/dan-snelson/dialog-scripts/issues/29)
 
 
