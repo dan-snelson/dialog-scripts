@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.7.0
+### TBD
+[Release-specific Blog Post](https://snelson.us/)
+- Completion Actions
+  - Adjusted alternative code options for Mac Admins using an Enrollment Complete trigger
+- Blah
+
+
 ## 1.6.0
 ### 09-Jan-2023
 [Release-specific Blog Post](https://snelson.us/2023/01/setup-your-mac-via-swiftdialog-1-6-0/)

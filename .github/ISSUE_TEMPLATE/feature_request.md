@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea for **Setup Your Mac**
+about: Suggest an idea for Setup Your Mac
 title: ''
 labels: enhancement
 assignees: dan-snelson

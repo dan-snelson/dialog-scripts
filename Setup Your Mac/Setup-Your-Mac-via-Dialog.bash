@@ -9,8 +9,8 @@
 #
 # HISTORY
 #
-#   Version 1.6.0, 09-Jan-2023, Dan K. Snelson (@dan-snelson)
-#   - Addresses Issue Nos. 21, 25 & 29
+#   Version 1.7.0, DD-MMM-2023, Dan K. Snelson (@dan-snelson)
+#   - Adds compatibility and features of swiftDialog 2.1.0
 #
 ####################################################################################################
 
@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0"
+scriptVersion="1.7.0-rc1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -101,6 +101,18 @@ welcomeDialog="${6:-"true"}"                       # [ true (default) | false ]
 completionActionOption="${7:-"Restart Attended"}"  # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
 reconOptions=""                                    # Initialize dynamic recon options; built based on user's input at Welcome dialog
 exitCode="0"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# infobox-related variables
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+macOSproductVersion="$( sw_vers -productVersion )"
+macOSbuildVersion="$( sw_vers -buildVersion )"
+serialNumber=$( system_profiler SPHardwareDataType | grep Serial |  awk '{print $NF}' )
+timestamp="$( date '+%Y-%m-%d-%H%M%S' )"
+dialogVersion=$( /usr/local/bin/dialog --version )
 
 
 
@@ -253,6 +265,8 @@ welcomeJSON='{
 
 title="Setting up ${loggedInUserFirstname}'s Mac"
 message="Please wait while the following apps are installed …"
+infobox="- **Operating System:** ${macOSproductVersion} ($macOSbuildVersion)  \n- **Serial Number:** ${serialNumber}  \n- **Dialog:** ${dialogVersion}  \n- **Started:** ${timestamp}"
+helpmessage="If you need assistance, please contact the Global Service Department:  \n- **Telephone:** +1 (801) 555-1212  \n- **Email:** support@domain.org  \n- **Knowledge Base Article:** KB0057050  \n\nComputer Information:  \n${infobox}"
 overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 
 # Set initial icon based on whether the Mac is a desktop or laptop
@@ -271,7 +285,9 @@ fi
 dialogSetupYourMacCMD="$dialogApp \
 --title \"$title\" \
 --message \"$message\" \
+--helpmessage \"$helpmessage\" \
 --icon \"$icon\" \
+--infobox \"${infobox}\" \
 --progress \
 --progresstext \"Initializing configuration …\" \
 --button1text \"Wait\" \
@@ -279,7 +295,7 @@ dialogSetupYourMacCMD="$dialogApp \
 --infotext \"$scriptVersion\" \
 --titlefont 'size=28' \
 --messagefont 'size=14' \
---height '825' \
+--height '775' \
 --position 'centre' \
 --blurscreen \
 --ontop \
@@ -321,14 +337,7 @@ policy_array=('
                 {
                     "trigger": "rosettaInstall",
                     "validation": "None"
-                }
-            ]
-        },
-        {
-            "listitem": "Rosetta Services (Local)",
-            "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
-            "progresstext": "Locally validating Rosetta service …",
-            "trigger_list": [
+                },
                 {
                     "trigger": "rosetta",
                     "validation": "Local"
@@ -1155,7 +1164,7 @@ function completionAction() {
                 killProcess "Self Service"
                 # runAsUser osascript -e 'tell app "System Events" to shut down'
                 sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
-                # shutdown -h +1 &
+                # sleep 5 && shutdown -h now &
                 ;;
 
             "Shut Down Attended" )
@@ -1164,7 +1173,7 @@ function completionAction() {
                 wait
                 # runAsUser osascript -e 'tell app "System Events" to shut down'
                 sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
-                # shutdown -h +1 &
+                # sleep 5 && shutdown -h now &
                 ;;
 
             "Shut Down Confirm" )
@@ -1177,7 +1186,7 @@ function completionAction() {
                 killProcess "Self Service"
                 # runAsUser osascript -e 'tell app "System Events" to restart'
                 sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
-                # shutdown -r +1 &
+                # sleep 5 && shutdown -r now &
                 ;;
 
             "Restart Attended" )
@@ -1186,7 +1195,7 @@ function completionAction() {
                 wait
                 # runAsUser osascript -e 'tell app "System Events" to restart'
                 sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
-                # shutdown -r +1 &
+                # sleep 5 && shutdown -r now &
                 ;;
 
             "Restart Confirm" )
@@ -1197,23 +1206,23 @@ function completionAction() {
             "Log Out" )
                 updateScriptLog "Log out sans user interaction"
                 killProcess "Self Service"
-                # runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
+                # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
                 sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
-                # launchctl bootout user/"${loggedInUserID}"
+                # sleep 5 && launchctl bootout user/"${loggedInUserID}"
                 ;;
 
             "Log Out Attended" )
                 updateScriptLog "Log out sans user interaction"
                 killProcess "Self Service"
                 wait
-                # runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
+                # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
                 sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
-                # launchctl bootout user/"${loggedInUserID}"
+                # sleep 5 && launchctl bootout user/"${loggedInUserID}"
                 ;;
 
             "Log Out Confirm" )
                 updateScriptLog "Log out, only after macOS time-out or user confirmation"
-                runAsUser osascript -e 'tell app "System Events" to log out'
+                sleep 5 && runAsUser osascript -e 'tell app "System Events" to log out'
                 ;;
 
             "Sleep"* )
@@ -1562,6 +1571,14 @@ dialogUpdateSetupYourMac "progress: $progress_index"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogUpdateWelcome "quit:"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Update Setup Your Mac's infobox
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+dialogUpdateSetupYourMac "infobox: Updated infobox at Line No. ${LINENO}"
 
 
 
