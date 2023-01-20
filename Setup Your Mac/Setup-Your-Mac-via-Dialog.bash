@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.7.0, DD-MMM-2023, Dan K. Snelson (@dan-snelson)
+#   Version 1.7.0, 20-Jan-2023, Dan K. Snelson (@dan-snelson)
 #   - Adds compatibility and features of swiftDialog 2.1.0
 #
 ####################################################################################################
@@ -93,7 +93,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0-rc1"
+scriptVersion="1.7.0-rc2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -131,6 +131,7 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogApp="/Library/Application\ Support/Dialog/Dialog.app/Contents/MacOS/Dialog"
+dialogBinary="/usr/local/bin/dialog"
 welcomeCommandFile=$( mktemp /var/tmp/dialogWelcome.XXX )
 setupYourMacCommandFile=$( mktemp /var/tmp/dialogSetupYourMac.XXX )
 failureCommandFile=$( mktemp /var/tmp/dialogFailure.XXX )
@@ -282,7 +283,7 @@ fi
 # "Setup Your Mac" dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogSetupYourMacCMD="$dialogApp \
+dialogSetupYourMacCMD="$dialogBinary \
 --title \"$title\" \
 --message \"$message\" \
 --helpmessage \"$helpmessage\" \
@@ -506,7 +507,7 @@ failureIcon="SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
 # "Failure" dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogFailureCMD="$dialogApp \
+dialogFailureCMD="$dialogBinary \
 --moveable \
 --title \"$failureTitle\" \
 --message \"$failureMessage\" \
@@ -1366,7 +1367,7 @@ echo "$welcomeJSON" > "$welcomeCommandFile"
 
 if [[ "${welcomeDialog}" == "true" ]]; then
 
-    welcomeResults=$( eval "${dialogApp} --jsonfile ${welcomeCommandFile} --json" )
+    welcomeResults=$( eval "${dialogBinary} --jsonfile ${welcomeCommandFile} --json" )
 
     if [[ -z "${welcomeResults}" ]]; then
         welcomeReturnCode="2"
