@@ -11,6 +11,7 @@
 #
 #   Version 1.7.0, 20-Jan-2023, Dan K. Snelson (@dan-snelson)
 #   - Adds compatibility and features of swiftDialog 2.1.0
+#   - Addresses Issue No. 31
 #
 ####################################################################################################
 
@@ -26,10 +27,31 @@
 # Confirm script is running as root
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# if [[ $(id -u) -ne 0 ]]; then
-#     echo "This script must be run as root; exiting."
-#     exit 1
-# fi
+if [[ $(id -u) -ne 0 ]]; then
+    echo "This script must be run as root; exiting."
+    exit 1
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate Operating System
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+osVersion=$( sw_vers -productVersion )
+osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
+
+if [[ "${osMajorVersion}" -ge 11 ]] ; then
+    echo "macOS ${osMajorVersion} installed; proceeding ..."
+else
+    echo "macOS ${osVersion} installed; exiting."
+    loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+    message="Error: Outdated Operating System  The operating system of your Mac, ${osVersion}, is too old to complete setup.  Please upgrade before proceeding."
+    action="jamfselfservice://content?entity=policy&id=988&action=view"
+    /usr/local/jamf/bin/jamf displayMessage -message "${message}" &
+    su - "${loggedInUser}" -c "/usr/bin/open \"${action}\""
+    exit 1
+fi
 
 
 
@@ -93,7 +115,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0-rc3"
+scriptVersion="1.7.0-rc4"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
