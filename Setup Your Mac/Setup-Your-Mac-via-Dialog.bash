@@ -45,7 +45,7 @@ if [[ $cpu = "Apple"  ]]; then
 else
     type="intel"
 fi
-echo "CPU Type is $type"
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Ensure computer does not go to sleep while running this script (thanks, @grahampugh!)
@@ -723,7 +723,7 @@ function finalise(){
         dialogUpdateSetupYourMac "quit:"
         eval "${dialogFailureCMD}" & sleep 0.3
 
-        dialogUpdateFailure "message: A failure has been detected, ${loggedInUserFirstname}.  \n\nPlease complete the following steps:\n1. Reboot and login to your Mac  \n2. Login to Self Service  \n3. Re-run any failed policy listed below  \n\nThe following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please contact the Help Desk,  \n+1 (801) 555-1212, and mention [KB86753099](https://servicenow.company.com/support?id=kb_article_view&sysparm_article=KB86753099#Failures). "
+        dialogUpdateFailure "message: A failure has been detected, ${loggedInUserFirstname}.  \n\The following failed to install:  \n${jamfProPolicyPolicyNameFailures}  \n\n\n\nIf you need assistance, please ithelp@emersoncollective.com,"
         dialogUpdateFailure "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         dialogUpdateFailure "button1text: ${button1textCompletionActionOption}"
 
