@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.7.0, 20-Jan-2023, Dan K. Snelson (@dan-snelson)
+#   Version 1.7.0, 25-Jan-2023, Dan K. Snelson (@dan-snelson)
 #   - Adds compatibility and features of swiftDialog 2.1.0
 #   - Addresses Issue No. 31
 #
@@ -38,19 +38,47 @@ fi
 # Validate Operating System
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-osVersion=$( sw_vers -productVersion )
-osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
+# Set `requiredMinimumBuild` to your required minimum build of macOS to allow users to proceed.
+# For example, to only allow macOS Ventura 13.2 (or later), specify: requiredMinimumBuild="22D"
+# Some examples for macOS Ventura's "version (build)" include: "13.2 (22D49)", "13.1 (22C65)", "13.0.1 (22A400)"
+requiredMinimumBuild="22D"
 
+# ID number of your Jamf Pro Self Service policy for operating system ugprades 
+action="jamfselfservice://content?entity=policy&id=988&action=view"
+
+# Operating System and currently logged-in user variables
+osVersion=$( sw_vers -productVersion )
+osBuild=$( sw_vers -buildVersion )
+osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
+loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+
+# Since swiftDialog requires at least macOS 11 Big Sur, first confirm the major OS version
 if [[ "${osMajorVersion}" -ge 11 ]] ; then
-    echo "macOS ${osMajorVersion} installed; proceeding ..."
+
+    echo "macOS ${osMajorVersion} installed; checking build version ..."
+
+    # Confirm the Mac is running `requiredMinimumBuild` (or later)
+    if [[ "${osBuild}" > "${requiredMinimumBuild}" ]]; then
+
+        echo "macOS ${osVersion} (${osBuild}) installed; proceeding ..."
+
+    # When the current `osBuild` is older than `requiredMinimumBuild`; exit with error
+    else
+        echo "The installed operating system, macOS ${osVersion} (${osBuild}), needs to be updated to Build ${requiredMinimumBuild}; exiting with error."
+        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Close"} with icon caution'
+        su - "${loggedInUser}" -c "/usr/bin/open \"${action}\""
+        exit 1
+
+    fi
+
+# The Mac is running an operating system older than macOS 11 Big Sur; exit with error
 else
-    echo "macOS ${osVersion} installed; exiting."
-    loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
-    message="Error: Outdated Operating System  The operating system of your Mac, ${osVersion}, is too old to complete setup.  Please upgrade before proceeding."
-    action="jamfselfservice://content?entity=policy&id=988&action=view"
-    /usr/local/jamf/bin/jamf displayMessage -message "${message}" &
+
+    echo "swiftDialog requires at least macOS 11 Big Sur and this Mac is running ${osVersion} (${osBuild}), exiting with error."
+    osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Close"} with icon caution'
     su - "${loggedInUser}" -c "/usr/bin/open \"${action}\""
     exit 1
+
 fi
 
 
@@ -115,7 +143,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0-rc4"
+scriptVersion="1.7.0-rc5"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -1389,7 +1417,7 @@ echo "$welcomeJSON" > "$welcomeCommandFile"
 
 if [[ "${welcomeDialog}" == "true" ]]; then
 
-    welcomeResults=$( eval "${dialogBinary} --jsonfile ${welcomeCommandFile} --json" )
+    welcomeResults=$( eval "${dialogApp} --jsonfile ${welcomeCommandFile} --json" )
 
     if [[ -z "${welcomeResults}" ]]; then
         welcomeReturnCode="2"
