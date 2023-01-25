@@ -3,9 +3,19 @@
 ## 1.7.0
 ### TBD
 [Release-specific Blog Post](https://snelson.us/)
+- Adds compatibility and features of swiftDialog 2.1.0
+  - `helpmessage`
+  - `infobox`
 - Completion Actions
-  - Adjusted alternative code options for Mac Admins using an Enrollment Complete trigger
-- Blah
+  - Adjusted default code option to hopefully help Mac Admins using an Enrollment Complete trigger (i.e., `runAsUser` doesn't work too well when `_mbsetupuser` is the logged-in user)
+- Combined `listitem` steps for installation and validation (thanks, @roiegat!)
+  - Addresses [Issue No. 30](https://github.com/dan-snelson/dialog-scripts/issues/30)
+- Validate Operating System Version and Build
+  - Addresses [Issue No. 31](https://github.com/dan-snelson/dialog-scripts/issues/31)
+  - Introduces the ability to specify a `requiredMinimumBuild` as Script Parameter `8`
+    - For example, to only allow macOS Ventura 13.2 (or later), specify: `requiredMinimumBuild="22D"`
+- Temporarily disables `jamf` binary check-in (thanks, @mactroll and @cube!)
+
 
 
 ## 1.6.0

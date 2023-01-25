@@ -11,7 +11,7 @@
 #
 #   Version 1.7.0, 25-Jan-2023, Dan K. Snelson (@dan-snelson)
 #   - Adds compatibility and features of swiftDialog 2.1.0
-#   - Addresses Issue No. 31
+#   - Addresses Issues Nos. 30 & 31
 #
 ####################################################################################################
 
@@ -35,16 +35,19 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate Operating System
+# Validate Operating System Version and Build
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Set `requiredMinimumBuild` to your required minimum build of macOS to allow users to proceed.
 # For example, to only allow macOS Ventura 13.2 (or later), specify: requiredMinimumBuild="22D"
 # Some examples for macOS Ventura's "version (build)" include: "13.2 (22D49)", "13.1 (22C65)", "13.0.1 (22A400)"
-requiredMinimumBuild="22D"
+requiredMinimumBuild="${8:-"22D"}"
 
 # ID number of your Jamf Pro Self Service policy for operating system ugprades 
-action="jamfselfservice://content?entity=policy&id=988&action=view"
+# action="jamfselfservice://content?entity=policy&id=988&action=view"
+
+# Update Software Update
+action="/System/Library/CoreServices/Software Update.app"
 
 # Operating System and currently logged-in user variables
 osVersion=$( sw_vers -productVersion )
@@ -53,6 +56,7 @@ osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 
 # Since swiftDialog requires at least macOS 11 Big Sur, first confirm the major OS version
+# shellcheck disable=SC2086 # purposely use single quotes with osascript
 if [[ "${osMajorVersion}" -ge 11 ]] ; then
 
     echo "macOS ${osMajorVersion} installed; checking build version ..."
@@ -65,7 +69,7 @@ if [[ "${osMajorVersion}" -ge 11 ]] ; then
     # When the current `osBuild` is older than `requiredMinimumBuild`; exit with error
     else
         echo "The installed operating system, macOS ${osVersion} (${osBuild}), needs to be updated to Build ${requiredMinimumBuild}; exiting with error."
-        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Close"} with icon caution'
+        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
         su - "${loggedInUser}" -c "/usr/bin/open \"${action}\""
         exit 1
 
@@ -75,7 +79,7 @@ if [[ "${osMajorVersion}" -ge 11 ]] ; then
 else
 
     echo "swiftDialog requires at least macOS 11 Big Sur and this Mac is running ${osVersion} (${osBuild}), exiting with error."
-    osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Close"} with icon caution'
+    osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
     su - "${loggedInUser}" -c "/usr/bin/open \"${action}\""
     exit 1
 
@@ -133,6 +137,21 @@ fi
 
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Temporarily disable `jamf` binary check-in (thanks, @mactroll and @cube!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+echo "Temporarily disable 'jamf' binary check-in"
+jamflaunchDaemon="/Library/LaunchDaemons/com.jamfsoftware.task.1.plist"
+
+while [[ ! -f "${jamflaunchDaemon}" ]]; do
+    sleep 0.1
+done
+
+/bin/launchctl bootout system "$jamflaunchDaemon"
+
+
+
 ####################################################################################################
 #
 # Variables
@@ -143,7 +162,7 @@ fi
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0-rc5"
+scriptVersion="1.7.0-rc6"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 debugMode="${5:-"true"}"                           # [ true (default) | false ]
@@ -1214,8 +1233,8 @@ function completionAction() {
                 updateScriptLog "Shut Down sans user interaction"
                 killProcess "Self Service"
                 # runAsUser osascript -e 'tell app "System Events" to shut down'
-                sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
-                # sleep 5 && shutdown -h now &
+                # sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
+                sleep 5 && shutdown -h now &
                 ;;
 
             "Shut Down Attended" )
@@ -1223,8 +1242,8 @@ function completionAction() {
                 killProcess "Self Service"
                 wait
                 # runAsUser osascript -e 'tell app "System Events" to shut down'
-                sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
-                # sleep 5 && shutdown -h now &
+                # sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
+                sleep 5 && shutdown -h now &
                 ;;
 
             "Shut Down Confirm" )
@@ -1236,8 +1255,8 @@ function completionAction() {
                 updateScriptLog "Restart sans user interaction"
                 killProcess "Self Service"
                 # runAsUser osascript -e 'tell app "System Events" to restart'
-                sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
-                # sleep 5 && shutdown -r now &
+                # sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
+                sleep 5 && shutdown -r now &
                 ;;
 
             "Restart Attended" )
@@ -1245,8 +1264,8 @@ function completionAction() {
                 killProcess "Self Service"
                 wait
                 # runAsUser osascript -e 'tell app "System Events" to restart'
-                sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
-                # sleep 5 && shutdown -r now &
+                # sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
+                sleep 5 && shutdown -r now &
                 ;;
 
             "Restart Confirm" )
@@ -1258,8 +1277,8 @@ function completionAction() {
                 updateScriptLog "Log out sans user interaction"
                 killProcess "Self Service"
                 # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
-                sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
-                # sleep 5 && launchctl bootout user/"${loggedInUserID}"
+                # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
+                sleep 5 && launchctl bootout user/"${loggedInUserID}"
                 ;;
 
             "Log Out Attended" )
@@ -1267,8 +1286,8 @@ function completionAction() {
                 killProcess "Self Service"
                 wait
                 # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
-                sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
-                # sleep 5 && launchctl bootout user/"${loggedInUserID}"
+                # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
+                sleep 5 && launchctl bootout user/"${loggedInUserID}"
                 ;;
 
             "Log Out Confirm" )
@@ -1317,6 +1336,10 @@ function quitScript() {
     # Stop `caffeinate` process
     updateScriptLog "De-caffeinate …"
     killProcess "caffeinate"
+
+    # Reenable 'jamf' binary check-in
+    updateScriptLog "Reenable 'jamf' binary check-in"
+    launchctl bootstrap system "${jamflaunchDaemon}"
 
     # Remove welcomeCommandFile
     if [[ -e ${welcomeCommandFile} ]]; then
