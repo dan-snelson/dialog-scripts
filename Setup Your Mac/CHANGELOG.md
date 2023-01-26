@@ -10,12 +10,16 @@
   - Adjusted default code option to hopefully help Mac Admins using an Enrollment Complete trigger (i.e., `runAsUser` doesn't work too well when `_mbsetupuser` is the logged-in user)
 - Combined `listitem` steps for installation and validation (thanks, @roiegat!)
   - Addresses [Issue No. 30](https://github.com/dan-snelson/dialog-scripts/issues/30)
-- Validate Operating System Version and Build
+- Validate Operating System Version, Build and Outdated OS Action
   - Addresses [Issue No. 31](https://github.com/dan-snelson/dialog-scripts/issues/31)
-  - Introduces the ability to specify a `requiredMinimumBuild` as Script Parameter `8`
+  - Introduces the ability to specify a `requiredMinimumBuild` as Script Parameter `8` (thanks, @SirDrSpiderpig!)
     - For example, to only allow macOS Ventura 13.2 (or later), specify: `requiredMinimumBuild="22D"`
+  - Introduces Outdated OS Action
+    - Open Self Service to your OS update policy: `jamfselfservice://content?entity=policy&id=117&action=view`
+    - Open Software Update (default): `/System/Library/CoreServices/Software Update.app`
 - Temporarily disables `jamf` binary check-in (thanks, @mactroll and @cube!)
-
+- Separated "Global Variables" from "Dialog Variables" to allow for additional Script Parameters 
+- Improved Pre-flight Check messaging
 
 
 ## 1.6.0
