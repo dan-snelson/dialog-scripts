@@ -2,8 +2,9 @@
 
 ## 1.7.0
 ### TBD
-[Release-specific Blog Post](https://snelson.us/)
+[Release-specific Blog Post](https://snelson.us/sym)
 - Adds compatibility and features of swiftDialog 2.1.0
+  - `bannertext`
   - `helpmessage`
   - `infobox`
 - Completion Actions

@@ -27,7 +27,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0-rc7"
+scriptVersion="1.7.0-rc8"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"true"}"                                                    # [ true (default) | false ]
@@ -279,8 +279,7 @@ welcomeJSON='{
     "infotext" : "'"${scriptVersion}"'",
     "blurscreen" : "true",
     "ontop" : "true",
-    "titlefont" : "shadow=1",
-    "titlefont" : "size=36",
+    "titlefont" : "shadow=true, size=36",
     "messagefont" : "size=16",
     "textfield" : [
         {   "title" : "Comment",
@@ -371,7 +370,7 @@ overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist se
 bannerImage="https://snelson.us/wp-content/uploads/2023/01/2022-02.png"
 bannerText="Setting up ${loggedInUserFirstname}'s Mac"
 helpmessage="If you need assistance, please contact the Global Service Department:  \n- **Telephone:** +1 (801) 555-1212  \n- **Email:** support@domain.org  \n- **Knowledge Base Article:** KB0057050  \n\n**Computer Information:** \n\n- **Operating System:**  ${macOSproductVersion} ($macOSbuildVersion)  \n- **Serial Number:** ${serialNumber}  \n- **Dialog:** ${dialogVersion}  \n- **Started:** ${timestamp}"
-infobox="Analyzing input …" # Update at "Update Setup Your Mac's infobox"
+infobox="Analyzing input …" # Customize at "Update Setup Your Mac's infobox"
 
 # Set initial icon based on whether the Mac is a desktop or laptop
 if system_profiler SPPowerDataType | grep -q "Battery Power"; then
@@ -399,8 +398,7 @@ dialogSetupYourMacCMD="$dialogBinary \
 --button1text \"Wait\" \
 --button1disabled \
 --infotext \"$scriptVersion\" \
---titlefont 'shadow=1' \
---titlefont 'size=36' \
+--titlefont 'shadow=true, size=36' \
 --messagefont 'size=14' \
 --height '775' \
 --position 'centre' \
@@ -1459,8 +1457,6 @@ fi
 
 if [[ "${debugMode}" == "true" ]]; then
     updateScriptLog "\n\n###\n# ${scriptVersion}\n###\n"
-# else
-#     updateScriptLog "\n\n###\n# Setup Your Mac (${scriptVersion})\n###\n"
 fi
 
 
