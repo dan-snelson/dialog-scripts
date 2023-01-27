@@ -3,10 +3,11 @@
 ## 1.7.0
 ### TBD
 [Release-specific Blog Post](https://snelson.us/sym)
-- Adds compatibility and features of swiftDialog 2.1.0
+- Adds compatibility for and leverages new features of [swiftDialog](https://github.com/bartreardon/swiftDialog/blob/main/README.md) `2.1.0`
   - `bannertext`
   - `helpmessage`
   - `infobox`
+  - `progress`-related racing-stripes
 - Completion Actions
   - Adjusted default code option to hopefully help Mac Admins using an Enrollment Complete trigger (i.e., `runAsUser` doesn't work too well when `_mbsetupuser` is the logged-in user)
 - Combined `listitem` steps for installation and validation (thanks, @roiegat!)
@@ -19,6 +20,7 @@
     - Open Self Service to your OS update policy: `jamfselfservice://content?entity=policy&id=117&action=view`
     - Open Software Update (default): `/System/Library/CoreServices/Software Update.app`
 - Temporarily disables `jamf` binary check-in (thanks, @mactroll and @cube!)
+  - Purposely commented-out the code to re-enable the `jamf` binary; presumes the Mac will be restarted
 - Separated "Global Variables" from "Dialog Variables" to allow for additional Script Parameters 
 - Improved Pre-flight Check messaging
 

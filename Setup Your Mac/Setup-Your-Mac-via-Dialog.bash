@@ -3,14 +3,14 @@
 ####################################################################################################
 #
 # Setup Your Mac via swiftDialog
-# https://snelson.us/setup-your-mac/
+# https://snelson.us/sym
 #
 ####################################################################################################
 #
 # HISTORY
 #
 #   Version 1.7.0, 25-Jan-2023, Dan K. Snelson (@dan-snelson)
-#   - Adds compatibility and features of swiftDialog 2.1.0
+#   - Adds compatibility for and leverages new features of swiftDialog 2.1.0
 #   - Addresses Issues Nos. 30 & 31
 #
 ####################################################################################################
@@ -27,7 +27,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0-rc8"
+scriptVersion="1.7.0-rc9"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"true"}"                                                    # [ true (default) | false ]
@@ -249,8 +249,7 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
 welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
-# welcomeBannerImage="/System/Library/Desktop Pictures/hello Orange.heic"
-welcomeBannerImage="https://snelson.us/wp-content/uploads/2023/01/2022-02.png"
+welcomeBannerImage="/System/Library/Desktop Pictures/hello Orange.heic"
 welcomeBannerText="Welcome to your new Mac, ${loggedInUserFirstname}!"
 
 # Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
@@ -279,7 +278,7 @@ welcomeJSON='{
     "infotext" : "'"${scriptVersion}"'",
     "blurscreen" : "true",
     "ontop" : "true",
-    "titlefont" : "shadow=true, size=36",
+    "titlefont" : "shadow=true, size=40",
     "messagefont" : "size=16",
     "textfield" : [
         {   "title" : "Comment",
@@ -367,7 +366,7 @@ welcomeJSON='{
 title="Setting up ${loggedInUserFirstname}'s Mac"
 message="Please wait while the following apps are installed …"
 overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
-bannerImage="https://snelson.us/wp-content/uploads/2023/01/2022-02.png"
+bannerImage="/System/Library/Desktop Pictures/hello Orange.heic"
 bannerText="Setting up ${loggedInUserFirstname}'s Mac"
 helpmessage="If you need assistance, please contact the Global Service Department:  \n- **Telephone:** +1 (801) 555-1212  \n- **Email:** support@domain.org  \n- **Knowledge Base Article:** KB0057050  \n\n**Computer Information:** \n\n- **Operating System:**  ${macOSproductVersion} ($macOSbuildVersion)  \n- **Serial Number:** ${serialNumber}  \n- **Dialog:** ${dialogVersion}  \n- **Started:** ${timestamp}"
 infobox="Analyzing input …" # Customize at "Update Setup Your Mac's infobox"
@@ -398,7 +397,7 @@ dialogSetupYourMacCMD="$dialogBinary \
 --button1text \"Wait\" \
 --button1disabled \
 --infotext \"$scriptVersion\" \
---titlefont 'shadow=true, size=36' \
+--titlefont 'shadow=true, size=40' \
 --messagefont 'size=14' \
 --height '775' \
 --position 'centre' \
@@ -1394,8 +1393,9 @@ function quitScript() {
     killProcess "caffeinate"
 
     # Reenable 'jamf' binary check-in
-    updateScriptLog "Reenable 'jamf' binary check-in"
-    launchctl bootstrap system "${jamflaunchDaemon}"
+    # Purposely commented-out on 2023-01-26-092705; presumes Mac will be rebooted
+    # updateScriptLog "Reenable 'jamf' binary check-in"
+    # launchctl bootstrap system "${jamflaunchDaemon}"
 
     # Remove welcomeCommandFile
     if [[ -e ${welcomeCommandFile} ]]; then
@@ -1668,11 +1668,11 @@ done
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Set progress_total to the number of steps in policy_array
+# Determine the "progress: increment" value based on the number of steps in policy_array
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-progress_total=$(get_json_value "${policy_array[*]}" "steps.length")
-updateScriptLog "SETUP YOUR MAC DIALOG: progress_total=$progress_total"
+totalProgressSteps=$(get_json_value "${policy_array[*]}" "steps.length")
+progressIncrementValue=$(( 100 / totalProgressSteps ))
 
 
 
@@ -1701,8 +1701,7 @@ dialogUpdateSetupYourMac "list: show"
 if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
 
 updateScriptLog "SETUP YOUR MAC DIALOG: Initial progress bar"
-progress_index=0
-dialogUpdateSetupYourMac "progress: $progress_index"
+dialogUpdateSetupYourMac "progress: 1"
 
 
 
@@ -1786,7 +1785,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
     validatePolicyResult "${trigger}" "${validation}"
 
     # Increment the progress bar
-    dialogUpdateSetupYourMac "progress: $(( i * ( 100 / progress_total ) ))"
+    dialogUpdateSetupYourMac "progress: increment ${progressIncrementValue}"
 
     # Record duration
     updateScriptLog "SETUP YOUR MAC DIALOG: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
