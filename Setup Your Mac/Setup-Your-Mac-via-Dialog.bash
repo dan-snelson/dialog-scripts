@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.7.0, 25-Jan-2023, Dan K. Snelson (@dan-snelson)
+#   Version 1.7.0, 01-Feb-2023, Dan K. Snelson (@dan-snelson)
 #   - Adds compatibility for and leverages new features of swiftDialog 2.1.0
 #   - Addresses Issues Nos. 30 & 31
 #
@@ -27,10 +27,10 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0-rc9"
+scriptVersion="1.7.0-rc10"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
-debugMode="${5:-"true"}"                                                    # [ true (default) | false ]
+debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
 welcomeDialog="${6:-"true"}"                                                # [ true (default) | false ]
 completionActionOption="${7:-"Restart Attended"}"                           # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
 requiredMinimumBuild="${8:-"22D"}"                                          # Your organization's required minimum build of macOS to allow users to proceed
@@ -170,16 +170,14 @@ fi
 # Temporarily disable `jamf` binary check-in (thanks, @mactroll and @cube!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ "${debugMode}" == "true" ]]; then
+if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
     echo "${timestamp} - Pre-flight Check: DEBUG MODE: Normally, 'jamf' binary check-in would be temporarily disabled"
 else
     echo "${timestamp} - Pre-flight Check: Temporarily disable 'jamf' binary check-in"
     jamflaunchDaemon="/Library/LaunchDaemons/com.jamfsoftware.task.1.plist"
-
     while [[ ! -f "${jamflaunchDaemon}" ]] ; do
         sleep 0.1
     done
-
     /bin/launchctl bootout system "$jamflaunchDaemon"
 fi
 
@@ -215,9 +213,10 @@ dialogVersion=$( /usr/local/bin/dialog --version )
 # Reflect Debug Mode in `infotext` (i.e., bottom, left-hand corner of each dialog)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ "${debugMode}" == "true" ]]; then
-    scriptVersion="DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
-fi
+case ${debugMode} in
+    "true"      ) scriptVersion="DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}" ;;
+    "verbose"   ) scriptVersion="VERBOSE DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}" ;;
+esac
 
 
 
@@ -494,7 +493,7 @@ policy_array=('
         },
         {
             "listitem": "Palo Alto GlobalProtect",
-            "icon": "fcccf5d72ad9a4f6d3a4d780dcd8385378a0a8fd18e8c33ad32326f5bd53cca0",
+            "icon": "ea794c5a1850e735179c7c60919e3b51ed3ed2b301fe3f0f27ad5ebd394a2e4b",
             "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
             "trigger_list": [
                 {
@@ -724,8 +723,8 @@ function runAsUser() {
 
 function dialogCheck() {
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     # Get the URL of the latest PKG From the Dialog GitHub repo
     dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
@@ -817,8 +816,8 @@ function dialogUpdateFailure(){
 
 function finalise(){
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     if [[ "${jamfProPolicyTriggerFailure}" == "failed" ]]; then
 
@@ -904,12 +903,12 @@ function get_json_value_welcomeDialog() {
 
 function run_jamf_trigger() {
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     trigger="$1"
 
-    if [[ "${debugMode}" == "true" ]]; then
+    if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
 
         updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: TRIGGER: $jamfBinary policy -trigger $trigger"
         if [[ "$trigger" == "recon" ]]; then
@@ -941,18 +940,17 @@ function run_jamf_trigger() {
 
 function confirmPolicyExecution() {
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     trigger="${1}"
     validation="${2}"
-
     updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: '${trigger}' '${validation}'"
 
     case ${validation} in
 
         */* ) # If the validation variable contains a forward slash (i.e., "/"), presume it's a path and check if that path exists on disk
-            if [[ "${debugMode}" == "true" ]]; then
+            if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: DEBUG MODE: Skipping 'run_jamf_trigger ${trigger}'"
                 sleep 0.5
             elif [[ -f "${validation}" ]]; then
@@ -965,7 +963,7 @@ function confirmPolicyExecution() {
 
         "None" )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
-            if [[ "${debugMode}" == "true" ]]; then
+            if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 sleep 0.5
             else
                 run_jamf_trigger "${trigger}"
@@ -974,7 +972,7 @@ function confirmPolicyExecution() {
 
         * )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution Catch-all: ${validation}"
-            if [[ "${debugMode}" == "true" ]]; then
+            if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 sleep 0.5
             else
                 run_jamf_trigger "${trigger}"
@@ -993,12 +991,11 @@ function confirmPolicyExecution() {
 
 function validatePolicyResult() {
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     trigger="${1}"
     validation="${2}"
-
     updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Result: '${trigger}' '${validation}'"
 
     case ${validation} in
@@ -1182,7 +1179,7 @@ function validatePolicyResult() {
         ###
 
         "Remote" )
-            if [[ "${debugMode}" == "true" ]]; then
+            if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: Remotely Confirm Policy Execution: Skipping 'run_jamf_trigger ${trigger}'"
                 dialogUpdateSetupYourMac "listitem: index: $i, status: error, statustext: Debug Mode Enabled"
                 sleep 0.5
@@ -1214,7 +1211,7 @@ function validatePolicyResult() {
             if [[ "${trigger}" == "recon" ]]; then
                 dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
                 updateScriptLog "SETUP YOUR MAC DIALOG: Updating computer inventory with the following reconOptions: \"${reconOptions}\" …"
-                if [[ "${debugMode}" == "true" ]]; then
+                if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                     updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: eval ${jamfBinary} recon ${reconOptions}"
                 else
                     eval "${jamfBinary} recon ${reconOptions}"
@@ -1266,10 +1263,10 @@ function killProcess() {
 
 function completionAction() {
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-    if [[ "${debugMode}" == "true" ]]; then
+    if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
 
         # If Debug Mode is enabled, ignore specified `completionActionOption`, display simple dialog box and exit
         runAsUser osascript -e 'display dialog "Setup Your Mac is operating in Debug Mode.\r\r• completionActionOption == '"'${completionActionOption}'"'\r\r" with title "Setup Your Mac: Debug Mode" buttons {"Close"} with icon note'
@@ -1383,8 +1380,8 @@ function completionAction() {
 
 function quitScript() {
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     updateScriptLog "Exiting …"
 
@@ -1455,7 +1452,7 @@ fi
 # Debug Mode Logging Notification
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ "${debugMode}" == "true" ]]; then
+if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
     updateScriptLog "\n\n###\n# ${scriptVersion}\n###\n"
 fi
 
@@ -1473,7 +1470,7 @@ dialogCheck
 # If Debug Mode is enabled, replace `blurscreen` with `movable`
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ "${debugMode}" == "true" ]]; then
+if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
     welcomeJSON=${welcomeJSON//blurscreen/moveable}
     dialogSetupYourMacCMD=${dialogSetupYourMacCMD//blurscreen/moveable}
 fi
@@ -1494,8 +1491,8 @@ echo "$welcomeJSON" > "$welcomeCommandFile"
 
 if [[ "${welcomeDialog}" == "true" ]]; then
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     welcomeResults=$( eval "${dialogApp} --jsonfile ${welcomeCommandFile} --json" )
 
@@ -1556,10 +1553,10 @@ if [[ "${welcomeDialog}" == "true" ]]; then
                 lastSixMAC=$( ifconfig en0 | awk '/ether/ {print $2}' | sed 's/://g' | cut -c 7-12 )
                 newLocalHostName=${firstEightSerialNumber}-${lastSixMAC}
 
-                if [[ "${debugMode}" == "true" ]]; then
+                if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
 
-                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Renamed computer from: \"${currentComputerName}\" to \"${computerName}\" "
-                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Renamed LocalHostName from: \"${currentLocalHostName}\" to \"${newLocalHostName}\" "
+                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Would have renamed computer from: \"${currentComputerName}\" to \"${computerName}\" "
+                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Would have renamed LocalHostName from: \"${currentLocalHostName}\" to \"${newLocalHostName}\" "
 
                 else
 
@@ -1654,8 +1651,8 @@ fi
 # Iterate through policy_array JSON to construct the list for swiftDialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Output Line Number in Debug Mode
-if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
 dialog_step_length=$(get_json_value "${policy_array[*]}" "steps.length")
 for (( i=0; i<dialog_step_length; i++ )); do
@@ -1671,8 +1668,13 @@ done
 # Determine the "progress: increment" value based on the number of steps in policy_array
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
 totalProgressSteps=$(get_json_value "${policy_array[*]}" "steps.length")
 progressIncrementValue=$(( 100 / totalProgressSteps ))
+updateScriptLog "SETUP YOUR MAC DIALOG: Total Number of Steps: ${totalProgressSteps}"
+updateScriptLog "SETUP YOUR MAC DIALOG: Progress Increment Value: ${progressIncrementValue}"
 
 
 
@@ -1681,8 +1683,8 @@ progressIncrementValue=$(( 100 / totalProgressSteps ))
 # To add a character to the start, use "/#/" instead of the "/%/"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Output Line Number in Debug Mode
-if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
 list_item_string=${list_item_array[*]/%/,}
 dialogUpdateSetupYourMac "list: ${list_item_string%?}"
@@ -1697,8 +1699,8 @@ dialogUpdateSetupYourMac "list: show"
 # Set initial progress bar
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Output Line Number in Debug Mode
-if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
 updateScriptLog "SETUP YOUR MAC DIALOG: Initial progress bar"
 dialogUpdateSetupYourMac "progress: 1"
@@ -1709,8 +1711,8 @@ dialogUpdateSetupYourMac "progress: 1"
 # Close Welcome dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Output Line Number in Debug Mode
-if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
 dialogUpdateWelcome "quit:"
 
@@ -1720,8 +1722,8 @@ dialogUpdateWelcome "quit:"
 # Update Setup Your Mac's infobox
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Output Line Number in Debug Mode
-if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
 infobox=""
 
@@ -1743,8 +1745,8 @@ dialogUpdateSetupYourMac "infobox: ${infobox}"
 
 for (( i=0; i<dialog_step_length; i++ )); do 
 
-    # Output Line Number in Debug Mode
-    if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     # Initialize SECONDS
     SECONDS="0"
@@ -1798,7 +1800,7 @@ done
 # Complete processing and enable the "Done" button
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Output Line Number in Debug Mode
-if [[ "${debugMode}" == "true" ]]; then updateScriptLog "# SETUP YOUR MAC DEBUG MODE: Line No. ${LINENO}" ; fi
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
 finalise
