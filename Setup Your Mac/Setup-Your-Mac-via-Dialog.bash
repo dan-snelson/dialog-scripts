@@ -13,6 +13,10 @@
 #   - Adds compatibility for and leverages new features of swiftDialog 2.1
 #   - Addresses Issues Nos. 30 & 31
 #
+#   Version 1.7.1, 01-Feb-2023, Dan K. Snelson (@dan-snelson)
+#   - Addresses Issue No. 35
+#   - Improves user-interaction with `helpmessage`
+#
 ####################################################################################################
 
 
@@ -27,7 +31,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0"
+scriptVersion="1.7.1-rc1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
@@ -184,6 +188,70 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check for / install swiftDialog (Thanks big bunches, @acodega!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function dialogCheck() {
+
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then echo "${timestamp} - Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
+    # Get the URL of the latest PKG From the Dialog GitHub repo
+    dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+
+    # Expected Team ID of the downloaded PKG
+    expectedDialogTeamID="PWA5E9TQ59"
+
+    # Check for Dialog and install if not found
+    if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
+
+        echo "${timestamp} - Pre-flight Check: Dialog not found. Installing..."
+
+        # Create temporary working directory
+        workDirectory=$( /usr/bin/basename "$0" )
+        tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+
+        # Download the installer package
+        /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
+
+        # Verify the download
+        teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
+
+        # Install the package if Team ID validates
+        if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
+
+            /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+            sleep 2
+            dialogVersion=$( /usr/local/bin/dialog --version )
+            echo "${timestamp} - Pre-flight Check: swiftDialog version ${dialogVersion} installed; proceeding..."
+
+        else
+
+            # Display a so-called "simple" dialog if Team ID fails to validate
+            osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
+            completionActionOption="Quit"
+            exitCode="1"
+            quitScript
+
+        fi
+
+        # Remove the temporary working directory when done
+        /bin/rm -Rf "$tempDirectory"
+
+    else
+
+        echo "${timestamp} - Pre-flight Check: swiftDialog version $(dialog --version) found; proceeding..."
+
+    fi
+
+}
+
+
+dialogCheck
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Pre-flight Checks Complete
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -209,13 +277,14 @@ dialogVersion=$( /usr/local/bin/dialog --version )
 
 
 
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Reflect Debug Mode in `infotext` (i.e., bottom, left-hand corner of each dialog)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 case ${debugMode} in
-    "true"      ) scriptVersion="DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}" ;;
-    "verbose"   ) scriptVersion="VERBOSE DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}" ;;
+    "true"      ) scriptVersion="DEBUG MODE | Dialog: v${dialogVersion} • Setup Your Mac: v${scriptVersion}" ;;
+    "verbose"   ) scriptVersion="VERBOSE DEBUG MODE | Dialog: v${dialogVersion} • Setup Your Mac: v${scriptVersion}" ;;
 esac
 
 
@@ -712,66 +781,6 @@ function runAsUser() {
 
     updateScriptLog "Run \"$@\" as \"$loggedInUserID\" … "
     launchctl asuser "$loggedInUserID" sudo -u "$loggedInUser" "$@"
-
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (Thanks big bunches, @acodega!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function dialogCheck() {
-
-    # Output Line Number in `verbose` Debug Mode
-    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
-
-    # Get the URL of the latest PKG From the Dialog GitHub repo
-    dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
-
-    # Expected Team ID of the downloaded PKG
-    expectedDialogTeamID="PWA5E9TQ59"
-
-    # Check for Dialog and install if not found
-    if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
-
-        updateScriptLog "Dialog not found. Installing..."
-
-        # Create temporary working directory
-        workDirectory=$( /usr/bin/basename "$0" )
-        tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
-
-        # Download the installer package
-        /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
-
-        # Verify the download
-        teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
-
-        # Install the package if Team ID validates
-        if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
-
-            /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
-            sleep 2
-            updateScriptLog "swiftDialog version $(dialog --version) installed; proceeding..."
-
-        else
-
-            # Display a so-called "simple" dialog if Team ID fails to validate
-            runAsUser osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
-            completionActionOption="Quit"
-            exitCode="1"
-            quitScript
-
-        fi
-
-        # Remove the temporary working directory when done
-        /bin/rm -Rf "$tempDirectory"
-
-    else
-
-        updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
-
-    fi
 
 }
 
@@ -1459,14 +1468,6 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate swiftDialog is installed
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dialogCheck
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # If Debug Mode is enabled, replace `blurscreen` with `movable`
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -1608,6 +1609,7 @@ if [[ "${welcomeDialog}" == "true" ]]; then
 
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
+            osascript -e 'tell application "Dialog" to activate'
             ;;
 
         2)  # Process exit code 2 scenario here
@@ -1642,6 +1644,7 @@ else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
+    osascript -e 'tell application "Dialog" to activate'
 
 fi
 
