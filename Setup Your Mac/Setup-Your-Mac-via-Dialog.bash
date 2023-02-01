@@ -3,16 +3,52 @@
 ####################################################################################################
 #
 # Setup Your Mac via swiftDialog
-# https://snelson.us/setup-your-mac/
+# https://snelson.us/sym
 #
 ####################################################################################################
 #
 # HISTORY
 #
-#   Version 1.6.0, 09-Jan-2023, Dan K. Snelson (@dan-snelson)
-#   - Addresses Issue Nos. 21, 25 & 29
+#   Version 1.7.0, 01-Feb-2023, Dan K. Snelson (@dan-snelson)
+#   - Adds compatibility for and leverages new features of swiftDialog 2.1
+#   - Addresses Issues Nos. 30 & 31
 #
 ####################################################################################################
+
+
+
+####################################################################################################
+#
+# Global Variables
+#
+####################################################################################################
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Script Version, Jamf Pro Script Parameters and default Exit Code
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+scriptVersion="1.7.0"
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
+scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
+debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
+welcomeDialog="${6:-"true"}"                                                # [ true (default) | false ]
+completionActionOption="${7:-"Restart Attended"}"                           # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
+requiredMinimumBuild="${8:-"22D"}"                                          # Your organization's required minimum build of macOS to allow users to proceed
+outdatedOsAction=${9:-"/System/Library/CoreServices/Software Update.app"}   # Jamf Pro Self Service policy for operating system ugprades (i.e., "jamfselfservice://content?entity=policy&id=117&action=view") 
+reconOptions=""                                                             # Initialize dynamic recon options; built based on user's input at Welcome dialog
+exitCode="0"                                                                # Default exit code (i.e., "0" equals sucess)
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Operating System and currently logged-in user variables
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+osVersion=$( sw_vers -productVersion )
+osBuild=$( sw_vers -buildVersion )
+osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
+loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+timestamp=$( date +%Y-%m-%d\ %H:%M:%S )
 
 
 
@@ -23,12 +59,59 @@
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Initiate Pre-flight Checks
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+echo -e "\n###\n# Setup Your Mac (${scriptVersion})\n# https://snelson.us/sym\n###\n"
+echo "${timestamp} - Pre-flight Check: Initiating …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Confirm script is running as root
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ $(id -u) -ne 0 ]]; then
-    echo "This script must be run as root; exiting."
+    echo "${timestamp} - Pre-flight Check: This script must be run as root; exiting."
     exit 1
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate Operating System Version and Build
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Since swiftDialog requires at least macOS 11 Big Sur, first confirm the major OS version
+# shellcheck disable=SC2086 # purposely use single quotes with osascript
+if [[ "${osMajorVersion}" -ge 11 ]] ; then
+
+    echo "${timestamp} - Pre-flight Check: macOS ${osMajorVersion} installed; checking build version ..."
+
+    # Confirm the Mac is running `requiredMinimumBuild` (or later)
+    if [[ "${osBuild}" > "${requiredMinimumBuild}" ]]; then
+
+        echo "${timestamp} - Pre-flight Check: macOS ${osVersion} (${osBuild}) installed; proceeding ..."
+
+    # When the current `osBuild` is older than `requiredMinimumBuild`; exit with error
+    else
+        echo "${timestamp} - Pre-flight Check: The installed operating system, macOS ${osVersion} (${osBuild}), needs to be updated to Build ${requiredMinimumBuild}; exiting with error."
+        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
+        echo "${timestamp} - Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
+        su - "${loggedInUser}" -c "/usr/bin/open \"${outdatedOsAction}\""
+        exit 1
+
+    fi
+
+# The Mac is running an operating system older than macOS 11 Big Sur; exit with error
+else
+
+    echo "${timestamp} - Pre-flight Check: swiftDialog requires at least macOS 11 Big Sur and this Mac is running ${osVersion} (${osBuild}), exiting with error."
+    osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
+    echo "${timestamp} - Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
+    su - "${loggedInUser}" -c "/usr/bin/open \"${outdatedOsAction}\""
+    exit 1
+
 fi
 
 
@@ -37,7 +120,7 @@ fi
 # Ensure computer does not go to sleep while running this script (thanks, @grahampugh!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-echo "Caffeinating this script (PID: $$)"
+echo "${timestamp} - Pre-flight Check: Caffeinating this script (PID: $$)"
 caffeinate -dimsu -w $$ &
 
 
@@ -47,11 +130,11 @@ caffeinate -dimsu -w $$ &
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 while pgrep -q -x "Setup Assistant"; do
-    echo "Setup Assistant is still running; pausing for 2 seconds"
+    echo "${timestamp} - Pre-flight Check: Setup Assistant is still running; pausing for 2 seconds"
     sleep 2
 done
 
-echo "Setup Assistant is no longer running; proceeding …"
+echo "${timestamp} - Pre-flight Check: Setup Assistant is no longer running; proceeding …"
 
 
 
@@ -60,11 +143,11 @@ echo "Setup Assistant is no longer running; proceeding …"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 until pgrep -q -x "Finder" && pgrep -q -x "Dock"; do
-    echo "Finder & Dock are NOT running; pausing for 1 second"
+    echo "${timestamp} - Pre-flight Check: Finder & Dock are NOT running; pausing for 1 second"
     sleep 1
 done
 
-echo "Finder & Dock are running; proceeding …"
+echo "${timestamp} - Pre-flight Check: Finder & Dock are running; proceeding …"
 
 
 
@@ -75,7 +158,7 @@ echo "Finder & Dock are running; proceeding …"
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 
 if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
-    echo "No user logged-in; exiting."
+    echo "${timestamp} - Pre-flight Check: No user logged-in; exiting."
     exit 1
 else
     loggedInUserID=$(id -u "${loggedInUser}")
@@ -83,24 +166,46 @@ fi
 
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Temporarily disable `jamf` binary check-in (thanks, @mactroll and @cube!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
+    echo "${timestamp} - Pre-flight Check: DEBUG MODE: Normally, 'jamf' binary check-in would be temporarily disabled"
+else
+    echo "${timestamp} - Pre-flight Check: Temporarily disable 'jamf' binary check-in"
+    jamflaunchDaemon="/Library/LaunchDaemons/com.jamfsoftware.task.1.plist"
+    while [[ ! -f "${jamflaunchDaemon}" ]] ; do
+        sleep 0.1
+    done
+    /bin/launchctl bootout system "$jamflaunchDaemon"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Checks Complete
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+echo "${timestamp} - Pre-flight Check: Complete"
+
+
+
 ####################################################################################################
 #
-# Variables
+# Dialog Variables
 #
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Script Version, Jamf Pro Script Parameters and default Exit Code
+# infobox-related variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.6.0"
-export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
-scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
-debugMode="${5:-"true"}"                           # [ true (default) | false ]
-welcomeDialog="${6:-"true"}"                       # [ true (default) | false ]
-completionActionOption="${7:-"Restart Attended"}"  # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
-reconOptions=""                                    # Initialize dynamic recon options; built based on user's input at Welcome dialog
-exitCode="0"
+macOSproductVersion="$( sw_vers -productVersion )"
+macOSbuildVersion="$( sw_vers -buildVersion )"
+serialNumber=$( system_profiler SPHardwareDataType | grep Serial |  awk '{print $NF}' )
+timestamp="$( date '+%Y-%m-%d-%H%M%S' )"
+dialogVersion=$( /usr/local/bin/dialog --version )
 
 
 
@@ -108,9 +213,10 @@ exitCode="0"
 # Reflect Debug Mode in `infotext` (i.e., bottom, left-hand corner of each dialog)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ "${debugMode}" == "true" ]]; then
-    scriptVersion="DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}"
-fi
+case ${debugMode} in
+    "true"      ) scriptVersion="DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}" ;;
+    "verbose"   ) scriptVersion="VERBOSE DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}" ;;
+esac
 
 
 
@@ -119,6 +225,7 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 dialogApp="/Library/Application\ Support/Dialog/Dialog.app/Contents/MacOS/Dialog"
+dialogBinary="/usr/local/bin/dialog"
 welcomeCommandFile=$( mktemp /var/tmp/dialogWelcome.XXX )
 setupYourMacCommandFile=$( mktemp /var/tmp/dialogSetupYourMac.XXX )
 failureCommandFile=$( mktemp /var/tmp/dialogFailure.XXX )
@@ -141,6 +248,8 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
 welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
+welcomeBannerImage="/System/Library/Desktop Pictures/hello Orange.heic"
+welcomeBannerText="Welcome to your new Mac, ${loggedInUserFirstname}!"
 
 # Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
@@ -157,6 +266,8 @@ fi
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeJSON='{
+    "bannerimage" : "'"${welcomeBannerImage}"'",
+    "bannertext" : "'"${welcomeBannerText}"'",
     "title" : "'"${welcomeTitle}"'",
     "message" : "'"${welcomeMessage}"'",
     "icon" : "'"${welcomeIcon}"'",
@@ -166,7 +277,7 @@ welcomeJSON='{
     "infotext" : "'"${scriptVersion}"'",
     "blurscreen" : "true",
     "ontop" : "true",
-    "titlefont" : "size=26",
+    "titlefont" : "shadow=true, size=40",
     "messagefont" : "size=16",
     "textfield" : [
         {   "title" : "Comment",
@@ -236,7 +347,7 @@ welcomeJSON='{
             ]
         }
     ],
-    "height" : "635"
+    "height" : "700"
 }'
 
 
@@ -253,7 +364,11 @@ welcomeJSON='{
 
 title="Setting up ${loggedInUserFirstname}'s Mac"
 message="Please wait while the following apps are installed …"
-overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
+overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
+bannerImage="/System/Library/Desktop Pictures/hello Orange.heic"
+bannerText="Setting up ${loggedInUserFirstname}'s Mac"
+helpmessage="If you need assistance, please contact the Global Service Department:  \n- **Telephone:** +1 (801) 555-1212  \n- **Email:** support@domain.org  \n- **Knowledge Base Article:** KB0057050  \n\n**Computer Information:** \n\n- **Operating System:**  ${macOSproductVersion} ($macOSbuildVersion)  \n- **Serial Number:** ${serialNumber}  \n- **Dialog:** ${dialogVersion}  \n- **Started:** ${timestamp}"
+infobox="Analyzing input …" # Customize at "Update Setup Your Mac's infobox"
 
 # Set initial icon based on whether the Mac is a desktop or laptop
 if system_profiler SPPowerDataType | grep -q "Battery Power"; then
@@ -268,18 +383,22 @@ fi
 # "Setup Your Mac" dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogSetupYourMacCMD="$dialogApp \
+dialogSetupYourMacCMD="$dialogBinary \
+--bannerimage \"$bannerImage\" \
+--bannertext \"$bannerText\" \
 --title \"$title\" \
 --message \"$message\" \
+--helpmessage \"$helpmessage\" \
 --icon \"$icon\" \
+--infobox \"${infobox}\" \
 --progress \
 --progresstext \"Initializing configuration …\" \
 --button1text \"Wait\" \
 --button1disabled \
 --infotext \"$scriptVersion\" \
---titlefont 'size=28' \
+--titlefont 'shadow=true, size=40' \
 --messagefont 'size=14' \
---height '825' \
+--height '775' \
 --position 'centre' \
 --blurscreen \
 --ontop \
@@ -321,14 +440,7 @@ policy_array=('
                 {
                     "trigger": "rosettaInstall",
                     "validation": "None"
-                }
-            ]
-        },
-        {
-            "listitem": "Rosetta Services (Local)",
-            "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
-            "progresstext": "Locally validating Rosetta service …",
-            "trigger_list": [
+                },
                 {
                     "trigger": "rosetta",
                     "validation": "Local"
@@ -381,7 +493,7 @@ policy_array=('
         },
         {
             "listitem": "Palo Alto GlobalProtect",
-            "icon": "fcccf5d72ad9a4f6d3a4d780dcd8385378a0a8fd18e8c33ad32326f5bd53cca0",
+            "icon": "ea794c5a1850e735179c7c60919e3b51ed3ed2b301fe3f0f27ad5ebd394a2e4b",
             "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
             "trigger_list": [
                 {
@@ -497,7 +609,7 @@ failureIcon="SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
 # "Failure" dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogFailureCMD="$dialogApp \
+dialogFailureCMD="$dialogBinary \
 --moveable \
 --title \"$failureTitle\" \
 --message \"$failureMessage\" \
@@ -611,6 +723,9 @@ function runAsUser() {
 
 function dialogCheck() {
 
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
     # Get the URL of the latest PKG From the Dialog GitHub repo
     dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
@@ -701,6 +816,9 @@ function dialogUpdateFailure(){
 
 function finalise(){
 
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
     if [[ "${jamfProPolicyTriggerFailure}" == "failed" ]]; then
 
         killProcess "caffeinate"
@@ -709,7 +827,7 @@ function finalise(){
         dialogUpdateSetupYourMac "progresstext: Failures detected. Please click Continue for troubleshooting information."
         dialogUpdateSetupYourMac "button1text: Continue …"
         dialogUpdateSetupYourMac "button1: enable"
-        dialogUpdateSetupYourMac "progress: complete"
+        dialogUpdateSetupYourMac "progress: reset"
 
         # Wait for user-acknowledgment due to detected failure
         wait
@@ -785,9 +903,12 @@ function get_json_value_welcomeDialog() {
 
 function run_jamf_trigger() {
 
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
     trigger="$1"
 
-    if [[ "${debugMode}" == "true" ]]; then
+    if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
 
         updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: TRIGGER: $jamfBinary policy -trigger $trigger"
         if [[ "$trigger" == "recon" ]]; then
@@ -819,15 +940,17 @@ function run_jamf_trigger() {
 
 function confirmPolicyExecution() {
 
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
     trigger="${1}"
     validation="${2}"
-
     updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: '${trigger}' '${validation}'"
 
     case ${validation} in
 
         */* ) # If the validation variable contains a forward slash (i.e., "/"), presume it's a path and check if that path exists on disk
-            if [[ "${debugMode}" == "true" ]]; then
+            if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: DEBUG MODE: Skipping 'run_jamf_trigger ${trigger}'"
                 sleep 0.5
             elif [[ -f "${validation}" ]]; then
@@ -840,7 +963,7 @@ function confirmPolicyExecution() {
 
         "None" )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
-            if [[ "${debugMode}" == "true" ]]; then
+            if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 sleep 0.5
             else
                 run_jamf_trigger "${trigger}"
@@ -849,7 +972,7 @@ function confirmPolicyExecution() {
 
         * )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution Catch-all: ${validation}"
-            if [[ "${debugMode}" == "true" ]]; then
+            if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 sleep 0.5
             else
                 run_jamf_trigger "${trigger}"
@@ -868,9 +991,11 @@ function confirmPolicyExecution() {
 
 function validatePolicyResult() {
 
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
     trigger="${1}"
     validation="${2}"
-
     updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Result: '${trigger}' '${validation}'"
 
     case ${validation} in
@@ -1054,7 +1179,7 @@ function validatePolicyResult() {
         ###
 
         "Remote" )
-            if [[ "${debugMode}" == "true" ]]; then
+            if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: Remotely Confirm Policy Execution: Skipping 'run_jamf_trigger ${trigger}'"
                 dialogUpdateSetupYourMac "listitem: index: $i, status: error, statustext: Debug Mode Enabled"
                 sleep 0.5
@@ -1086,7 +1211,7 @@ function validatePolicyResult() {
             if [[ "${trigger}" == "recon" ]]; then
                 dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Updating …, "
                 updateScriptLog "SETUP YOUR MAC DIALOG: Updating computer inventory with the following reconOptions: \"${reconOptions}\" …"
-                if [[ "${debugMode}" == "true" ]]; then
+                if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                     updateScriptLog "SETUP YOUR MAC DIALOG: DEBUG MODE: eval ${jamfBinary} recon ${reconOptions}"
                 else
                     eval "${jamfBinary} recon ${reconOptions}"
@@ -1138,7 +1263,10 @@ function killProcess() {
 
 function completionAction() {
 
-    if [[ "${debugMode}" == "true" ]]; then
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
+    if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
 
         # If Debug Mode is enabled, ignore specified `completionActionOption`, display simple dialog box and exit
         runAsUser osascript -e 'display dialog "Setup Your Mac is operating in Debug Mode.\r\r• completionActionOption == '"'${completionActionOption}'"'\r\r" with title "Setup Your Mac: Debug Mode" buttons {"Close"} with icon note'
@@ -1154,8 +1282,8 @@ function completionAction() {
                 updateScriptLog "Shut Down sans user interaction"
                 killProcess "Self Service"
                 # runAsUser osascript -e 'tell app "System Events" to shut down'
-                sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
-                # shutdown -h +1 &
+                # sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
+                sleep 5 && shutdown -h now &
                 ;;
 
             "Shut Down Attended" )
@@ -1163,8 +1291,8 @@ function completionAction() {
                 killProcess "Self Service"
                 wait
                 # runAsUser osascript -e 'tell app "System Events" to shut down'
-                sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
-                # shutdown -h +1 &
+                # sleep 5 && runAsUser osascript -e 'tell app "System Events" to shut down' &
+                sleep 5 && shutdown -h now &
                 ;;
 
             "Shut Down Confirm" )
@@ -1176,8 +1304,8 @@ function completionAction() {
                 updateScriptLog "Restart sans user interaction"
                 killProcess "Self Service"
                 # runAsUser osascript -e 'tell app "System Events" to restart'
-                sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
-                # shutdown -r +1 &
+                # sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
+                sleep 5 && shutdown -r now &
                 ;;
 
             "Restart Attended" )
@@ -1185,8 +1313,8 @@ function completionAction() {
                 killProcess "Self Service"
                 wait
                 # runAsUser osascript -e 'tell app "System Events" to restart'
-                sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
-                # shutdown -r +1 &
+                # sleep 5 && runAsUser osascript -e 'tell app "System Events" to restart' &
+                sleep 5 && shutdown -r now &
                 ;;
 
             "Restart Confirm" )
@@ -1197,23 +1325,23 @@ function completionAction() {
             "Log Out" )
                 updateScriptLog "Log out sans user interaction"
                 killProcess "Self Service"
-                # runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
-                sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
-                # launchctl bootout user/"${loggedInUserID}"
+                # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
+                # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
+                sleep 5 && launchctl bootout user/"${loggedInUserID}"
                 ;;
 
             "Log Out Attended" )
                 updateScriptLog "Log out sans user interaction"
                 killProcess "Self Service"
                 wait
-                # runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
-                sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
-                # launchctl bootout user/"${loggedInUserID}"
+                # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»'
+                # sleep 5 && runAsUser osascript -e 'tell app "loginwindow" to «event aevtrlgo»' &
+                sleep 5 && launchctl bootout user/"${loggedInUserID}"
                 ;;
 
             "Log Out Confirm" )
                 updateScriptLog "Log out, only after macOS time-out or user confirmation"
-                runAsUser osascript -e 'tell app "System Events" to log out'
+                sleep 5 && runAsUser osascript -e 'tell app "System Events" to log out'
                 ;;
 
             "Sleep"* )
@@ -1252,11 +1380,19 @@ function completionAction() {
 
 function quitScript() {
 
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
     updateScriptLog "Exiting …"
 
     # Stop `caffeinate` process
     updateScriptLog "De-caffeinate …"
     killProcess "caffeinate"
+
+    # Reenable 'jamf' binary check-in
+    # Purposely commented-out on 2023-01-26-092705; presumes Mac will be rebooted
+    # updateScriptLog "Reenable 'jamf' binary check-in"
+    # launchctl bootstrap system "${jamflaunchDaemon}"
 
     # Remove welcomeCommandFile
     if [[ -e ${welcomeCommandFile} ]]; then
@@ -1313,13 +1449,11 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Logging preamble
+# Debug Mode Logging Notification
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ "${debugMode}" == "true" ]]; then
+if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
     updateScriptLog "\n\n###\n# ${scriptVersion}\n###\n"
-else
-    updateScriptLog "\n\n###\n# Setup Your Mac (${scriptVersion})\n###\n"
 fi
 
 
@@ -1336,7 +1470,7 @@ dialogCheck
 # If Debug Mode is enabled, replace `blurscreen` with `movable`
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ "${debugMode}" == "true" ]]; then
+if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
     welcomeJSON=${welcomeJSON//blurscreen/moveable}
     dialogSetupYourMacCMD=${dialogSetupYourMacCMD//blurscreen/moveable}
 fi
@@ -1356,6 +1490,9 @@ echo "$welcomeJSON" > "$welcomeCommandFile"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ "${welcomeDialog}" == "true" ]]; then
+
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     welcomeResults=$( eval "${dialogApp} --jsonfile ${welcomeCommandFile} --json" )
 
@@ -1416,10 +1553,10 @@ if [[ "${welcomeDialog}" == "true" ]]; then
                 lastSixMAC=$( ifconfig en0 | awk '/ether/ {print $2}' | sed 's/://g' | cut -c 7-12 )
                 newLocalHostName=${firstEightSerialNumber}-${lastSixMAC}
 
-                if [[ "${debugMode}" == "true" ]]; then
+                if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
 
-                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Renamed computer from: \"${currentComputerName}\" to \"${computerName}\" "
-                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Renamed LocalHostName from: \"${currentLocalHostName}\" to \"${newLocalHostName}\" "
+                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Would have renamed computer from: \"${currentComputerName}\" to \"${computerName}\" "
+                    updateScriptLog "WELCOME DIALOG: DEBUG MODE: Would have renamed LocalHostName from: \"${currentLocalHostName}\" to \"${newLocalHostName}\" "
 
                 else
 
@@ -1514,6 +1651,9 @@ fi
 # Iterate through policy_array JSON to construct the list for swiftDialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
 dialog_step_length=$(get_json_value "${policy_array[*]}" "steps.length")
 for (( i=0; i<dialog_step_length; i++ )); do
     listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
@@ -1525,11 +1665,16 @@ done
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Set progress_total to the number of steps in policy_array
+# Determine the "progress: increment" value based on the number of steps in policy_array
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-progress_total=$(get_json_value "${policy_array[*]}" "steps.length")
-updateScriptLog "SETUP YOUR MAC DIALOG: progress_total=$progress_total"
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
+totalProgressSteps=$(get_json_value "${policy_array[*]}" "steps.length")
+progressIncrementValue=$(( 100 / totalProgressSteps ))
+updateScriptLog "SETUP YOUR MAC DIALOG: Total Number of Steps: ${totalProgressSteps}"
+updateScriptLog "SETUP YOUR MAC DIALOG: Progress Increment Value: ${progressIncrementValue}"
 
 
 
@@ -1537,6 +1682,9 @@ updateScriptLog "SETUP YOUR MAC DIALOG: progress_total=$progress_total"
 # The ${array_name[*]/%/,} expansion will combine all items within the array adding a "," character at the end
 # To add a character to the start, use "/#/" instead of the "/%/"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
 list_item_string=${list_item_array[*]/%/,}
 dialogUpdateSetupYourMac "list: ${list_item_string%?}"
@@ -1551,9 +1699,11 @@ dialogUpdateSetupYourMac "list: show"
 # Set initial progress bar
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
 updateScriptLog "SETUP YOUR MAC DIALOG: Initial progress bar"
-progress_index=0
-dialogUpdateSetupYourMac "progress: $progress_index"
+dialogUpdateSetupYourMac "progress: 1"
 
 
 
@@ -1561,7 +1711,31 @@ dialogUpdateSetupYourMac "progress: $progress_index"
 # Close Welcome dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
 dialogUpdateWelcome "quit:"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Update Setup Your Mac's infobox
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
+infobox=""
+
+if [[ -n ${comment} ]]; then infobox+="**Comment:**  \n$comment  \n\n" ; fi
+if [[ -n ${computerName} ]]; then infobox+="**Computer Name:**  \n$computerName  \n\n" ; fi
+if [[ -n ${userName} ]]; then infobox+="**Username:**  \n$userName  \n\n" ; fi
+if [[ -n ${assetTag} ]]; then infobox+="**Asset Tag:**  \n$assetTag  \n\n" ; fi
+if [[ -n ${department} ]]; then infobox+="**Department:**  \n$department  \n\n" ; fi
+if [[ -n ${selectB} ]]; then infobox+="**Select B:**  \n$selectB  \n\n" ; fi
+if [[ -n ${selectC} ]]; then infobox+="**Select C:**  \n$selectC  \n\n" ; fi
+
+dialogUpdateSetupYourMac "infobox: ${infobox}"
 
 
 
@@ -1570,6 +1744,9 @@ dialogUpdateWelcome "quit:"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 for (( i=0; i<dialog_step_length; i++ )); do 
+
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     # Initialize SECONDS
     SECONDS="0"
@@ -1610,7 +1787,7 @@ for (( i=0; i<dialog_step_length; i++ )); do
     validatePolicyResult "${trigger}" "${validation}"
 
     # Increment the progress bar
-    dialogUpdateSetupYourMac "progress: $(( i * ( 100 / progress_total ) ))"
+    dialogUpdateSetupYourMac "progress: increment ${progressIncrementValue}"
 
     # Record duration
     updateScriptLog "SETUP YOUR MAC DIALOG: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
@@ -1622,5 +1799,8 @@ done
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Complete processing and enable the "Done" button
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
 finalise

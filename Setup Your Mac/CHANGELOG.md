@@ -1,5 +1,33 @@
 # CHANGELOG
 
+## 1.7.0
+### 01-Feb-2023
+[Release-specific Blog Post](https://snelson.us/2023/02/setup-your-mac-via-swiftdialog-1-7-0/)
+- Adds compatibility for and leverages new features of [swiftDialog](https://github.com/bartreardon/swiftDialog/blob/main/README.md) `2.1`
+  - `bannertext`
+  - `helpmessage`
+  - `infobox`
+  - `progress`-related racing-stripes (which now **require** `swiftDialog 2.1+`)
+- Completion Actions
+  - Adjusted default code option (to hopefully help Mac Admins using an Enrollment Complete trigger [i.e., `runAsUser` doesn't work too well when `_mbsetupuser` is the logged-in user])
+- Combined `listitem` steps for installation and validation (thanks, @roiegat!)
+  - Addresses [Issue No. 30](https://github.com/dan-snelson/dialog-scripts/issues/30)
+- Validate Operating System Version, Build and Outdated OS Action
+  - Addresses [Issue No. 31](https://github.com/dan-snelson/dialog-scripts/issues/31)
+  - Introduces the ability to specify a `requiredMinimumBuild` as Script Parameter `8` (thanks, @SirDrSpiderpig!)
+    - For example, to only allow macOS Ventura 13.2 (or later), specify: `22D`
+  - Introduces Outdated OS Action
+    - Open Self Service to your OS update policy: `jamfselfservice://content?entity=policy&id=117&action=view`
+    - Open Software Update (default): `/System/Library/CoreServices/Software Update.app`
+- Temporarily disables `jamf` binary check-in (thanks, @mactroll and @cube!)
+  - Purposely commented-out the code to re-enable the `jamf` binary; presumes the Mac will be restarted
+- Separated "Global Variables" from "Dialog Variables" to allow for additional Script Parameters 
+- Improved Pre-flight Check messaging
+- Introduces `verbose` as an option for `Debug Mode`
+  - Most useful when first deploying Setup Your Mac
+
+
+
 ## 1.6.0
 ### 09-Jan-2023
 [Release-specific Blog Post](https://snelson.us/2023/01/setup-your-mac-via-swiftdialog-1-6-0/)
