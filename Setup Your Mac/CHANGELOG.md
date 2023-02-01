@@ -1,13 +1,13 @@
 # CHANGELOG
 
 ## 1.7.0
-### TBD
+### 01-Feb-2023
 [Release-specific Blog Post](https://snelson.us/2023/02/setup-your-mac-via-swiftdialog-1-7-0/)
-- Adds compatibility for and leverages new features of [swiftDialog](https://github.com/bartreardon/swiftDialog/blob/main/README.md) `2.1.0`
+- Adds compatibility for and leverages new features of [swiftDialog](https://github.com/bartreardon/swiftDialog/blob/main/README.md) `2.1`
   - `bannertext`
   - `helpmessage`
   - `infobox`
-  - `progress`-related racing-stripes (which now **require** `swiftDialog 2.1.0+`)
+  - `progress`-related racing-stripes (which now **require** `swiftDialog 2.1+`)
 - Completion Actions
   - Adjusted default code option (to hopefully help Mac Admins using an Enrollment Complete trigger [i.e., `runAsUser` doesn't work too well when `_mbsetupuser` is the logged-in user])
 - Combined `listitem` steps for installation and validation (thanks, @roiegat!)

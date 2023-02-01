@@ -10,7 +10,7 @@
 # HISTORY
 #
 #   Version 1.7.0, 01-Feb-2023, Dan K. Snelson (@dan-snelson)
-#   - Adds compatibility for and leverages new features of swiftDialog 2.1.0
+#   - Adds compatibility for and leverages new features of swiftDialog 2.1
 #   - Addresses Issues Nos. 30 & 31
 #
 ####################################################################################################
@@ -27,7 +27,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0-rc10"
+scriptVersion="1.7.0"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
@@ -827,7 +827,7 @@ function finalise(){
         dialogUpdateSetupYourMac "progresstext: Failures detected. Please click Continue for troubleshooting information."
         dialogUpdateSetupYourMac "button1text: Continue …"
         dialogUpdateSetupYourMac "button1: enable"
-        dialogUpdateSetupYourMac "progress: complete"
+        dialogUpdateSetupYourMac "progress: reset"
 
         # Wait for user-acknowledgment due to detected failure
         wait
