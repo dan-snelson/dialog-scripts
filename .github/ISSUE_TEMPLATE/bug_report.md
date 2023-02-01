@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Submit a bug report for Setup Your Mac, after having reviewed open swiftDialog issues: https://github.com/bartreardon/swiftDialog/issues
+about: Submit a bug report for Setup Your Mac (after having reviewed open swiftDialog issues)
 title: ''
 labels: bug
 assignees: dan-snelson
