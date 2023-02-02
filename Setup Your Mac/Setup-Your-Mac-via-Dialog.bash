@@ -31,7 +31,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.1-rc2"
+scriptVersion="1.7.1-rc3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
@@ -1607,6 +1607,11 @@ if [[ "${welcomeDialog}" == "true" ]]; then
 
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
+            until pgrep -q -x "Dialog"; do
+                updateScriptLog "WELCOME DIALOG: Waiting to display 'Setup Your Mac' dialog; pausing"
+                sleep 0.5
+            done
+            updateScriptLog "WELCOME DIALOG: 'Setup Your Mac' dialog displayed; ensure it's the front-most app"
             runAsUser osascript -e 'tell application "Dialog" to activate'
             ;;
 
@@ -1642,6 +1647,11 @@ else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
+    until pgrep -q -x "Dialog"; do
+        updateScriptLog "WELCOME DIALOG: Waiting to display 'Setup Your Mac' dialog; pausing"
+        sleep 0.5
+    done
+    updateScriptLog "WELCOME DIALOG: 'Setup Your Mac' dialog displayed; ensure it's the front-most app"
     runAsUser osascript -e 'tell application "Dialog" to activate'
 
 fi
