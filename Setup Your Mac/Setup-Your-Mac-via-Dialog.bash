@@ -31,7 +31,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.1-rc1"
+scriptVersion="1.7.1-rc2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
@@ -246,7 +246,6 @@ function dialogCheck() {
 
 }
 
-
 dialogCheck
 
 
@@ -274,7 +273,6 @@ macOSbuildVersion="$( sw_vers -buildVersion )"
 serialNumber=$( system_profiler SPHardwareDataType | grep Serial |  awk '{print $NF}' )
 timestamp="$( date '+%Y-%m-%d-%H%M%S' )"
 dialogVersion=$( /usr/local/bin/dialog --version )
-
 
 
 
@@ -467,7 +465,7 @@ dialogSetupYourMacCMD="$dialogBinary \
 --infotext \"$scriptVersion\" \
 --titlefont 'shadow=true, size=40' \
 --messagefont 'size=14' \
---height '775' \
+--height '780' \
 --position 'centre' \
 --blurscreen \
 --ontop \
@@ -1609,7 +1607,7 @@ if [[ "${welcomeDialog}" == "true" ]]; then
 
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
-            osascript -e 'tell application "Dialog" to activate'
+            runAsUser osascript -e 'tell application "Dialog" to activate'
             ;;
 
         2)  # Process exit code 2 scenario here
@@ -1644,7 +1642,7 @@ else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
-    osascript -e 'tell application "Dialog" to activate'
+    runAsUser osascript -e 'tell application "Dialog" to activate'
 
 fi
 
