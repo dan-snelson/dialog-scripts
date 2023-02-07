@@ -13,6 +13,12 @@
 #   - Adds compatibility for and leverages new features of swiftDialog 2.1
 #   - Addresses Issues Nos. 30 & 31
 #
+#   Version 1.7.1, 07-Feb-2023, Dan K. Snelson (@dan-snelson)
+#   - Addresses [Issue No. 35](https://github.com/dan-snelson/dialog-scripts/issues/35)
+#   - Improves user-interaction with `helpmessage` under certain circumstances (thanks, @bartreardon!)
+#   - Increased `debugMode` delay (thanks for the heads-up, @Lewis B!)
+#   - Changed Banner Image (to something much, much smaller)
+#
 ####################################################################################################
 
 
@@ -27,7 +33,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.0"
+scriptVersion="1.7.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
@@ -161,6 +167,8 @@ if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
     echo "${timestamp} - Pre-flight Check: No user logged-in; exiting."
     exit 1
 else
+    loggedInUserFullname=$( id -F "${loggedInUser}" )
+    loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
     loggedInUserID=$(id -u "${loggedInUser}")
 fi
 
@@ -179,6 +187,71 @@ else
         sleep 0.1
     done
     /bin/launchctl bootout system "$jamflaunchDaemon"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check for / install swiftDialog (Thanks big bunches, @acodega!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function dialogCheck() {
+
+    # Output Line Number in `verbose` Debug Mode
+    if [[ "${debugMode}" == "verbose" ]]; then echo "${timestamp} - Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
+    # Get the URL of the latest PKG From the Dialog GitHub repo
+    dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+
+    # Expected Team ID of the downloaded PKG
+    expectedDialogTeamID="PWA5E9TQ59"
+
+    # Check for Dialog and install if not found
+    if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
+
+        echo "${timestamp} - Pre-flight Check: Dialog not found. Installing..."
+
+        # Create temporary working directory
+        workDirectory=$( /usr/bin/basename "$0" )
+        tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+
+        # Download the installer package
+        /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
+
+        # Verify the download
+        teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
+
+        # Install the package if Team ID validates
+        if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
+
+            /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+            sleep 2
+            dialogVersion=$( /usr/local/bin/dialog --version )
+            echo "${timestamp} - Pre-flight Check: swiftDialog version ${dialogVersion} installed; proceeding..."
+
+        else
+
+            # Display a so-called "simple" dialog if Team ID fails to validate
+            osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
+            completionActionOption="Quit"
+            exitCode="1"
+            quitScript
+
+        fi
+
+        # Remove the temporary working directory when done
+        /bin/rm -Rf "$tempDirectory"
+
+    else
+
+        echo "${timestamp} - Pre-flight Check: swiftDialog version $(dialog --version) found; proceeding..."
+
+    fi
+
+}
+
+if [[ ! -e "/Library/Application Support/Dialog/Dialog.app" ]]; then
+    dialogCheck
 fi
 
 
@@ -214,8 +287,8 @@ dialogVersion=$( /usr/local/bin/dialog --version )
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 case ${debugMode} in
-    "true"      ) scriptVersion="DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}" ;;
-    "verbose"   ) scriptVersion="VERBOSE DEBUG MODE | Dialog: v$(dialog --version) • Setup Your Mac: v${scriptVersion}" ;;
+    "true"      ) scriptVersion="DEBUG MODE | Dialog: v${dialogVersion} • Setup Your Mac: v${scriptVersion}" ;;
+    "verbose"   ) scriptVersion="VERBOSE DEBUG MODE | Dialog: v${dialogVersion} • Setup Your Mac: v${scriptVersion}" ;;
 esac
 
 
@@ -230,9 +303,6 @@ welcomeCommandFile=$( mktemp /var/tmp/dialogWelcome.XXX )
 setupYourMacCommandFile=$( mktemp /var/tmp/dialogSetupYourMac.XXX )
 failureCommandFile=$( mktemp /var/tmp/dialogFailure.XXX )
 jamfBinary="/usr/local/bin/jamf"
-loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
-loggedInUserFullname=$( id -F "${loggedInUser}" )
-loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 
 
 
@@ -248,7 +318,7 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
 welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
-welcomeBannerImage="/System/Library/Desktop Pictures/hello Orange.heic"
+welcomeBannerImage="https://img.freepik.com/free-photo/yellow-watercolor-paper_95678-446.jpg"
 welcomeBannerText="Welcome to your new Mac, ${loggedInUserFirstname}!"
 
 # Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
@@ -365,7 +435,7 @@ welcomeJSON='{
 title="Setting up ${loggedInUserFirstname}'s Mac"
 message="Please wait while the following apps are installed …"
 overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
-bannerImage="/System/Library/Desktop Pictures/hello Orange.heic"
+bannerImage="https://img.freepik.com/free-photo/yellow-watercolor-paper_95678-446.jpg"
 bannerText="Setting up ${loggedInUserFirstname}'s Mac"
 helpmessage="If you need assistance, please contact the Global Service Department:  \n- **Telephone:** +1 (801) 555-1212  \n- **Email:** support@domain.org  \n- **Knowledge Base Article:** KB0057050  \n\n**Computer Information:** \n\n- **Operating System:**  ${macOSproductVersion} ($macOSbuildVersion)  \n- **Serial Number:** ${serialNumber}  \n- **Dialog:** ${dialogVersion}  \n- **Started:** ${timestamp}"
 infobox="Analyzing input …" # Customize at "Update Setup Your Mac's infobox"
@@ -398,7 +468,7 @@ dialogSetupYourMacCMD="$dialogBinary \
 --infotext \"$scriptVersion\" \
 --titlefont 'shadow=true, size=40' \
 --messagefont 'size=14' \
---height '775' \
+--height '780' \
 --position 'centre' \
 --blurscreen \
 --ontop \
@@ -616,7 +686,7 @@ dialogFailureCMD="$dialogBinary \
 --icon \"$failureIcon\" \
 --iconsize 125 \
 --width 625 \
---height 500 \
+--height 525 \
 --position topright \
 --button1text \"Close\" \
 --infotext \"$scriptVersion\" \
@@ -712,66 +782,6 @@ function runAsUser() {
 
     updateScriptLog "Run \"$@\" as \"$loggedInUserID\" … "
     launchctl asuser "$loggedInUserID" sudo -u "$loggedInUser" "$@"
-
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (Thanks big bunches, @acodega!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function dialogCheck() {
-
-    # Output Line Number in `verbose` Debug Mode
-    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
-
-    # Get the URL of the latest PKG From the Dialog GitHub repo
-    dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
-
-    # Expected Team ID of the downloaded PKG
-    expectedDialogTeamID="PWA5E9TQ59"
-
-    # Check for Dialog and install if not found
-    if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
-
-        updateScriptLog "Dialog not found. Installing..."
-
-        # Create temporary working directory
-        workDirectory=$( /usr/bin/basename "$0" )
-        tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
-
-        # Download the installer package
-        /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
-
-        # Verify the download
-        teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
-
-        # Install the package if Team ID validates
-        if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
-
-            /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
-            sleep 2
-            updateScriptLog "swiftDialog version $(dialog --version) installed; proceeding..."
-
-        else
-
-            # Display a so-called "simple" dialog if Team ID fails to validate
-            runAsUser osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
-            completionActionOption="Quit"
-            exitCode="1"
-            quitScript
-
-        fi
-
-        # Remove the temporary working directory when done
-        /bin/rm -Rf "$tempDirectory"
-
-    else
-
-        updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
-
-    fi
 
 }
 
@@ -952,7 +962,7 @@ function confirmPolicyExecution() {
         */* ) # If the validation variable contains a forward slash (i.e., "/"), presume it's a path and check if that path exists on disk
             if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
                 updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: DEBUG MODE: Skipping 'run_jamf_trigger ${trigger}'"
-                sleep 0.5
+                sleep 1
             elif [[ -f "${validation}" ]]; then
                 updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation} exists; skipping 'run_jamf_trigger ${trigger}'"
             else
@@ -964,7 +974,7 @@ function confirmPolicyExecution() {
         "None" )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
             if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
-                sleep 0.5
+                sleep 1
             else
                 run_jamf_trigger "${trigger}"
             fi
@@ -973,7 +983,7 @@ function confirmPolicyExecution() {
         * )
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution Catch-all: ${validation}"
             if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
-                sleep 0.5
+                sleep 1
             else
                 run_jamf_trigger "${trigger}"
             fi
@@ -1383,38 +1393,38 @@ function quitScript() {
     # Output Line Number in `verbose` Debug Mode
     if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-    updateScriptLog "Exiting …"
+    updateScriptLog "QUIT SCRIPT: Exiting …"
 
     # Stop `caffeinate` process
-    updateScriptLog "De-caffeinate …"
+    updateScriptLog "QUIT SCRIPT: De-caffeinate …"
     killProcess "caffeinate"
 
     # Reenable 'jamf' binary check-in
     # Purposely commented-out on 2023-01-26-092705; presumes Mac will be rebooted
-    # updateScriptLog "Reenable 'jamf' binary check-in"
+    # updateScriptLog "QUIT SCRIPT: Reenable 'jamf' binary check-in"
     # launchctl bootstrap system "${jamflaunchDaemon}"
 
     # Remove welcomeCommandFile
     if [[ -e ${welcomeCommandFile} ]]; then
-        updateScriptLog "Removing ${welcomeCommandFile} …"
+        updateScriptLog "QUIT SCRIPT: Removing ${welcomeCommandFile} …"
         rm "${welcomeCommandFile}"
     fi
 
     # Remove setupYourMacCommandFile
     if [[ -e ${setupYourMacCommandFile} ]]; then
-        updateScriptLog "Removing ${setupYourMacCommandFile} …"
+        updateScriptLog "QUIT SCRIPT: Removing ${setupYourMacCommandFile} …"
         rm "${setupYourMacCommandFile}"
     fi
 
     # Remove failureCommandFile
     if [[ -e ${failureCommandFile} ]]; then
-        updateScriptLog "Removing ${failureCommandFile} …"
+        updateScriptLog "QUIT SCRIPT: Removing ${failureCommandFile} …"
         rm "${failureCommandFile}"
     fi
 
     # Remove any default dialog file
     if [[ -e /var/tmp/dialog.log ]]; then
-        updateScriptLog "Removing default dialog file …"
+        updateScriptLog "QUIT SCRIPT: Removing default dialog file …"
         rm /var/tmp/dialog.log
     fi
 
@@ -1423,7 +1433,7 @@ function quitScript() {
         exitCode="1"
         exit "${exitCode}"
     else
-        updateScriptLog "Executing Completion Action Option: '${completionActionOption}' …"
+        updateScriptLog "QUIT SCRIPT: Executing Completion Action Option: '${completionActionOption}' …"
         completionAction "${completionActionOption}"
     fi
 
@@ -1455,14 +1465,6 @@ fi
 if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
     updateScriptLog "\n\n###\n# ${scriptVersion}\n###\n"
 fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate swiftDialog is installed
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dialogCheck
 
 
 
@@ -1608,6 +1610,12 @@ if [[ "${welcomeDialog}" == "true" ]]; then
 
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
+            until pgrep -q -x "Dialog"; do
+                updateScriptLog "WELCOME DIALOG: Waiting to display 'Setup Your Mac' dialog; pausing"
+                sleep 0.5
+            done
+            updateScriptLog "WELCOME DIALOG: 'Setup Your Mac' dialog displayed; ensure it's the front-most app"
+            runAsUser osascript -e 'tell application "Dialog" to activate'
             ;;
 
         2)  # Process exit code 2 scenario here
@@ -1642,6 +1650,12 @@ else
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
+    until pgrep -q -x "Dialog"; do
+        updateScriptLog "WELCOME DIALOG: Waiting to display 'Setup Your Mac' dialog; pausing"
+        sleep 0.5
+    done
+    updateScriptLog "WELCOME DIALOG: 'Setup Your Mac' dialog displayed; ensure it's the front-most app"
+    runAsUser osascript -e 'tell application "Dialog" to activate'
 
 fi
 

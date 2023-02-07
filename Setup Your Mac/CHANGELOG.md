@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.7.1
+### 07-Feb-2023
+
+- Addresses [Issue No. 35](https://github.com/dan-snelson/dialog-scripts/issues/35)
+- Improves user-interaction with `helpmessage` under certain circumstances (thanks, @bartreardon!)
+- Increased `debugMode` delay (thanks for the heads-up, @Lewis B!)
+- Changed Banner Image (to something much, much smaller)
+
 ## 1.7.0
 ### 01-Feb-2023
 [Release-specific Blog Post](https://snelson.us/2023/02/setup-your-mac-via-swiftdialog-1-7-0/)
