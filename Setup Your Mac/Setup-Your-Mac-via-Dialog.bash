@@ -13,10 +13,10 @@
 #   - Adds compatibility for and leverages new features of swiftDialog 2.1
 #   - Addresses Issues Nos. 30 & 31
 #
-#   Version 1.7.1, 02-Feb-2023, Dan K. Snelson (@dan-snelson)
-#   - Addresses Issue No. 35
-#   - Improves user-interaction with `helpmessage`
-#   - Increased debugMode delay
+#   Version 1.7.1, 07-Feb-2023, Dan K. Snelson (@dan-snelson)
+#   - Addresses [Issue No. 35](https://github.com/dan-snelson/dialog-scripts/issues/35)
+#   - Improves user-interaction with `helpmessage` under certain circumstances (thanks, @bartreardon!)
+#   - Increased `debugMode` delay (thanks for the heads-up, @Lewis B!)
 #   - Changed Banner Image (to something much, much smaller)
 #
 ####################################################################################################
@@ -33,7 +33,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.1-rc4"
+scriptVersion="1.7.1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
@@ -167,6 +167,8 @@ if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
     echo "${timestamp} - Pre-flight Check: No user logged-in; exiting."
     exit 1
 else
+    loggedInUserFullname=$( id -F "${loggedInUser}" )
+    loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
     loggedInUserID=$(id -u "${loggedInUser}")
 fi
 
@@ -248,7 +250,9 @@ function dialogCheck() {
 
 }
 
-dialogCheck
+if [[ ! -e "/Library/Application Support/Dialog/Dialog.app" ]]; then
+    dialogCheck
+fi
 
 
 
@@ -299,9 +303,6 @@ welcomeCommandFile=$( mktemp /var/tmp/dialogWelcome.XXX )
 setupYourMacCommandFile=$( mktemp /var/tmp/dialogSetupYourMac.XXX )
 failureCommandFile=$( mktemp /var/tmp/dialogFailure.XXX )
 jamfBinary="/usr/local/bin/jamf"
-loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
-loggedInUserFullname=$( id -F "${loggedInUser}" )
-loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 
 
 
@@ -317,7 +318,7 @@ loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
 
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
 welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
-welcomeBannerImage="https://img.freepik.com/free-photo/abstract-grunge-decorative-relief-navy-blue-stucco-wall-texture-wide-angle-rough-colored-background_1258-28311.jpg"
+welcomeBannerImage="https://img.freepik.com/free-photo/yellow-watercolor-paper_95678-446.jpg"
 welcomeBannerText="Welcome to your new Mac, ${loggedInUserFirstname}!"
 
 # Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
@@ -434,7 +435,7 @@ welcomeJSON='{
 title="Setting up ${loggedInUserFirstname}'s Mac"
 message="Please wait while the following apps are installed …"
 overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
-bannerImage="https://img.freepik.com/free-photo/abstract-grunge-decorative-relief-navy-blue-stucco-wall-texture-wide-angle-rough-colored-background_1258-28311.jpg"
+bannerImage="https://img.freepik.com/free-photo/yellow-watercolor-paper_95678-446.jpg"
 bannerText="Setting up ${loggedInUserFirstname}'s Mac"
 helpmessage="If you need assistance, please contact the Global Service Department:  \n- **Telephone:** +1 (801) 555-1212  \n- **Email:** support@domain.org  \n- **Knowledge Base Article:** KB0057050  \n\n**Computer Information:** \n\n- **Operating System:**  ${macOSproductVersion} ($macOSbuildVersion)  \n- **Serial Number:** ${serialNumber}  \n- **Dialog:** ${dialogVersion}  \n- **Started:** ${timestamp}"
 infobox="Analyzing input …" # Customize at "Update Setup Your Mac's infobox"
@@ -685,7 +686,7 @@ dialogFailureCMD="$dialogBinary \
 --icon \"$failureIcon\" \
 --iconsize 125 \
 --width 625 \
---height 500 \
+--height 525 \
 --position topright \
 --button1text \"Close\" \
 --infotext \"$scriptVersion\" \
@@ -1392,38 +1393,38 @@ function quitScript() {
     # Output Line Number in `verbose` Debug Mode
     if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-    updateScriptLog "Exiting …"
+    updateScriptLog "QUIT SCRIPT: Exiting …"
 
     # Stop `caffeinate` process
-    updateScriptLog "De-caffeinate …"
+    updateScriptLog "QUIT SCRIPT: De-caffeinate …"
     killProcess "caffeinate"
 
     # Reenable 'jamf' binary check-in
     # Purposely commented-out on 2023-01-26-092705; presumes Mac will be rebooted
-    # updateScriptLog "Reenable 'jamf' binary check-in"
+    # updateScriptLog "QUIT SCRIPT: Reenable 'jamf' binary check-in"
     # launchctl bootstrap system "${jamflaunchDaemon}"
 
     # Remove welcomeCommandFile
     if [[ -e ${welcomeCommandFile} ]]; then
-        updateScriptLog "Removing ${welcomeCommandFile} …"
+        updateScriptLog "QUIT SCRIPT: Removing ${welcomeCommandFile} …"
         rm "${welcomeCommandFile}"
     fi
 
     # Remove setupYourMacCommandFile
     if [[ -e ${setupYourMacCommandFile} ]]; then
-        updateScriptLog "Removing ${setupYourMacCommandFile} …"
+        updateScriptLog "QUIT SCRIPT: Removing ${setupYourMacCommandFile} …"
         rm "${setupYourMacCommandFile}"
     fi
 
     # Remove failureCommandFile
     if [[ -e ${failureCommandFile} ]]; then
-        updateScriptLog "Removing ${failureCommandFile} …"
+        updateScriptLog "QUIT SCRIPT: Removing ${failureCommandFile} …"
         rm "${failureCommandFile}"
     fi
 
     # Remove any default dialog file
     if [[ -e /var/tmp/dialog.log ]]; then
-        updateScriptLog "Removing default dialog file …"
+        updateScriptLog "QUIT SCRIPT: Removing default dialog file …"
         rm /var/tmp/dialog.log
     fi
 
@@ -1432,7 +1433,7 @@ function quitScript() {
         exitCode="1"
         exit "${exitCode}"
     else
-        updateScriptLog "Executing Completion Action Option: '${completionActionOption}' …"
+        updateScriptLog "QUIT SCRIPT: Executing Completion Action Option: '${completionActionOption}' …"
         completionAction "${completionActionOption}"
     fi
 
