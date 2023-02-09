@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.7.2
+### 09-Feb-2023
+- Reordered Pre-Flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
+- Added `disabled` option for `requiredMinimumBuild`
+
 ## 1.7.1
 ### 07-Feb-2023
 

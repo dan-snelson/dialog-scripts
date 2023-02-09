@@ -19,6 +19,10 @@
 #   - Increased `debugMode` delay (thanks for the heads-up, @Lewis B!)
 #   - Changed Banner Image (to something much, much smaller)
 #
+#   Version 1.7.2, 09-Feb-2023, Dan K. Snelson (@dan-snelson)
+#   - Reordered Pre-Flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
+#   - Added `disabled` option for `requiredMinimumBuild``
+#
 ####################################################################################################
 
 
@@ -33,13 +37,13 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.1"
+scriptVersion="1.7.2-rc1"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
 welcomeDialog="${6:-"true"}"                                                # [ true (default) | false ]
 completionActionOption="${7:-"Restart Attended"}"                           # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
-requiredMinimumBuild="${8:-"22D"}"                                          # Your organization's required minimum build of macOS to allow users to proceed
+requiredMinimumBuild="${8:-"disabled"}"                                          # [ disabled | Your organization's required minimum build of macOS to allow users to proceed ]
 outdatedOsAction=${9:-"/System/Library/CoreServices/Software Update.app"}   # Jamf Pro Self Service policy for operating system ugprades (i.e., "jamfselfservice://content?entity=policy&id=117&action=view") 
 reconOptions=""                                                             # Initialize dynamic recon options; built based on user's input at Welcome dialog
 exitCode="0"                                                                # Default exit code (i.e., "0" equals sucess)
@@ -85,53 +89,6 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate Operating System Version and Build
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-# Since swiftDialog requires at least macOS 11 Big Sur, first confirm the major OS version
-# shellcheck disable=SC2086 # purposely use single quotes with osascript
-if [[ "${osMajorVersion}" -ge 11 ]] ; then
-
-    echo "${timestamp} - Pre-flight Check: macOS ${osMajorVersion} installed; checking build version ..."
-
-    # Confirm the Mac is running `requiredMinimumBuild` (or later)
-    if [[ "${osBuild}" > "${requiredMinimumBuild}" ]]; then
-
-        echo "${timestamp} - Pre-flight Check: macOS ${osVersion} (${osBuild}) installed; proceeding ..."
-
-    # When the current `osBuild` is older than `requiredMinimumBuild`; exit with error
-    else
-        echo "${timestamp} - Pre-flight Check: The installed operating system, macOS ${osVersion} (${osBuild}), needs to be updated to Build ${requiredMinimumBuild}; exiting with error."
-        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
-        echo "${timestamp} - Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
-        su - "${loggedInUser}" -c "/usr/bin/open \"${outdatedOsAction}\""
-        exit 1
-
-    fi
-
-# The Mac is running an operating system older than macOS 11 Big Sur; exit with error
-else
-
-    echo "${timestamp} - Pre-flight Check: swiftDialog requires at least macOS 11 Big Sur and this Mac is running ${osVersion} (${osBuild}), exiting with error."
-    osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
-    echo "${timestamp} - Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
-    su - "${loggedInUser}" -c "/usr/bin/open \"${outdatedOsAction}\""
-    exit 1
-
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Ensure computer does not go to sleep while running this script (thanks, @grahampugh!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-echo "${timestamp} - Pre-flight Check: Caffeinating this script (PID: $$)"
-caffeinate -dimsu -w $$ &
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Validate Setup Assistant has completed
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -154,6 +111,62 @@ until pgrep -q -x "Finder" && pgrep -q -x "Dock"; do
 done
 
 echo "${timestamp} - Pre-flight Check: Finder & Dock are running; proceeding …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate Operating System Version and Build
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ "${requiredMinimumBuild}" == "disabled" ]]; then
+
+    echo "${timestamp} - Pre-flight Check: 'requiredMinimumBuild' has been set to ${requiredMinimumBuild}; skipping OS validation."
+    echo "${timestamp} - Pre-flight Check: macOS ${osVersion} (${osBuild}) installed"
+
+else
+
+    # Since swiftDialog requires at least macOS 11 Big Sur, first confirm the major OS version
+    # shellcheck disable=SC2086 # purposely use single quotes with osascript
+    if [[ "${osMajorVersion}" -ge 11 ]] ; then
+
+        echo "${timestamp} - Pre-flight Check: macOS ${osMajorVersion} installed; checking build version ..."
+
+        # Confirm the Mac is running `requiredMinimumBuild` (or later)
+        if [[ "${osBuild}" > "${requiredMinimumBuild}" ]]; then
+
+            echo "${timestamp} - Pre-flight Check: macOS ${osVersion} (${osBuild}) installed; proceeding ..."
+
+        # When the current `osBuild` is older than `requiredMinimumBuild`; exit with error
+        else
+            echo "${timestamp} - Pre-flight Check: The installed operating system, macOS ${osVersion} (${osBuild}), needs to be updated to Build ${requiredMinimumBuild}; exiting with error."
+            osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
+            echo "${timestamp} - Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
+            su - "${loggedInUser}" -c "/usr/bin/open \"${outdatedOsAction}\""
+            exit 1
+
+        fi
+
+    # The Mac is running an operating system older than macOS 11 Big Sur; exit with error
+    else
+
+        echo "${timestamp} - Pre-flight Check: swiftDialog requires at least macOS 11 Big Sur and this Mac is running ${osVersion} (${osBuild}), exiting with error."
+        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
+        echo "${timestamp} - Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
+        su - "${loggedInUser}" -c "/usr/bin/open \"${outdatedOsAction}\""
+        exit 1
+
+    fi
+
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Ensure computer does not go to sleep while running this script (thanks, @grahampugh!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+echo "${timestamp} - Pre-flight Check: Caffeinating this script (PID: $$)"
+caffeinate -dimsu -w $$ &
 
 
 
