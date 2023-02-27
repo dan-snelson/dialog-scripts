@@ -19,11 +19,12 @@
 #   - Increased `debugMode` delay (thanks for the heads-up, @Lewis B!)
 #   - Changed Banner Image (to something much, much smaller)
 #
-#   Version 1.7.2, 27-Feb-2023, Dan K. Snelson (@dan-snelson)
+#   Version 1.7.2, 28-Feb-2023, Dan K. Snelson (@dan-snelson)
 #   - Reordered Pre-flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
 #   - Added `disabled` option for `requiredMinimumBuild`
-#   - Added Pre-flight Check for Self Service's brandingimage.png
+#   - Added check for Self Service's brandingimage.png (Addresses [Issue No. 40](https://github.com/dan-snelson/dialog-scripts/issues/40))
 #   - Pre-flight Check logging messages now saved client-side
+#   - Addresses [Issue No. 41](https://github.com/dan-snelson/dialog-scripts/issues/41)
 #
 ####################################################################################################
 
@@ -39,7 +40,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.2-rc2"
+scriptVersion="1.7.2-rc3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
@@ -293,46 +294,46 @@ fi
 # (Uncomment `exit 1` below to exit when Self Service's brandingimage.png is NOT found.)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Output Line Number in `verbose` Debug Mode
-if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+# # Output Line Number in `verbose` Debug Mode
+# if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-# Validate Self Service's brandingimage.png exists
-selfServiceBrandingImage="/Users/${loggedInUser}/Library/Application Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png"
-if [[ ! -f "${selfServiceBrandingImage}" ]]; then
+# # Validate Self Service's brandingimage.png exists
+# selfServiceBrandingImage="/Users/${loggedInUser}/Library/Application Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png"
+# if [[ ! -f "${selfServiceBrandingImage}" ]]; then
 
-    # Self Service's brandingimage.png NOT found
-    updateScriptLog "Pre-flight Check: Self Service's brandingimage.png was NOT found."
+#     # Self Service's brandingimage.png NOT found
+#     updateScriptLog "Pre-flight Check: Self Service's brandingimage.png was NOT found."
 
-    # Launch Self Service as the currently logged-in user
-    updateScriptLog "Pre-flight Check: Launching Self Service as ${loggedInUser} …"
-    selfServicePath=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
-    su - "${loggedInUser}" -c "/usr/bin/open -a \"${selfServicePath}\" -g -j"
+#     # Launch Self Service as the currently logged-in user
+#     updateScriptLog "Pre-flight Check: Launching Self Service as ${loggedInUser} …"
+#     selfServicePath=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
+#     su - "${loggedInUser}" -c "/usr/bin/open -a \"${selfServicePath}\" -g -j"
 
-    # Re-check for Self Service's brandingimage.png
-    counter="1"
-    counterMaximum="20"
-    counterDelay="1"
+#     # Re-check for Self Service's brandingimage.png
+#     counter="1"
+#     counterMaximum="20"
+#     counterDelay="1"
 
-    until [[ -f "${selfServiceBrandingImage}" ]] || [[ "${counter}" -gt "${counterMaximum}" ]] ; do
-        updateScriptLog "Pre-flight Check: Check ${counter} of ${counterMaximum} for Self Service's brandingimage.png …"
-        updateScriptLog "Pre-flight Check: Waiting ${counterDelay} second(s) for Self Service's brandingimage.png …"
-        sleep "${counterDelay}"
-        (( counter++ ))
-    done
+#     until [[ -f "${selfServiceBrandingImage}" ]] || [[ "${counter}" -gt "${counterMaximum}" ]] ; do
+#         updateScriptLog "Pre-flight Check: Check ${counter} of ${counterMaximum} for Self Service's brandingimage.png …"
+#         updateScriptLog "Pre-flight Check: Waiting ${counterDelay} second(s) for Self Service's brandingimage.png …"
+#         sleep "${counterDelay}"
+#         (( counter++ ))
+#     done
 
-    if [[ ! -f "${selfServiceBrandingImage}" ]]; then
-        # Output Line Number in `verbose` Debug Mode
-        if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
-        updateScriptLog "Pre-flight Check: Self Service's brandingimage.png NOT found after launching Self Service and waiting (${counterMaximum} * ${counterDelay} second(s))"
-        # exit 1  # Uncomment this line to exit when Self Service's brandingimage.png is NOT found
-    fi
+#     if [[ ! -f "${selfServiceBrandingImage}" ]]; then
+#         # Output Line Number in `verbose` Debug Mode
+#         if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+#         updateScriptLog "Pre-flight Check: Self Service's brandingimage.png NOT found after launching Self Service and waiting (${counterMaximum} * ${counterDelay} second(s))"
+#         # exit 1  # Uncomment this line to exit when Self Service's brandingimage.png is NOT found
+#     fi
 
-else
+# else
 
-    # Self Service's brandingimage.png found
-    updateScriptLog "Pre-flight Check: Self Service's brandingimage.png found; proceeding …"
+#     # Self Service's brandingimage.png found
+#     updateScriptLog "Pre-flight Check: Self Service's brandingimage.png found; proceeding …"
 
-fi
+# fi
 
 
 
@@ -514,11 +515,17 @@ welcomeJSON='{
 
 title="Setting up ${loggedInUserFirstname}'s Mac"
 message="Please wait while the following apps are installed …"
-overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
 bannerImage="https://img.freepik.com/free-photo/yellow-watercolor-paper_95678-446.jpg"
 bannerText="Setting up ${loggedInUserFirstname}'s Mac"
 helpmessage="If you need assistance, please contact the Global Service Department:  \n- **Telephone:** +1 (801) 555-1212  \n- **Email:** support@domain.org  \n- **Knowledge Base Article:** KB0057050  \n\n**Computer Information:** \n\n- **Operating System:**  ${macOSproductVersion} ($macOSbuildVersion)  \n- **Serial Number:** ${serialNumber}  \n- **Dialog:** ${dialogVersion}  \n- **Started:** ${timestamp}"
 infobox="Analyzing input …" # Customize at "Update Setup Your Mac's infobox"
+selfServiceBrandingImage="/Users/${loggedInUser}/Library/Application Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png"
+if [[ ! -f "${selfServiceBrandingImage}" ]]; then
+    overlayicon="https://ics.services.jamfcloud.com/icon/hash_aa63d5813d6ed4846b623ed82acdd1562779bf3716f2d432a8ee533bba8950ee"
+else
+    # overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
+    overlayicon="${selfServiceBrandingImage}"
+fi
 
 # Set initial icon based on whether the Mac is a desktop or laptop
 if system_profiler SPPowerDataType | grep -q "Battery Power"; then
@@ -1670,6 +1677,8 @@ if [[ "${welcomeDialog}" == "true" ]]; then
             eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
             dialogSetupYourMacProcessID=$!
             until pgrep -q -x "Dialog"; do
+                # Output Line Number in `verbose` Debug Mode
+                if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
                 updateScriptLog "WELCOME DIALOG: Waiting to display 'Setup Your Mac' dialog; pausing"
                 sleep 0.5
             done
