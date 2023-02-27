@@ -1,9 +1,12 @@
 # CHANGELOG
 
 ## 1.7.2
-### 09-Feb-2023
+### 27-Feb-2023
 - Reordered Pre-Flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
 - Added `disabled` option for `requiredMinimumBuild`
+- Added Pre-flight Check for Self Service's `brandingimage.png`
+- Pre-flight Check logging messages now saved client-side
+- Addresses [Issue No. 41](https://github.com/dan-snelson/dialog-scripts/issues/41)
 
 ## 1.7.1
 ### 07-Feb-2023

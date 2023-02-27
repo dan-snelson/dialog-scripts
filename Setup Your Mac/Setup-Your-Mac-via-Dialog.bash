@@ -19,9 +19,11 @@
 #   - Increased `debugMode` delay (thanks for the heads-up, @Lewis B!)
 #   - Changed Banner Image (to something much, much smaller)
 #
-#   Version 1.7.2, 09-Feb-2023, Dan K. Snelson (@dan-snelson)
-#   - Reordered Pre-Flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
-#   - Added `disabled` option for `requiredMinimumBuild``
+#   Version 1.7.2, 27-Feb-2023, Dan K. Snelson (@dan-snelson)
+#   - Reordered Pre-flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
+#   - Added `disabled` option for `requiredMinimumBuild`
+#   - Added Pre-flight Check for Self Service's brandingimage.png
+#   - Pre-flight Check logging messages now saved client-side
 #
 ####################################################################################################
 
@@ -37,14 +39,14 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.2-rc1"
+scriptVersion="1.7.2-rc2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
 welcomeDialog="${6:-"true"}"                                                # [ true (default) | false ]
 completionActionOption="${7:-"Restart Attended"}"                           # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
-requiredMinimumBuild="${8:-"disabled"}"                                          # [ disabled | Your organization's required minimum build of macOS to allow users to proceed ]
-outdatedOsAction=${9:-"/System/Library/CoreServices/Software Update.app"}   # Jamf Pro Self Service policy for operating system ugprades (i.e., "jamfselfservice://content?entity=policy&id=117&action=view") 
+requiredMinimumBuild="${8:-"disabled"}"                                     # [ disabled (default) | Your organization's required minimum build of macOS to allow users to proceed (i.e., "22D" for macOS 13.2.x) ]
+outdatedOsAction="${9:-"/System/Library/CoreServices/Software Update.app"}" # Jamf Pro Self Service policy for operating system ugprades (i.e., "jamfselfservice://content?entity=policy&id=117&action=view") 
 reconOptions=""                                                             # Initialize dynamic recon options; built based on user's input at Welcome dialog
 exitCode="0"                                                                # Default exit code (i.e., "0" equals sucess)
 
@@ -58,7 +60,6 @@ osVersion=$( sw_vers -productVersion )
 osBuild=$( sw_vers -buildVersion )
 osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
-timestamp=$( date +%Y-%m-%d\ %H:%M:%S )
 
 
 
@@ -69,59 +70,79 @@ timestamp=$( date +%Y-%m-%d\ %H:%M:%S )
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Initiate Pre-flight Checks
+# Pre-flight Check: Client-side Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-echo -e "\n###\n# Setup Your Mac (${scriptVersion})\n# https://snelson.us/sym\n###\n"
-echo "${timestamp} - Pre-flight Check: Initiating …"
+if [[ ! -f "${scriptLog}" ]]; then
+    touch "${scriptLog}"
+fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm script is running as root
+# Pre-flight Check: Client-side Script Logging Function
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function updateScriptLog() {
+    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Logging Preamble
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "\n\n###\n# Setup Your Mac (${scriptVersion})\n# https://snelson.us/sym\n###\n"
+updateScriptLog "Pre-flight Check: Initiating …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Confirm script is running as root
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ $(id -u) -ne 0 ]]; then
-    echo "${timestamp} - Pre-flight Check: This script must be run as root; exiting."
+    updateScriptLog "Pre-flight Check: This script must be run as root; exiting."
     exit 1
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate Setup Assistant has completed
+# Pre-flight Check: Validate Setup Assistant has completed
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 while pgrep -q -x "Setup Assistant"; do
-    echo "${timestamp} - Pre-flight Check: Setup Assistant is still running; pausing for 2 seconds"
+    updateScriptLog "Pre-flight Check: Setup Assistant is still running; pausing for 2 seconds"
     sleep 2
 done
 
-echo "${timestamp} - Pre-flight Check: Setup Assistant is no longer running; proceeding …"
+updateScriptLog "Pre-flight Check: Setup Assistant is no longer running; proceeding …"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm Dock is running / user is at Desktop
+# Pre-flight Check: Confirm Dock is running / user is at Desktop
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 until pgrep -q -x "Finder" && pgrep -q -x "Dock"; do
-    echo "${timestamp} - Pre-flight Check: Finder & Dock are NOT running; pausing for 1 second"
+    updateScriptLog "Pre-flight Check: Finder & Dock are NOT running; pausing for 1 second"
     sleep 1
 done
 
-echo "${timestamp} - Pre-flight Check: Finder & Dock are running; proceeding …"
+updateScriptLog "Pre-flight Check: Finder & Dock are running; proceeding …"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate Operating System Version and Build
+# Pre-flight Check: Validate Operating System Version and Build
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ "${requiredMinimumBuild}" == "disabled" ]]; then
 
-    echo "${timestamp} - Pre-flight Check: 'requiredMinimumBuild' has been set to ${requiredMinimumBuild}; skipping OS validation."
-    echo "${timestamp} - Pre-flight Check: macOS ${osVersion} (${osBuild}) installed"
+    updateScriptLog "Pre-flight Check: 'requiredMinimumBuild' has been set to ${requiredMinimumBuild}; skipping OS validation."
+    updateScriptLog "Pre-flight Check: macOS ${osVersion} (${osBuild}) installed"
 
 else
 
@@ -129,18 +150,18 @@ else
     # shellcheck disable=SC2086 # purposely use single quotes with osascript
     if [[ "${osMajorVersion}" -ge 11 ]] ; then
 
-        echo "${timestamp} - Pre-flight Check: macOS ${osMajorVersion} installed; checking build version ..."
+        updateScriptLog "Pre-flight Check: macOS ${osMajorVersion} installed; checking build version ..."
 
         # Confirm the Mac is running `requiredMinimumBuild` (or later)
         if [[ "${osBuild}" > "${requiredMinimumBuild}" ]]; then
 
-            echo "${timestamp} - Pre-flight Check: macOS ${osVersion} (${osBuild}) installed; proceeding ..."
+            updateScriptLog "Pre-flight Check: macOS ${osVersion} (${osBuild}) installed; proceeding ..."
 
         # When the current `osBuild` is older than `requiredMinimumBuild`; exit with error
         else
-            echo "${timestamp} - Pre-flight Check: The installed operating system, macOS ${osVersion} (${osBuild}), needs to be updated to Build ${requiredMinimumBuild}; exiting with error."
+            updateScriptLog "Pre-flight Check: The installed operating system, macOS ${osVersion} (${osBuild}), needs to be updated to Build ${requiredMinimumBuild}; exiting with error."
             osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
-            echo "${timestamp} - Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
+            updateScriptLog "Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
             su - "${loggedInUser}" -c "/usr/bin/open \"${outdatedOsAction}\""
             exit 1
 
@@ -149,9 +170,9 @@ else
     # The Mac is running an operating system older than macOS 11 Big Sur; exit with error
     else
 
-        echo "${timestamp} - Pre-flight Check: swiftDialog requires at least macOS 11 Big Sur and this Mac is running ${osVersion} (${osBuild}), exiting with error."
+        updateScriptLog "Pre-flight Check: swiftDialog requires at least macOS 11 Big Sur and this Mac is running ${osVersion} (${osBuild}), exiting with error."
         osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\rExpected macOS Build '${requiredMinimumBuild}' (or newer), but found macOS '${osVersion}' ('${osBuild}').\r\r" with title "Setup Your Mac: Detected Outdated Operating System" buttons {"Open Software Update"} with icon caution'
-        echo "${timestamp} - Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
+        updateScriptLog "Pre-flight Check: Executing /usr/bin/open '${outdatedOsAction}' …"
         su - "${loggedInUser}" -c "/usr/bin/open \"${outdatedOsAction}\""
         exit 1
 
@@ -162,39 +183,37 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Ensure computer does not go to sleep while running this script (thanks, @grahampugh!)
+# Pre-flight Check: Ensure computer does not go to sleep during SYM (thanks, @grahampugh!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-echo "${timestamp} - Pre-flight Check: Caffeinating this script (PID: $$)"
+updateScriptLog "Pre-flight Check: Caffeinating this script (PID: $$)"
 caffeinate -dimsu -w $$ &
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate logged-in user
+# Pre-flight Check: Validate logged-in user
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
-
 if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
-    echo "${timestamp} - Pre-flight Check: No user logged-in; exiting."
+    updateScriptLog "Pre-flight Check: No user logged-in; exiting."
     exit 1
 else
     loggedInUserFullname=$( id -F "${loggedInUser}" )
     loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
-    loggedInUserID=$(id -u "${loggedInUser}")
+    loggedInUserID=$( id -u "${loggedInUser}" )
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Temporarily disable `jamf` binary check-in (thanks, @mactroll and @cube!)
+# Pre-flight Check: Temporarily disable `jamf` binary check-in (thanks, @mactroll and @cube!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ "${debugMode}" == "true" ]] || [[ "${debugMode}" == "verbose" ]] ; then
-    echo "${timestamp} - Pre-flight Check: DEBUG MODE: Normally, 'jamf' binary check-in would be temporarily disabled"
+    updateScriptLog "Pre-flight Check: DEBUG MODE: Normally, 'jamf' binary check-in would be temporarily disabled"
 else
-    echo "${timestamp} - Pre-flight Check: Temporarily disable 'jamf' binary check-in"
+    updateScriptLog "Pre-flight Check: Temporarily disable 'jamf' binary check-in"
     jamflaunchDaemon="/Library/LaunchDaemons/com.jamfsoftware.task.1.plist"
     while [[ ! -f "${jamflaunchDaemon}" ]] ; do
         sleep 0.1
@@ -205,13 +224,13 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (Thanks big bunches, @acodega!)
+# Pre-flight Check: Validate / install swiftDialog (Thanks big bunches, @acodega!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialogCheck() {
 
     # Output Line Number in `verbose` Debug Mode
-    if [[ "${debugMode}" == "verbose" ]]; then echo "${timestamp} - Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+    if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
     # Get the URL of the latest PKG From the Dialog GitHub repo
     dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
@@ -222,7 +241,7 @@ function dialogCheck() {
     # Check for Dialog and install if not found
     if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
 
-        echo "${timestamp} - Pre-flight Check: Dialog not found. Installing..."
+        updateScriptLog "Pre-flight Check: Dialog not found. Installing..."
 
         # Create temporary working directory
         workDirectory=$( /usr/bin/basename "$0" )
@@ -240,7 +259,7 @@ function dialogCheck() {
             /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
             sleep 2
             dialogVersion=$( /usr/local/bin/dialog --version )
-            echo "${timestamp} - Pre-flight Check: swiftDialog version ${dialogVersion} installed; proceeding..."
+            updateScriptLog "Pre-flight Check: swiftDialog version ${dialogVersion} installed; proceeding..."
 
         else
 
@@ -257,7 +276,7 @@ function dialogCheck() {
 
     else
 
-        echo "${timestamp} - Pre-flight Check: swiftDialog version $(dialog --version) found; proceeding..."
+        updateScriptLog "Pre-flight Check: swiftDialog version $(dialog --version) found; proceeding..."
 
     fi
 
@@ -270,10 +289,58 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Pre-flight Checks Complete
+# Pre-flight Check: Self Service's brandingimage.png
+# (Uncomment `exit 1` below to exit when Self Service's brandingimage.png is NOT found.)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-echo "${timestamp} - Pre-flight Check: Complete"
+# Output Line Number in `verbose` Debug Mode
+if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
+# Validate Self Service's brandingimage.png exists
+selfServiceBrandingImage="/Users/${loggedInUser}/Library/Application Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png"
+if [[ ! -f "${selfServiceBrandingImage}" ]]; then
+
+    # Self Service's brandingimage.png NOT found
+    updateScriptLog "Pre-flight Check: Self Service's brandingimage.png was NOT found."
+
+    # Launch Self Service as the currently logged-in user
+    updateScriptLog "Pre-flight Check: Launching Self Service as ${loggedInUser} …"
+    selfServicePath=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
+    su - "${loggedInUser}" -c "/usr/bin/open -a \"${selfServicePath}\" -g -j"
+
+    # Re-check for Self Service's brandingimage.png
+    counter="1"
+    counterMaximum="20"
+    counterDelay="1"
+
+    until [[ -f "${selfServiceBrandingImage}" ]] || [[ "${counter}" -gt "${counterMaximum}" ]] ; do
+        updateScriptLog "Pre-flight Check: Check ${counter} of ${counterMaximum} for Self Service's brandingimage.png …"
+        updateScriptLog "Pre-flight Check: Waiting ${counterDelay} second(s) for Self Service's brandingimage.png …"
+        sleep "${counterDelay}"
+        (( counter++ ))
+    done
+
+    if [[ ! -f "${selfServiceBrandingImage}" ]]; then
+        # Output Line Number in `verbose` Debug Mode
+        if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+        updateScriptLog "Pre-flight Check: Self Service's brandingimage.png NOT found after launching Self Service and waiting (${counterMaximum} * ${counterDelay} second(s))"
+        # exit 1  # Uncomment this line to exit when Self Service's brandingimage.png is NOT found
+    fi
+
+else
+
+    # Self Service's brandingimage.png found
+    updateScriptLog "Pre-flight Check: Self Service's brandingimage.png found; proceeding …"
+
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Complete
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "Pre-flight Check: Complete"
 
 
 
@@ -775,16 +842,6 @@ esac
 # Functions
 #
 ####################################################################################################
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Script Logging
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function updateScriptLog() {
-    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
-}
-
-
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Run command as logged-in user (thanks, @scriptingosx!)
@@ -1461,17 +1518,6 @@ function quitScript() {
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Logging
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ ! -f "${scriptLog}" ]]; then
-    touch "${scriptLog}"
-    updateScriptLog "*** Created log file via script ***"
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Debug Mode Logging Notification
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -1664,6 +1710,8 @@ else
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
     until pgrep -q -x "Dialog"; do
+        # Output Line Number in `verbose` Debug Mode
+        if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
         updateScriptLog "WELCOME DIALOG: Waiting to display 'Setup Your Mac' dialog; pausing"
         sleep 0.5
     done
