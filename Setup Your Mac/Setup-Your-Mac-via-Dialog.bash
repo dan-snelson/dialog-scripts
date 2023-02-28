@@ -23,7 +23,7 @@
 #   - Reordered Pre-flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
 #   - Added `disabled` option for `requiredMinimumBuild`
 #   - Added check for Self Service's brandingimage.png (Addresses [Issue No. 40](https://github.com/dan-snelson/dialog-scripts/issues/40))
-#   - Pre-flight Check logging messages now saved client-side
+#   - Pre-flight Check logging messages now saved to client-side log
 #   - Addresses [Issue No. 41](https://github.com/dan-snelson/dialog-scripts/issues/41)
 #
 ####################################################################################################
@@ -40,7 +40,7 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.2-rc3"
+scriptVersion="1.7.2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
@@ -286,54 +286,6 @@ function dialogCheck() {
 if [[ ! -e "/Library/Application Support/Dialog/Dialog.app" ]]; then
     dialogCheck
 fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Pre-flight Check: Self Service's brandingimage.png
-# (Uncomment `exit 1` below to exit when Self Service's brandingimage.png is NOT found.)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-# # Output Line Number in `verbose` Debug Mode
-# if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
-
-# # Validate Self Service's brandingimage.png exists
-# selfServiceBrandingImage="/Users/${loggedInUser}/Library/Application Support/com.jamfsoftware.selfservice.mac/Documents/Images/brandingimage.png"
-# if [[ ! -f "${selfServiceBrandingImage}" ]]; then
-
-#     # Self Service's brandingimage.png NOT found
-#     updateScriptLog "Pre-flight Check: Self Service's brandingimage.png was NOT found."
-
-#     # Launch Self Service as the currently logged-in user
-#     updateScriptLog "Pre-flight Check: Launching Self Service as ${loggedInUser} …"
-#     selfServicePath=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path 2>&1 )
-#     su - "${loggedInUser}" -c "/usr/bin/open -a \"${selfServicePath}\" -g -j"
-
-#     # Re-check for Self Service's brandingimage.png
-#     counter="1"
-#     counterMaximum="20"
-#     counterDelay="1"
-
-#     until [[ -f "${selfServiceBrandingImage}" ]] || [[ "${counter}" -gt "${counterMaximum}" ]] ; do
-#         updateScriptLog "Pre-flight Check: Check ${counter} of ${counterMaximum} for Self Service's brandingimage.png …"
-#         updateScriptLog "Pre-flight Check: Waiting ${counterDelay} second(s) for Self Service's brandingimage.png …"
-#         sleep "${counterDelay}"
-#         (( counter++ ))
-#     done
-
-#     if [[ ! -f "${selfServiceBrandingImage}" ]]; then
-#         # Output Line Number in `verbose` Debug Mode
-#         if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "Pre-flight Check: # # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
-#         updateScriptLog "Pre-flight Check: Self Service's brandingimage.png NOT found after launching Self Service and waiting (${counterMaximum} * ${counterDelay} second(s))"
-#         # exit 1  # Uncomment this line to exit when Self Service's brandingimage.png is NOT found
-#     fi
-
-# else
-
-#     # Self Service's brandingimage.png found
-#     updateScriptLog "Pre-flight Check: Self Service's brandingimage.png found; proceeding …"
-
-# fi
 
 
 
@@ -1293,6 +1245,8 @@ function validatePolicyResult() {
         ###
 
         "None" )
+            # Output Line Number in `verbose` Debug Mode
+            if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
             updateScriptLog "SETUP YOUR MAC DIALOG: Confirm Policy Execution: ${validation}"
             dialogUpdateSetupYourMac "listitem: index: $i, status: success, statustext: Installed"
             if [[ "${trigger}" == "recon" ]]; then
@@ -1314,6 +1268,8 @@ function validatePolicyResult() {
         ###
 
         * )
+            # Output Line Number in `verbose` Debug Mode
+            if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
             updateScriptLog "SETUP YOUR MAC DIALOG: Validate Policy Results Catch-all: ${validation}"
             dialogUpdateSetupYourMac "listitem: index: $i, status: error, statustext: Error"
             ;;
