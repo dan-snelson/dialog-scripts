@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.8.0
+### 01-Mar-2023
+- Introduces "Configurations" (thanks, @drtaru!)
+    - Required
+    - Recommended
+    - Complete
+- Play video at Welcome dialog (Issue No. 36)
+
 ## 1.7.2
 ### 28-Feb-2023
 - Reordered Pre-Flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
