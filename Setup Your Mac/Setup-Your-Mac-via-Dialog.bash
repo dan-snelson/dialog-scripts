@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.8.0, 28-Feb-2023, Dan K. Snelson (@dan-snelson)
+#   Version 1.8.0, 01-Mar-2023, Dan K. Snelson (@dan-snelson)
 #   - Introduces "Configurations" (thanks, @drtaru!)
 #       - Required
 #       - Recommended
@@ -30,11 +30,11 @@
 # Script Version, Jamf Pro Script Parameters and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.8.0-rc1"
+scriptVersion="1.8.0-rc2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
 debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
-welcomeDialog="${6:-"userInput"}"                                               # [ userInput (default) | video | false ]
+welcomeDialog="${6:-"userInput"}"                                           # [ userInput (default) | video | false ]
 completionActionOption="${7:-"Restart Attended"}"                           # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
 requiredMinimumBuild="${8:-"disabled"}"                                     # [ disabled (default) | Your organization's required minimum build of macOS to allow users to proceed (i.e., "22D" for macOS 13.2.x) ]
 outdatedOsAction="${9:-"/System/Library/CoreServices/Software Update.app"}" # Jamf Pro Self Service policy for operating system ugprades (i.e., "jamfselfservice://content?entity=policy&id=117&action=view") 
@@ -192,7 +192,6 @@ if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
 else
     loggedInUserFullname=$( id -F "${loggedInUser}" )
     loggedInUserFirstname=$( echo "$loggedInUserFullname" | cut -d " " -f 1 )
-    loggedInUserFirstname="Dan" # Hard-coded Testing Variable
     loggedInUserID=$( id -u "${loggedInUser}" )
 fi
 
@@ -341,7 +340,7 @@ jamfBinary="/usr/local/bin/jamf"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
-welcomeMessage="Please enter your Mac's **Asset Tag**, select your preferred **Configuration** then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212.  \n\n---  \n\n#### Configurations  \n- **Required:** Minimum organization requirements  \n- **Recommended:** Minimum organization requirements and Microsoft Office  \n- **Complete:** Minimum organization requirements, Microsoft Office, Adobe Creative Cloud Desktop and Zoom (additional licensing required)"
+welcomeMessage="Please enter your Mac's **Asset Tag**, select your preferred **Configuration** then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212.  \n\n---  \n\n#### Configurations  \n- **Required:** Minimum organization requirements  \n- **Recommended:** Required apps and Microsoft Office  \n- **Complete:** Recommended apps, Adobe Acrobat Reader and Google Chrome"
 welcomeBannerImage="https://img.freepik.com/free-photo/yellow-watercolor-paper_95678-446.jpg"
 welcomeBannerText="Welcome to your new Mac, ${loggedInUserFirstname}!"
 welcomeCaption="Please review the above video, then click Continue."
@@ -530,8 +529,9 @@ dialogSetupYourMacCMD="$dialogBinary \
 #   See: https://snelson.us/2023/01/setup-your-mac-validation/
 #       - {absolute path} (simulates pre-v1.6.0 behavior, for example: "/Applications/Microsoft Teams.app/Contents/Info.plist")
 #       - Local (for validation within this script, for example: "filevault")
-#       - Remote (for validation validation via a single-script Jamf Pro policy, for example: "symvGlobalProtect")
+#       - Remote (for validation via a single-script Jamf Pro policy, for example: "symvGlobalProtect")
 #       - None (for triggers which don't require validation, for example: recon; always evaluates as successful)
+# shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -746,6 +746,17 @@ function policyArrayConfiguration() {
                         ]
                     },
                     {
+                        "listitem": "Microsoft Teams",
+                        "icon": "dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e",
+                        "progresstext": "Microsoft Teams is a hub for teamwork in Office 365. Keep all your team’s chats, meetings and files together in one place.",
+                        "trigger_list": [
+                            {
+                                "trigger": "microsoftTeams",
+                                "validation": "/Applications/Microsoft Teams.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
                         "listitem": "Final Configuration",
                         "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
                         "progresstext": "Finalizing Configuration …",
@@ -885,24 +896,23 @@ function policyArrayConfiguration() {
                         ]
                     },
                     {
-                        "listitem": "Adobe Creative Cloud",
-                        "icon": "b61695d1d725cefa61c4ac014528049087e83f6f4ec8e04174e2d3dc2da9275e",
-                        "progresstext": "The Adobe Creative Cloud desktop application is your central location for managing the dozens of Adobe apps and services.",
+                        "listitem": "Microsoft Teams",
+                        "icon": "dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e",
+                        "progresstext": "Microsoft Teams is a hub for teamwork in Office 365. Keep all your team’s chats, meetings and files together in one place.",
                         "trigger_list": [
                             {
-                                "trigger": "adobeCreativeCloud",
-                                "validation": "/Applications/Utilities/Adobe Creative Cloud/ACC/Creative Cloud.app/Contents/Info.plist"
+                                "trigger": "microsoftTeams",
+                                "validation": "/Applications/Microsoft Teams.app/Contents/Info.plist"
                             }
                         ]
-                    },
-                    {
-                        "listitem": "Zoom",
-                        "icon": "be66420495a3f2f1981a49a0e0ad31783e9a789e835b4196af60554bf4c115ac",
-                        "progresstext": "Zoom is a videotelephony software program developed by Zoom Video Communications.",
+                    },                    {
+                        "listitem": "Adobe Acrobat Reader",
+                        "icon": "988b669ca27eab93a9bcd53bb7e2873fb98be4eaa95ae8974c14d611bea1d95f",
+                        "progresstext": "Views, prints, and comments on PDF documents, and connects to Adobe Document Cloud.",
                         "trigger_list": [
                             {
-                                "trigger": "zoom",
-                                "validation": "/Applications/zoom.us.app/Contents/Info.plist"
+                                "trigger": "adobeAcrobatReader",
+                                "validation": "/Applications/Adobe Acrobat Reader.app/Contents/Info.plist"
                             }
                         ]
                     },
