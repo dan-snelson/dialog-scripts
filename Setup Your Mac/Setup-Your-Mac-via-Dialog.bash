@@ -9,7 +9,7 @@
 #
 # HISTORY
 #
-#   Version 1.8.0, 01-Mar-2023, Dan K. Snelson (@dan-snelson)
+#   Version 1.8.0, 06-Mar-2023, Dan K. Snelson (@dan-snelson)
 #   - Introduces "Configurations" (thanks, @drtaru!)
 #       - Required
 #       - Recommended
@@ -27,30 +27,30 @@
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Script Version, Jamf Pro Script Parameters and default Exit Code
+# Script Version and Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.8.0-rc2"
+scriptVersion="1.8.0-rc3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
-scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
-debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
-welcomeDialog="${6:-"userInput"}"                                           # [ userInput (default) | video | false ]
-completionActionOption="${7:-"Restart Attended"}"                           # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
-requiredMinimumBuild="${8:-"disabled"}"                                     # [ disabled (default) | Your organization's required minimum build of macOS to allow users to proceed (i.e., "22D" for macOS 13.2.x) ]
-outdatedOsAction="${9:-"/System/Library/CoreServices/Software Update.app"}" # Jamf Pro Self Service policy for operating system ugprades (i.e., "jamfselfservice://content?entity=policy&id=117&action=view") 
-reconOptions=""                                                             # Initialize dynamic recon options; built based on user's input at Welcome dialog
-exitCode="0"                                                                # Default exit code (i.e., "0" equals sucess)
+scriptLog="${4:-"/var/log/org.churchofjesuschrist.log"}"                        # Parameter 4: Script Log Location [ /var/log/org.churchofjesuschrist.log ] (i.e., Your organization's default location for client-side logs)
+debugMode="${5:-"verbose"}"                                                     # Parameter 5: Debug Mode [ verbose (default) | true | false ]
+welcomeDialog="${6:-"userInput"}"                                               # Parameter 6: Welcome dialog [ userInput (default) | video | false ]
+completionActionOption="${7:-"Restart Attended"}"                               # Parameter 7: Completion Action [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
+requiredMinimumBuild="${8:-"disabled"}"                                         # Parameter 8: Required Minimum Build [ disabled (default) | 22D ] (i.e., Your organization's required minimum build of macOS to allow users to proceed; use "22D" for macOS 13.2.x)
+outdatedOsAction="${9:-"/System/Library/CoreServices/Software Update.app"}"     # Parameter 9: Outdated OS Action [ /System/Library/CoreServices/Software Update.app (default) | jamfselfservice://content?entity=policy&id=117&action=view ] (i.e., Jamf Pro Self Service policy ID for operating system ugprades)
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Operating System and currently logged-in user variables
+# Operating System, currently logged-in user and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 osVersion=$( sw_vers -productVersion )
 osBuild=$( sw_vers -buildVersion )
 osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+reconOptions=""
+exitCode="0"
 
 
 
@@ -340,11 +340,11 @@ jamfBinary="/usr/local/bin/jamf"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
-welcomeMessage="Please enter your Mac's **Asset Tag**, select your preferred **Configuration** then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212.  \n\n---  \n\n#### Configurations  \n- **Required:** Minimum organization requirements  \n- **Recommended:** Required apps and Microsoft Office  \n- **Complete:** Recommended apps, Adobe Acrobat Reader and Google Chrome"
+welcomeMessage="Please enter your Mac's **Asset Tag**, select your preferred **Configuration** then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212.  \n\n---  \n\n#### Configurations  \n- **Required:** Minimum organization apps  \n- **Recommended:** Required apps and Microsoft Office  \n- **Complete:** Recommended apps, Adobe Acrobat Reader and Google Chrome"
 welcomeBannerImage="https://img.freepik.com/free-photo/yellow-watercolor-paper_95678-446.jpg"
 welcomeBannerText="Welcome to your new Mac, ${loggedInUserFirstname}!"
 welcomeCaption="Please review the above video, then click Continue."
-welcomeVideoID="vimeoid=794065227"
+welcomeVideoID="vimeoid=803933536"
 
 # Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
@@ -531,6 +531,11 @@ dialogSetupYourMacCMD="$dialogBinary \
 #       - Local (for validation within this script, for example: "filevault")
 #       - Remote (for validation via a single-script Jamf Pro policy, for example: "symvGlobalProtect")
 #       - None (for triggers which don't require validation, for example: recon; always evaluates as successful)
+#
+# From @wakco: If you would prefer to get your policyJSON externally replace it with:
+#  - policyJSON="$(cat /path/to/file.json)" # For getting from a file, replacing /path/to/file.json with the path to your file, or
+#  - policyJSON="$(curl -sL https://server.name/jsonquery)" # For a URL, replacing https://server.name/jsonquery with the URL of your file.
+#
 # shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -543,7 +548,7 @@ setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/ha
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Select `policy_array` based on Configuration selected in "Welcome" dialog (thanks, @drtaru!)
+# Select `policyJSON` based on Configuration selected in "Welcome" dialog (thanks, @drtaru!)
 # shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -555,7 +560,7 @@ function policyArrayConfiguration() {
 
         "Required" )
 
-            policy_array=('
+            policyJSON='
             {
                 "steps": [
                     {
@@ -656,12 +661,12 @@ function policyArrayConfiguration() {
                     }
                 ]
             }
-            ')
+            '
             ;;
 
         "Recommended" )
 
-            policy_array=('
+            policyJSON='
             {
                 "steps": [
                     {
@@ -784,12 +789,12 @@ function policyArrayConfiguration() {
                     }
                 ]
             }
-            ')
+            '
             ;;
 
         "Complete" )
 
-            policy_array=('
+            policyJSON='
             {
                 "steps": [
                     {
@@ -955,12 +960,12 @@ function policyArrayConfiguration() {
                     }
                 ]
             }
-            ')
+            '
             ;;
 
-        * ) # Catch-all (i.e., used when `welcomeDialog` is disabled)
+        * ) # Catch-all (i.e., used when `welcomeDialog` is set to `video` or `false`)
 
-            policy_array=('
+            policyJSON='
             {
                 "steps": [
                     {
@@ -997,25 +1002,7 @@ function policyArrayConfiguration() {
                             {
                                 "trigger": "sophosEndpoint",
                                 "validation": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
-                            }
-                        ]
-                    },
-                    {
-                        "listitem": "Sophos Endpoint Services (Local)",
-                        "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
-                        "progresstext": "Locally validating Sophos Endpoint services …",
-                        "trigger_list": [
-                            {
-                                "trigger": "sophosEndpointServices",
-                                "validation": "Local"
-                            }
-                        ]
-                    },
-                    {
-                        "listitem": "Sophos Endpoint Services (Remote)",
-                        "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
-                        "progresstext": "Remotely validating Sophos Endpoint services …",
-                        "trigger_list": [
+                            },
                             {
                                 "trigger": "symvSophosEndpointRTS",
                                 "validation": "Remote"
@@ -1030,25 +1017,7 @@ function policyArrayConfiguration() {
                             {
                                 "trigger": "globalProtect",
                                 "validation": "/Applications/GlobalProtect.app/Contents/Info.plist"
-                            }
-                        ]
-                    },
-                    {
-                        "listitem": "Palo Alto GlobalProtect Services (Local)",
-                        "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
-                        "progresstext": "Locally validating Palo Alto GlobalProtect services …",
-                        "trigger_list": [
-                            {
-                                "trigger": "globalProtect",
-                                "validation": "Local"
-                            }
-                        ]
-                    },
-                    {
-                        "listitem": "Palo Alto GlobalProtect Services (Remote)",
-                        "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
-                        "progresstext": "Remotely validating Palo Alto GlobalProtect services …",
-                        "trigger_list": [
+                            },
                             {
                                 "trigger": "symvGlobalProtect",
                                 "validation": "Remote"
@@ -1083,7 +1052,7 @@ function policyArrayConfiguration() {
                     }
                 ]
             }
-            ')
+            '
             ;;
 
     esac
@@ -1965,7 +1934,7 @@ elif [[ "${welcomeDialog}" == "userInput" ]]; then
 
 
             ###
-            # Select `policy_array` based on selected Configuration
+            # Select `policyJSON` based on selected Configuration
             ###
 
             policyArrayConfiguration
@@ -2082,7 +2051,7 @@ elif [[ "${welcomeDialog}" == "userInput" ]]; then
 else
 
     ###
-    # Select `policy_array` based on selected Configuration
+    # Select `policyJSON` based on selected Configuration
     ###
 
     policyArrayConfiguration
@@ -2109,30 +2078,30 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Iterate through policy_array JSON to construct the list for swiftDialog
+# Iterate through policyJSON to construct the list for swiftDialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Output Line Number in `verbose` Debug Mode
 if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-dialog_step_length=$(get_json_value "${policy_array[*]}" "steps.length")
+dialog_step_length=$(get_json_value "${policyJSON}" "steps.length")
 for (( i=0; i<dialog_step_length; i++ )); do
-    listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
+    listitem=$(get_json_value "${policyJSON}" "steps[$i].listitem")
     list_item_array+=("$listitem")
-    icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
+    icon=$(get_json_value "${policyJSON}" "steps[$i].icon")
     icon_url_array+=("$icon")
 done
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Determine the "progress: increment" value based on the number of steps in policy_array
+# Determine the "progress: increment" value based on the number of steps in policyJSON
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Output Line Number in `verbose` Debug Mode
 if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-totalProgressSteps=$(get_json_value "${policy_array[*]}" "steps.length")
+totalProgressSteps=$(get_json_value "${policyJSON}" "steps.length")
 progressIncrementValue=$(( 100 / totalProgressSteps ))
 updateScriptLog "SETUP YOUR MAC DIALOG: Total Number of Steps: ${totalProgressSteps}"
 updateScriptLog "SETUP YOUR MAC DIALOG: Progress Increment Value: ${progressIncrementValue}"
@@ -2200,7 +2169,7 @@ dialogUpdateSetupYourMac "infobox: ${infobox}"
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# This for loop will iterate over each distinct step in the policy_array array
+# This for loop will iterate over each distinct step in the policyJSON
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 for (( i=0; i<dialog_step_length; i++ )); do 
@@ -2212,14 +2181,14 @@ for (( i=0; i<dialog_step_length; i++ )); do
     SECONDS="0"
 
     # Creating initial variables
-    listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
-    icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
-    progresstext=$(get_json_value "${policy_array[*]}" "steps[$i].progresstext")
-    trigger_list_length=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list.length")
+    listitem=$(get_json_value "${policyJSON}" "steps[$i].listitem")
+    icon=$(get_json_value "${policyJSON}" "steps[$i].icon")
+    progresstext=$(get_json_value "${policyJSON}" "steps[$i].progresstext")
+    trigger_list_length=$(get_json_value "${policyJSON}" "steps[$i].trigger_list.length")
 
     # If there's a value in the variable, update running swiftDialog
     if [[ -n "$listitem" ]]; then
-        updateScriptLog "\n\n# # #\n# SETUP YOUR MAC DIALOG: policy_array > listitem: ${listitem}\n# # #\n"
+        updateScriptLog "\n\n# # #\n# SETUP YOUR MAC DIALOG: policyJSON > listitem: ${listitem}\n# # #\n"
         dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Installing …, "
     fi
     if [[ -n "$icon" ]]; then dialogUpdateSetupYourMac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon}"; fi
@@ -2229,8 +2198,8 @@ for (( i=0; i<dialog_step_length; i++ )); do
         for (( j=0; j<trigger_list_length; j++ )); do
 
             # Setting variables within the trigger_list
-            trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
-            validation=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].validation")
+            trigger=$(get_json_value "${policyJSON}" "steps[$i].trigger_list[$j].trigger")
+            validation=$(get_json_value "${policyJSON}" "steps[$i].trigger_list[$j].validation")
             case ${validation} in
                 "Local" | "Remote" )
                     updateScriptLog "SETUP YOUR MAC DIALOG: Skipping Policy Execution due to '${validation}' validation"
