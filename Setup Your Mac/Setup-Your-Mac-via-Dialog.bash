@@ -30,7 +30,7 @@
 # Script Version and Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.8.0-rc3"
+scriptVersion="1.8.0-rc4"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/log/org.churchofjesuschrist.log"}"                        # Parameter 4: Script Log Location [ /var/log/org.churchofjesuschrist.log ] (i.e., Your organization's default location for client-side logs)
 debugMode="${5:-"verbose"}"                                                     # Parameter 5: Debug Mode [ verbose (default) | true | false ]
@@ -357,6 +357,24 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# "Welcome" Video Settings and Features
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+welcomeVideo="--title \"$welcomeTitle\" \
+--videocaption \"$welcomeCaption\" \
+--video \"$welcomeVideoID\" \
+--infotext \"$scriptVersion\" \
+--button1text \"Continue …\" \
+--autoplay \
+--moveable \
+--ontop \
+--width '800' \
+--height '600' \
+--commandfile \"$welcomeCommandFile\" "
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # "Welcome" JSON for Capturing User Input (thanks, @bartreardon!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -433,24 +451,6 @@ welcomeJSON='{
     ],
     "height" : "725"
 }'
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Welcome" Video Settings and Features
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-welcomeVideo="--title \"$welcomeTitle\" \
---videocaption \"$welcomeCaption\" \
---video \"$welcomeVideoID\" \
---infotext \"$scriptVersion\" \
---button1text \"Continue …\" \
---autoplay \
---moveable \
---ontop \
---width '800' \
---height '600' \
---commandfile \"$welcomeCommandFile\" "
 
 
 
