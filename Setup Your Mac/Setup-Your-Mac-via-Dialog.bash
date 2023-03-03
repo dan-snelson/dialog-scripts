@@ -30,7 +30,7 @@
 # Script Version and Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.8.0-rc4"
+scriptVersion="1.8.0-rc5"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/log/org.churchofjesuschrist.log"}"                        # Parameter 4: Script Log Location [ /var/log/org.churchofjesuschrist.log ] (i.e., Your organization's default location for client-side logs)
 debugMode="${5:-"verbose"}"                                                     # Parameter 5: Debug Mode [ verbose (default) | true | false ]
@@ -552,9 +552,9 @@ setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/ha
 # shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function policyArrayConfiguration() {
+function policyJSONConfiguration() {
 
-    updateScriptLog "WELCOME DIALOG: Polcy Array Configuration: $symConfiguration"
+    updateScriptLog "WELCOME DIALOG: Polcy JSON Configuration: $symConfiguration"
 
     case ${symConfiguration} in
 
@@ -1873,7 +1873,7 @@ if [[ "${welcomeDialog}" == "video" ]]; then
     updateScriptLog "WELCOME DIALOG: Displaying "
     eval "${dialogBinary} --args ${welcomeVideo}"
 
-    policyArrayConfiguration
+    policyJSONConfiguration
 
     eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
     dialogSetupYourMacProcessID=$!
@@ -1911,7 +1911,6 @@ elif [[ "${welcomeDialog}" == "userInput" ]]; then
             # Extract the various values from the welcomeResults JSON
             ###
 
-            comment=$(get_json_value_welcomeDialog "$welcomeResults" "Comment")
             computerName=$(get_json_value_welcomeDialog "$welcomeResults" "Computer Name")
             userName=$(get_json_value_welcomeDialog "$welcomeResults" "User Name")
             assetTag=$(get_json_value_welcomeDialog "$welcomeResults" "Asset Tag")
@@ -1924,7 +1923,6 @@ elif [[ "${welcomeDialog}" == "userInput" ]]; then
             # Output the various values from the welcomeResults JSON to the log file
             ###
 
-            updateScriptLog "WELCOME DIALOG: • Comment: $comment"
             updateScriptLog "WELCOME DIALOG: • Computer Name: $computerName"
             updateScriptLog "WELCOME DIALOG: • User Name: $userName"
             updateScriptLog "WELCOME DIALOG: • Asset Tag: $assetTag"
@@ -1937,7 +1935,7 @@ elif [[ "${welcomeDialog}" == "userInput" ]]; then
             # Select `policyJSON` based on selected Configuration
             ###
 
-            policyArrayConfiguration
+            policyJSONConfiguration
 
 
 
@@ -2054,7 +2052,7 @@ else
     # Select `policyJSON` based on selected Configuration
     ###
 
-    policyArrayConfiguration
+    policyJSONConfiguration
 
 
 

@@ -12,6 +12,10 @@
       - To capture user input, `welcomeDialog` (Script Parameter `6`) must be set to `userInput`
 - Addresses [Issue No. 39](https://github.com/dan-snelson/dialog-scripts/issues/39) (thanks big bunches, [@wako](https://github.com/wakco)!)
 - Addresses [Issue No. 43](https://github.com/dan-snelson/dialog-scripts/issues/39) (thanks, @wako)
+- Removed the following from the Welcome dialog
+  - Comment
+  - Select B
+  - Select C
 
 ## 1.7.2
 ### 28-Feb-2023
