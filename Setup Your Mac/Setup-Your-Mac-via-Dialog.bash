@@ -538,7 +538,10 @@ dialogSetupYourMacCMD="$dialogBinary \
 setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
 
 # shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
-policy_array=('
+# If you would prefer to get your policyJSON externally replace it with:
+# policyJSON="$(cat /path/to/file.json)" # For getting from a file, replacing /path/to/file.json with the path to your file, or
+# policyJSON="$(curl -sL https://server.name/jsonquery)" # For a URL, replacing https://server.name/jsonquery with the URL of your file.
+policyJSON='
 {
     "steps": [
         {
@@ -694,7 +697,7 @@ policy_array=('
         }
     ]
 }
-')
+'
 
 
 
@@ -1688,30 +1691,30 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Iterate through policy_array JSON to construct the list for swiftDialog
+# Iterate through policyJSON to construct the list for swiftDialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Output Line Number in `verbose` Debug Mode
 if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-dialog_step_length=$(get_json_value "${policy_array[*]}" "steps.length")
+dialog_step_length=$(get_json_value "${policyJSON}" "steps.length")
 for (( i=0; i<dialog_step_length; i++ )); do
-    listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
+    listitem=$(get_json_value "${policyJSON}" "steps[$i].listitem")
     list_item_array+=("$listitem")
-    icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
+    icon=$(get_json_value "${policyJSON}" "steps[$i].icon")
     icon_url_array+=("$icon")
 done
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Determine the "progress: increment" value based on the number of steps in policy_array
+# Determine the "progress: increment" value based on the number of steps in policyJSON
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Output Line Number in `verbose` Debug Mode
 if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-totalProgressSteps=$(get_json_value "${policy_array[*]}" "steps.length")
+totalProgressSteps=$(get_json_value "${policyJSON}" "steps.length")
 progressIncrementValue=$(( 100 / totalProgressSteps ))
 updateScriptLog "SETUP YOUR MAC DIALOG: Total Number of Steps: ${totalProgressSteps}"
 updateScriptLog "SETUP YOUR MAC DIALOG: Progress Increment Value: ${progressIncrementValue}"
@@ -1780,7 +1783,7 @@ dialogUpdateSetupYourMac "infobox: ${infobox}"
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# This for loop will iterate over each distinct step in the policy_array array
+# This for loop will iterate over each distinct step in policyJSON
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 for (( i=0; i<dialog_step_length; i++ )); do 
@@ -1792,14 +1795,14 @@ for (( i=0; i<dialog_step_length; i++ )); do
     SECONDS="0"
 
     # Creating initial variables
-    listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
-    icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
-    progresstext=$(get_json_value "${policy_array[*]}" "steps[$i].progresstext")
-    trigger_list_length=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list.length")
+    listitem=$(get_json_value "${policyJSON}" "steps[$i].listitem")
+    icon=$(get_json_value "${policyJSON}" "steps[$i].icon")
+    progresstext=$(get_json_value "${policyJSON}" "steps[$i].progresstext")
+    trigger_list_length=$(get_json_value "${policyJSON}" "steps[$i].trigger_list.length")
 
     # If there's a value in the variable, update running swiftDialog
     if [[ -n "$listitem" ]]; then
-        updateScriptLog "\n\n# # #\n# SETUP YOUR MAC DIALOG: policy_array > listitem: ${listitem}\n# # #\n"
+        updateScriptLog "\n\n# # #\n# SETUP YOUR MAC DIALOG: policyJSON > listitem: ${listitem}\n# # #\n"
         dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Installing …, "
     fi
     if [[ -n "$icon" ]]; then dialogUpdateSetupYourMac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon}"; fi
@@ -1809,8 +1812,8 @@ for (( i=0; i<dialog_step_length; i++ )); do
         for (( j=0; j<trigger_list_length; j++ )); do
 
             # Setting variables within the trigger_list
-            trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
-            validation=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].validation")
+            trigger=$(get_json_value "${policyJSON}" "steps[$i].trigger_list[$j].trigger")
+            validation=$(get_json_value "${policyJSON}" "steps[$i].trigger_list[$j].validation")
             case ${validation} in
                 "Local" | "Remote" )
                     updateScriptLog "SETUP YOUR MAC DIALOG: Skipping Policy Execution due to '${validation}' validation"
