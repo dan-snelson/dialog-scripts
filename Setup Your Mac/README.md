@@ -12,7 +12,7 @@ Apple's Automated Device Enrollment helps streamline Mobile Device Management (M
 
 [Continue reading …](https://snelson.us/sym)
 
-## Script
+### Script
 - [Setup-Your-Mac-via-Dialog.bash](Setup-Your-Mac-via-Dialog.bash)
 
 
@@ -28,5 +28,5 @@ While we _thought_ we'd done everything to help ensure our users had a seamless 
 
 [Continue reading …](https://snelson.us/2022/07/setup-your-mac-please/)
 
-## Script
+### Script
 - [Prompt-to-Setup-Your-Mac.bash](Prompt-to-Setup-Your-Mac.bash)
