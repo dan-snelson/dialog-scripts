@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 1.8.0
+### 06-Mar-2023
+[Release-specific Blog Post](https://snelson.us/2023/03/setup-your-mac-1-8-0-via-swiftdialog/)
+- Introduces fully customizable "Configurations" (thanks, [@drtaru](https://github.com/drtaru)!)
+    - **Required:** Minimum organizational apps (i.e., full disk encryption, endpoint security, VPN, communication tools, etc.)
+    - **Recommended:** Required apps and Microsoft Office
+    - **Complete:** Recommended apps, Adobe Acrobat Reader and Google Chrome
+- Play video at Welcome dialog (Script Parameter `6`) by specifying `video` (Addresses [Issue No. 36](https://github.com/dan-snelson/dialog-scripts/issues/36))
+  - 🔥 **Breaking Change** for users of Setup Your Mac prior to `1.8.0` 🔥 
+      - To capture user input, `welcomeDialog` (Script Parameter `6`) must be set to `userInput`
+- Addresses [Issue No. 39](https://github.com/dan-snelson/dialog-scripts/issues/39) (thanks big bunches, [@wako](https://github.com/wakco)!)
+- Addresses [Issue No. 43](https://github.com/dan-snelson/dialog-scripts/issues/39) (thanks, @wako)
+- Removed the following fields from the Welcome dialog
+  - Comment
+  - Select B
+  - Select C
+
 ## 1.7.2
 ### 28-Feb-2023
 - Reordered Pre-Flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock

@@ -9,22 +9,12 @@
 #
 # HISTORY
 #
-#   Version 1.7.0, 01-Feb-2023, Dan K. Snelson (@dan-snelson)
-#   - Adds compatibility for and leverages new features of swiftDialog 2.1
-#   - Addresses Issues Nos. 30 & 31
-#
-#   Version 1.7.1, 07-Feb-2023, Dan K. Snelson (@dan-snelson)
-#   - Addresses [Issue No. 35](https://github.com/dan-snelson/dialog-scripts/issues/35)
-#   - Improves user-interaction with `helpmessage` under certain circumstances (thanks, @bartreardon!)
-#   - Increased `debugMode` delay (thanks for the heads-up, @Lewis B!)
-#   - Changed Banner Image (to something much, much smaller)
-#
-#   Version 1.7.2, 28-Feb-2023, Dan K. Snelson (@dan-snelson)
-#   - Reordered Pre-flight Check to not validate OS until AFTER Setup Assistant / Finder & Dock
-#   - Added `disabled` option for `requiredMinimumBuild`
-#   - Added check for Self Service's brandingimage.png (Addresses [Issue No. 40](https://github.com/dan-snelson/dialog-scripts/issues/40))
-#   - Pre-flight Check logging messages now saved to client-side log
-#   - Addresses [Issue No. 41](https://github.com/dan-snelson/dialog-scripts/issues/41)
+#   Version 1.8.0, 06-Mar-2023, Dan K. Snelson (@dan-snelson)
+#   - Introduces "Configurations" (thanks, @drtaru!)
+#       - Required
+#       - Recommended
+#       - Complete
+#   - Play video at Welcome dialog (Issue No. 36)
 #
 ####################################################################################################
 
@@ -37,30 +27,30 @@
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Script Version, Jamf Pro Script Parameters and default Exit Code
+# Script Version and Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.7.2"
+scriptVersion="1.8.0"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
-scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"                    # Your organization's default location for client-side logs
-debugMode="${5:-"verbose"}"                                                 # [ true | verbose (default) | false ]
-welcomeDialog="${6:-"true"}"                                                # [ true (default) | false ]
-completionActionOption="${7:-"Restart Attended"}"                           # [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
-requiredMinimumBuild="${8:-"disabled"}"                                     # [ disabled (default) | Your organization's required minimum build of macOS to allow users to proceed (i.e., "22D" for macOS 13.2.x) ]
-outdatedOsAction="${9:-"/System/Library/CoreServices/Software Update.app"}" # Jamf Pro Self Service policy for operating system ugprades (i.e., "jamfselfservice://content?entity=policy&id=117&action=view") 
-reconOptions=""                                                             # Initialize dynamic recon options; built based on user's input at Welcome dialog
-exitCode="0"                                                                # Default exit code (i.e., "0" equals sucess)
+scriptLog="${4:-"/var/log/org.churchofjesuschrist.log"}"                        # Parameter 4: Script Log Location [ /var/log/org.churchofjesuschrist.log ] (i.e., Your organization's default location for client-side logs)
+debugMode="${5:-"verbose"}"                                                     # Parameter 5: Debug Mode [ verbose (default) | true | false ]
+welcomeDialog="${6:-"userInput"}"                                               # Parameter 6: Welcome dialog [ userInput (default) | video | false ]
+completionActionOption="${7:-"Restart Attended"}"                               # Parameter 7: Completion Action [ wait | sleep (with seconds) | Shut Down | Shut Down Attended | Shut Down Confirm | Restart | Restart Attended (default) | Restart Confirm | Log Out | Log Out Attended | Log Out Confirm ]
+requiredMinimumBuild="${8:-"disabled"}"                                         # Parameter 8: Required Minimum Build [ disabled (default) | 22D ] (i.e., Your organization's required minimum build of macOS to allow users to proceed; use "22D" for macOS 13.2.x)
+outdatedOsAction="${9:-"/System/Library/CoreServices/Software Update.app"}"     # Parameter 9: Outdated OS Action [ /System/Library/CoreServices/Software Update.app (default) | jamfselfservice://content?entity=policy&id=117&action=view ] (i.e., Jamf Pro Self Service policy ID for operating system ugprades)
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Operating System and currently logged-in user variables
+# Operating System, currently logged-in user and default Exit Code
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 osVersion=$( sw_vers -productVersion )
 osBuild=$( sw_vers -buildVersion )
 osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+reconOptions=""
+exitCode="0"
 
 
 
@@ -350,9 +340,11 @@ jamfBinary="/usr/local/bin/jamf"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeTitle="Welcome to your new Mac, ${loggedInUserFirstname}!"
-welcomeMessage="To begin, please enter the required information below, then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212."
+welcomeMessage="Please enter your Mac's **Asset Tag**, select your preferred **Configuration** then click **Continue** to start applying settings to your new Mac.  \n\nOnce completed, the **Wait** button will be enabled and you'll be able to review the results before restarting your Mac.  \n\nIf you need assistance, please contact the Help Desk: +1 (801) 555-1212.  \n\n---  \n\n#### Configurations  \n- **Required:** Minimum organization apps  \n- **Recommended:** Required apps and Microsoft Office  \n- **Complete:** Recommended apps, Adobe Acrobat Reader and Google Chrome"
 welcomeBannerImage="https://img.freepik.com/free-photo/yellow-watercolor-paper_95678-446.jpg"
 welcomeBannerText="Welcome to your new Mac, ${loggedInUserFirstname}!"
+welcomeCaption="Please review the above video, then click Continue."
+welcomeVideoID="vimeoid=803933536"
 
 # Welcome icon set to either light or dark, based on user's Apperance setting (thanks, @mm2270!)
 appleInterfaceStyle=$( /usr/bin/defaults read /Users/"${loggedInUser}"/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>&1 )
@@ -365,7 +357,25 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# "Welcome" JSON (thanks, @bartreardon!)
+# "Welcome" Video Settings and Features
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+welcomeVideo="--title \"$welcomeTitle\" \
+--videocaption \"$welcomeCaption\" \
+--video \"$welcomeVideoID\" \
+--infotext \"$scriptVersion\" \
+--button1text \"Continue …\" \
+--autoplay \
+--moveable \
+--ontop \
+--width '800' \
+--height '600' \
+--commandfile \"$welcomeCommandFile\" "
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# "Welcome" JSON for Capturing User Input (thanks, @bartreardon!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeJSON='{
@@ -381,13 +391,8 @@ welcomeJSON='{
     "blurscreen" : "true",
     "ontop" : "true",
     "titlefont" : "shadow=true, size=40",
-    "messagefont" : "size=16",
+    "messagefont" : "size=14",
     "textfield" : [
-        {   "title" : "Comment",
-            "required" : false,
-            "prompt" : "Enter a comment",
-            "editor" : true
-        },
         {   "title" : "Computer Name",
             "required" : false,
             "prompt" : "Computer Name"
@@ -399,11 +404,19 @@ welcomeJSON='{
         {   "title" : "Asset Tag",
             "required" : true,
             "prompt" : "Please enter the seven-digit Asset Tag",
-            "regex" : "^(AP|IP)?[0-9]{7,}$",
-            "regexerror" : "Please enter (at least) seven digits for the Asset Tag, optionally preceed by either AP or IP."
+            "regex" : "^(AP|IP|CD)?[0-9]{7,}$",
+            "regexerror" : "Please enter (at least) seven digits for the Asset Tag, optionally preceed by either AP, IP or CD."
         }
     ],
   "selectitems" : [
+        {   "title" : "Configuration",
+            "default" : "Required",
+            "values" : [
+                "Required",
+                "Recommended",
+                "Complete"
+            ]
+        },  
         {   "title" : "Department",
             "default" : "Please select your department",
             "values" : [
@@ -434,23 +447,9 @@ welcomeJSON='{
                 "Strategic Initiatives & Programs",
                 "Technology"
             ]
-        },
-        {   "title" : "Select B",
-            "values" : [
-                "B1",
-                "B2",
-                "B3"
-            ]
-        },
-        {   "title" : "Select C",
-            "values" : [
-                "C1",
-                "C2",
-                "C3"
-            ]
         }
     ],
-    "height" : "700"
+    "height" : "725"
 }'
 
 
@@ -518,6 +517,7 @@ dialogSetupYourMacCMD="$dialogBinary \
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
 # "Setup Your Mac" policies to execute (Thanks, Obi-@smithjw!)
 #
 # For each configuration step, specify:
@@ -530,171 +530,542 @@ dialogSetupYourMacCMD="$dialogBinary \
 #   See: https://snelson.us/2023/01/setup-your-mac-validation/
 #       - {absolute path} (simulates pre-v1.6.0 behavior, for example: "/Applications/Microsoft Teams.app/Contents/Info.plist")
 #       - Local (for validation within this script, for example: "filevault")
-#       - Remote (for validation validation via a single-script Jamf Pro policy, for example: "symvGlobalProtect")
+#       - Remote (for validation via a single-script Jamf Pro policy, for example: "symvGlobalProtect")
 #       - None (for triggers which don't require validation, for example: recon; always evaluates as successful)
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# From @wakco: If you would prefer to get your policyJSON externally replace it with:
+#  - policyJSON="$(cat /path/to/file.json)" # For getting from a file, replacing /path/to/file.json with the path to your file, or
+#  - policyJSON="$(curl -sL https://server.name/jsonquery)" # For a URL, replacing https://server.name/jsonquery with the URL of your file.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# From @astrugatch: I added this line to global variables:
+# jsonURL=${10}                                                               # URL Hosting JSON for policy_array
+#
+# And this line replaces the entirety of the policy_array (~ line 503):
+# policy_array=("$(curl -sL $jsonURL)")
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# The fully qualified domain name of the server which hosts your icons, including any required sub-directories
 setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
 
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Select `policyJSON` based on Configuration selected in "Welcome" dialog (thanks, @drtaru!)
 # shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
-policy_array=('
-{
-    "steps": [
-        {
-            "listitem": "Rosetta",
-            "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
-            "progresstext": "Rosetta enables a Mac with Apple silicon to use apps built for a Mac with an Intel processor.",
-            "trigger_list": [
-                {
-                    "trigger": "rosettaInstall",
-                    "validation": "None"
-                },
-                {
-                    "trigger": "rosetta",
-                    "validation": "Local"
-                }
-            ]
-        },
-        {
-            "listitem": "FileVault Disk Encryption",
-            "icon": "f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913",
-            "progresstext": "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac.",
-            "trigger_list": [
-                {
-                    "trigger": "filevault",
-                    "validation": "Local"
-                }
-            ]
-        },
-        {
-            "listitem": "Sophos Endpoint",
-            "icon": "c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c",
-            "progresstext": "You’ll enjoy next-gen protection with Sophos Endpoint which doesn’t rely on signatures to catch malware.",
-            "trigger_list": [
-                {
-                    "trigger": "sophosEndpoint",
-                    "validation": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
-                }
-            ]
-        },
-        {
-            "listitem": "Sophos Endpoint Services (Local)",
-            "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
-            "progresstext": "Locally validating Sophos Endpoint services …",
-            "trigger_list": [
-                {
-                    "trigger": "sophosEndpointServices",
-                    "validation": "Local"
-                }
-            ]
-        },
-        {
-            "listitem": "Sophos Endpoint Services (Remote)",
-            "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
-            "progresstext": "Remotely validating Sophos Endpoint services …",
-            "trigger_list": [
-                {
-                    "trigger": "symvSophosEndpointRTS",
-                    "validation": "Remote"
-                }
-            ]
-        },
-        {
-            "listitem": "Palo Alto GlobalProtect",
-            "icon": "ea794c5a1850e735179c7c60919e3b51ed3ed2b301fe3f0f27ad5ebd394a2e4b",
-            "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
-            "trigger_list": [
-                {
-                    "trigger": "globalProtect",
-                    "validation": "/Applications/GlobalProtect.app/Contents/Info.plist"
-                }
-            ]
-        },
-        {
-            "listitem": "Palo Alto GlobalProtect Services (Local)",
-            "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
-            "progresstext": "Locally validating Palo Alto GlobalProtect services …",
-            "trigger_list": [
-                {
-                    "trigger": "globalProtect",
-                    "validation": "Local"
-                }
-            ]
-        },
-        {
-            "listitem": "Palo Alto GlobalProtect Services (Remote)",
-            "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
-            "progresstext": "Remotely validating Palo Alto GlobalProtect services …",
-            "trigger_list": [
-                {
-                    "trigger": "symvGlobalProtect",
-                    "validation": "Remote"
-                }
-            ]
-        },
-        {
-            "listitem": "Microsoft Teams",
-            "icon": "dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e",
-            "progresstext": "Microsoft Teams is a hub for teamwork in Office 365. Keep all your team’s chats, meetings and files together in one place.",
-            "trigger_list": [
-                {
-                    "trigger": "microsoftTeams",
-                    "validation": "/Applications/Microsoft Teams.app/Contents/Info.plist"
-                }
-            ]
-        },
-        {
-            "listitem": "Zoom",
-            "icon": "be66420495a3f2f1981a49a0e0ad31783e9a789e835b4196af60554bf4c115ac",
-            "progresstext": "Zoom is a videotelephony software program developed by Zoom Video Communications.",
-            "trigger_list": [
-                {
-                    "trigger": "zoom",
-                    "validation": "/Applications/zoom.us.app/Contents/Info.plist"
-                }
-            ]
-        },
-        {
-            "listitem": "Google Chrome",
-            "icon": "12d3d198f40ab2ac237cff3b5cb05b09f7f26966d6dffba780e4d4e5325cc701",
-            "progresstext": "Google Chrome is a browser that combines a minimal design with sophisticated technology to make the Web faster.",
-            "trigger_list": [
-                {
-                    "trigger": "googleChrome",
-                    "validation": "/Applications/Google Chrome.app/Contents/Info.plist"
-                }
-            ]
-        },
-        {
-            "listitem": "Final Configuration",
-            "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
-            "progresstext": "Finalizing Configuration …",
-            "trigger_list": [
-                {
-                    "trigger": "finalConfiguration",
-                    "validation": "None"
-                },
-                {
-                    "trigger": "reconAtReboot",
-                    "validation": "None"
-                }
-            ]
-        },
-        {
-            "listitem": "Computer Inventory",
-            "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
-            "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
-            "trigger_list": [
-                {
-                    "trigger": "recon",
-                    "validation": "None"
-                }
-            ]
-        }
-    ]
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function policyJSONConfiguration() {
+
+    updateScriptLog "WELCOME DIALOG: PolicyJSON Configuration: $symConfiguration"
+
+    case ${symConfiguration} in
+
+        "Required" )
+
+            policyJSON='
+            {
+                "steps": [
+                    {
+                        "listitem": "Rosetta",
+                        "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
+                        "progresstext": "Rosetta enables a Mac with Apple silicon to use apps built for a Mac with an Intel processor.",
+                        "trigger_list": [
+                            {
+                                "trigger": "rosettaInstall",
+                                "validation": "None"
+                            },
+                            {
+                                "trigger": "rosetta",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "FileVault Disk Encryption",
+                        "icon": "f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913",
+                        "progresstext": "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac.",
+                        "trigger_list": [
+                            {
+                                "trigger": "filevault",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Sophos Endpoint",
+                        "icon": "c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c",
+                        "progresstext": "You’ll enjoy next-gen protection with Sophos Endpoint which doesn’t rely on signatures to catch malware.",
+                        "trigger_list": [
+                            {
+                                "trigger": "sophosEndpoint",
+                                "validation": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Sophos Endpoint Services (Remote)",
+                        "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
+                        "progresstext": "Remotely validating Sophos Endpoint services …",
+                        "trigger_list": [
+                            {
+                                "trigger": "symvSophosEndpointRTS",
+                                "validation": "Remote"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Palo Alto GlobalProtect",
+                        "icon": "ea794c5a1850e735179c7c60919e3b51ed3ed2b301fe3f0f27ad5ebd394a2e4b",
+                        "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
+                        "trigger_list": [
+                            {
+                                "trigger": "globalProtect",
+                                "validation": "/Applications/GlobalProtect.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Palo Alto GlobalProtect Services (Remote)",
+                        "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
+                        "progresstext": "Remotely validating Palo Alto GlobalProtect services …",
+                        "trigger_list": [
+                            {
+                                "trigger": "symvGlobalProtect",
+                                "validation": "Remote"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Final Configuration",
+                        "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
+                        "progresstext": "Finalizing Configuration …",
+                        "trigger_list": [
+                            {
+                                "trigger": "finalConfiguration",
+                                "validation": "None"
+                            },
+                            {
+                                "trigger": "reconAtReboot",
+                                "validation": "None"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Computer Inventory",
+                        "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
+                        "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
+                        "trigger_list": [
+                            {
+                                "trigger": "recon",
+                                "validation": "None"
+                            }
+                        ]
+                    }
+                ]
+            }
+            '
+            ;;
+
+        "Recommended" )
+
+            policyJSON='
+            {
+                "steps": [
+                    {
+                        "listitem": "Rosetta",
+                        "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
+                        "progresstext": "Rosetta enables a Mac with Apple silicon to use apps built for a Mac with an Intel processor.",
+                        "trigger_list": [
+                            {
+                                "trigger": "rosettaInstall",
+                                "validation": "None"
+                            },
+                            {
+                                "trigger": "rosetta",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "FileVault Disk Encryption",
+                        "icon": "f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913",
+                        "progresstext": "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac.",
+                        "trigger_list": [
+                            {
+                                "trigger": "filevault",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Sophos Endpoint",
+                        "icon": "c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c",
+                        "progresstext": "You’ll enjoy next-gen protection with Sophos Endpoint which doesn’t rely on signatures to catch malware.",
+                        "trigger_list": [
+                            {
+                                "trigger": "sophosEndpoint",
+                                "validation": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Sophos Endpoint Services (Local)",
+                        "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
+                        "progresstext": "Locally validating Sophos Endpoint services …",
+                        "trigger_list": [
+                            {
+                                "trigger": "sophosEndpointServices",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Palo Alto GlobalProtect",
+                        "icon": "ea794c5a1850e735179c7c60919e3b51ed3ed2b301fe3f0f27ad5ebd394a2e4b",
+                        "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
+                        "trigger_list": [
+                            {
+                                "trigger": "globalProtect",
+                                "validation": "/Applications/GlobalProtect.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Palo Alto GlobalProtect Services (Local)",
+                        "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
+                        "progresstext": "Locally validating Palo Alto GlobalProtect services …",
+                        "trigger_list": [
+                            {
+                                "trigger": "globalProtect",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Microsoft Office 365",
+                        "icon": "10e2ebed512e443189badcaf9143293d447f4a3fd8562cd419f6666ca07eb775",
+                        "progresstext": "Microsoft Office 365 for Mac gives you the essentials to get it all done with the classic versions of the Office applications.",
+                        "trigger_list": [
+                            {
+                                "trigger": "microsoftOffice365",
+                                "validation": "/Applications/Microsoft Outlook.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Microsoft Teams",
+                        "icon": "dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e",
+                        "progresstext": "Microsoft Teams is a hub for teamwork in Office 365. Keep all your team’s chats, meetings and files together in one place.",
+                        "trigger_list": [
+                            {
+                                "trigger": "microsoftTeams",
+                                "validation": "/Applications/Microsoft Teams.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Final Configuration",
+                        "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
+                        "progresstext": "Finalizing Configuration …",
+                        "trigger_list": [
+                            {
+                                "trigger": "finalConfiguration",
+                                "validation": "None"
+                            },
+                            {
+                                "trigger": "reconAtReboot",
+                                "validation": "None"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Computer Inventory",
+                        "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
+                        "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
+                        "trigger_list": [
+                            {
+                                "trigger": "recon",
+                                "validation": "None"
+                            }
+                        ]
+                    }
+                ]
+            }
+            '
+            ;;
+
+        "Complete" )
+
+            policyJSON='
+            {
+                "steps": [
+                    {
+                        "listitem": "Rosetta",
+                        "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
+                        "progresstext": "Rosetta enables a Mac with Apple silicon to use apps built for a Mac with an Intel processor.",
+                        "trigger_list": [
+                            {
+                                "trigger": "rosettaInstall",
+                                "validation": "None"
+                            },
+                            {
+                                "trigger": "rosetta",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "FileVault Disk Encryption",
+                        "icon": "f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913",
+                        "progresstext": "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac.",
+                        "trigger_list": [
+                            {
+                                "trigger": "filevault",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Sophos Endpoint",
+                        "icon": "c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c",
+                        "progresstext": "You’ll enjoy next-gen protection with Sophos Endpoint which doesn’t rely on signatures to catch malware.",
+                        "trigger_list": [
+                            {
+                                "trigger": "sophosEndpoint",
+                                "validation": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Sophos Endpoint Services (Local)",
+                        "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
+                        "progresstext": "Locally validating Sophos Endpoint services …",
+                        "trigger_list": [
+                            {
+                                "trigger": "sophosEndpointServices",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Sophos Endpoint Services (Remote)",
+                        "icon": "c05d087189f0b25a94f02eeb43b0c5c928e5e378f2168f603554bce2b5c71209",
+                        "progresstext": "Remotely validating Sophos Endpoint services …",
+                        "trigger_list": [
+                            {
+                                "trigger": "symvSophosEndpointRTS",
+                                "validation": "Remote"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Palo Alto GlobalProtect",
+                        "icon": "ea794c5a1850e735179c7c60919e3b51ed3ed2b301fe3f0f27ad5ebd394a2e4b",
+                        "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
+                        "trigger_list": [
+                            {
+                                "trigger": "globalProtect",
+                                "validation": "/Applications/GlobalProtect.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Palo Alto GlobalProtect Services (Local)",
+                        "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
+                        "progresstext": "Locally validating Palo Alto GlobalProtect services …",
+                        "trigger_list": [
+                            {
+                                "trigger": "globalProtect",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Palo Alto GlobalProtect Services (Remote)",
+                        "icon": "709e8bdf0019e8faf9df85ec0a68545bfdb8bfa1227ac9bed9bba40a1fa8ff42",
+                        "progresstext": "Remotely validating Palo Alto GlobalProtect services …",
+                        "trigger_list": [
+                            {
+                                "trigger": "symvGlobalProtect",
+                                "validation": "Remote"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Microsoft Office 365",
+                        "icon": "10e2ebed512e443189badcaf9143293d447f4a3fd8562cd419f6666ca07eb775",
+                        "progresstext": "Microsoft Office 365 for Mac gives you the essentials to get it all done with the classic versions of the Office applications.",
+                        "trigger_list": [
+                            {
+                                "trigger": "microsoftOffice365",
+                                "validation": "/Applications/Microsoft Outlook.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Microsoft Teams",
+                        "icon": "dcb65709dba6cffa90a5eeaa54cb548d5ecc3b051f39feadd39e02744f37c19e",
+                        "progresstext": "Microsoft Teams is a hub for teamwork in Office 365. Keep all your team’s chats, meetings and files together in one place.",
+                        "trigger_list": [
+                            {
+                                "trigger": "microsoftTeams",
+                                "validation": "/Applications/Microsoft Teams.app/Contents/Info.plist"
+                            }
+                        ]
+                    },                    {
+                        "listitem": "Adobe Acrobat Reader",
+                        "icon": "988b669ca27eab93a9bcd53bb7e2873fb98be4eaa95ae8974c14d611bea1d95f",
+                        "progresstext": "Views, prints, and comments on PDF documents, and connects to Adobe Document Cloud.",
+                        "trigger_list": [
+                            {
+                                "trigger": "adobeAcrobatReader",
+                                "validation": "/Applications/Adobe Acrobat Reader.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Google Chrome",
+                        "icon": "12d3d198f40ab2ac237cff3b5cb05b09f7f26966d6dffba780e4d4e5325cc701",
+                        "progresstext": "Google Chrome is a browser that combines a minimal design with sophisticated technology to make the Web faster.",
+                        "trigger_list": [
+                            {
+                                "trigger": "googleChrome",
+                                "validation": "/Applications/Google Chrome.app/Contents/Info.plist"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Final Configuration",
+                        "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
+                        "progresstext": "Finalizing Configuration …",
+                        "trigger_list": [
+                            {
+                                "trigger": "finalConfiguration",
+                                "validation": "None"
+                            },
+                            {
+                                "trigger": "reconAtReboot",
+                                "validation": "None"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Computer Inventory",
+                        "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
+                        "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
+                        "trigger_list": [
+                            {
+                                "trigger": "recon",
+                                "validation": "None"
+                            }
+                        ]
+                    }
+                ]
+            }
+            '
+            ;;
+
+        * ) # Catch-all (i.e., used when `welcomeDialog` is set to `video` or `false`)
+
+            policyJSON='
+            {
+                "steps": [
+                    {
+                        "listitem": "Rosetta",
+                        "icon": "8bac19160fabb0c8e7bac97b37b51d2ac8f38b7100b6357642d9505645d37b52",
+                        "progresstext": "Rosetta enables a Mac with Apple silicon to use apps built for a Mac with an Intel processor.",
+                        "trigger_list": [
+                            {
+                                "trigger": "rosettaInstall",
+                                "validation": "None"
+                            },
+                            {
+                                "trigger": "rosetta",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "FileVault Disk Encryption",
+                        "icon": "f9ba35bd55488783456d64ec73372f029560531ca10dfa0e8154a46d7732b913",
+                        "progresstext": "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac.",
+                        "trigger_list": [
+                            {
+                                "trigger": "filevault",
+                                "validation": "Local"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Sophos Endpoint",
+                        "icon": "c70f1acf8c96b99568fec83e165d2a534d111b0510fb561a283d32aa5b01c60c",
+                        "progresstext": "You’ll enjoy next-gen protection with Sophos Endpoint which doesn’t rely on signatures to catch malware.",
+                        "trigger_list": [
+                            {
+                                "trigger": "sophosEndpoint",
+                                "validation": "/Applications/Sophos/Sophos Endpoint.app/Contents/Info.plist"
+                            },
+                            {
+                                "trigger": "symvSophosEndpointRTS",
+                                "validation": "Remote"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Palo Alto GlobalProtect",
+                        "icon": "ea794c5a1850e735179c7c60919e3b51ed3ed2b301fe3f0f27ad5ebd394a2e4b",
+                        "progresstext": "Use Palo Alto GlobalProtect to establish a Virtual Private Network (VPN) connection to Church headquarters.",
+                        "trigger_list": [
+                            {
+                                "trigger": "globalProtect",
+                                "validation": "/Applications/GlobalProtect.app/Contents/Info.plist"
+                            },
+                            {
+                                "trigger": "symvGlobalProtect",
+                                "validation": "Remote"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Final Configuration",
+                        "icon": "00d7c19b984222630f20b6821425c3548e4b5094ecd846b03bde0994aaf08826",
+                        "progresstext": "Finalizing Configuration …",
+                        "trigger_list": [
+                            {
+                                "trigger": "finalConfiguration",
+                                "validation": "None"
+                            },
+                            {
+                                "trigger": "reconAtReboot",
+                                "validation": "None"
+                            }
+                        ]
+                    },
+                    {
+                        "listitem": "Computer Inventory",
+                        "icon": "90958d0e1f8f8287a86a1198d21cded84eeea44886df2b3357d909fe2e6f1296",
+                        "progresstext": "A listing of your Mac’s apps and settings — its inventory — is sent automatically to the Jamf Pro server daily.",
+                        "trigger_list": [
+                            {
+                                "trigger": "recon",
+                                "validation": "None"
+                            }
+                        ]
+                    }
+                ]
+            }
+            '
+            ;;
+
+    esac
+
 }
-')
 
 
 
@@ -1502,21 +1873,34 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Write Welcome JSON to disk
+# Display Welcome dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-echo "$welcomeJSON" > "$welcomeCommandFile"
+if [[ "${welcomeDialog}" == "video" ]]; then
 
+    updateScriptLog "WELCOME DIALOG: Displaying "
+    eval "${dialogBinary} --args ${welcomeVideo}"
 
+    policyJSONConfiguration
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Display Welcome dialog and capture user's input
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    eval "${dialogSetupYourMacCMD[*]}" & sleep 0.3
+    dialogSetupYourMacProcessID=$!
+    until pgrep -q -x "Dialog"; do
+        # Output Line Number in `verbose` Debug Mode
+        if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+        updateScriptLog "WELCOME DIALOG: Waiting to display 'Setup Your Mac' dialog; pausing"
+        sleep 0.5
+    done
+    updateScriptLog "WELCOME DIALOG: 'Setup Your Mac' dialog displayed; ensure it's the front-most app"
+    runAsUser osascript -e 'tell application "Dialog" to activate'
 
-if [[ "${welcomeDialog}" == "true" ]]; then
+elif [[ "${welcomeDialog}" == "userInput" ]]; then
 
     # Output Line Number in `verbose` Debug Mode
     if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
+
+    # Write Welcome JSON to disk
+    echo "$welcomeJSON" > "$welcomeCommandFile"
 
     welcomeResults=$( eval "${dialogApp} --jsonfile ${welcomeCommandFile} --json" )
 
@@ -1535,13 +1919,11 @@ if [[ "${welcomeDialog}" == "true" ]]; then
             # Extract the various values from the welcomeResults JSON
             ###
 
-            comment=$(get_json_value_welcomeDialog "$welcomeResults" "Comment")
             computerName=$(get_json_value_welcomeDialog "$welcomeResults" "Computer Name")
             userName=$(get_json_value_welcomeDialog "$welcomeResults" "User Name")
             assetTag=$(get_json_value_welcomeDialog "$welcomeResults" "Asset Tag")
+            symConfiguration=$(get_json_value_welcomeDialog "$welcomeResults" "Configuration" "selectedValue")
             department=$(get_json_value_welcomeDialog "$welcomeResults" "Department" "selectedValue")
-            selectB=$(get_json_value_welcomeDialog "$welcomeResults" "Select B" "selectedValue")
-            selectC=$(get_json_value_welcomeDialog "$welcomeResults" "Select C" "selectedValue")
 
 
 
@@ -1549,13 +1931,19 @@ if [[ "${welcomeDialog}" == "true" ]]; then
             # Output the various values from the welcomeResults JSON to the log file
             ###
 
-            updateScriptLog "WELCOME DIALOG: • Comment: $comment"
             updateScriptLog "WELCOME DIALOG: • Computer Name: $computerName"
             updateScriptLog "WELCOME DIALOG: • User Name: $userName"
             updateScriptLog "WELCOME DIALOG: • Asset Tag: $assetTag"
+            updateScriptLog "WELCOME DIALOG: • Configuration: $symConfiguration"
             updateScriptLog "WELCOME DIALOG: • Department: $department"
-            updateScriptLog "WELCOME DIALOG: • Select B: $selectB"
-            updateScriptLog "WELCOME DIALOG: • Select C: $selectC"
+
+
+
+            ###
+            # Select `policyJSON` based on selected Configuration
+            ###
+
+            policyJSONConfiguration
 
 
 
@@ -1669,6 +2057,14 @@ if [[ "${welcomeDialog}" == "true" ]]; then
 else
 
     ###
+    # Select `policyJSON` based on selected Configuration
+    ###
+
+    policyJSONConfiguration
+
+
+
+    ###
     # Display "Setup Your Mac" dialog (and capture Process ID)
     ###
 
@@ -1688,30 +2084,30 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Iterate through policy_array JSON to construct the list for swiftDialog
+# Iterate through policyJSON to construct the list for swiftDialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Output Line Number in `verbose` Debug Mode
 if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-dialog_step_length=$(get_json_value "${policy_array[*]}" "steps.length")
+dialog_step_length=$(get_json_value "${policyJSON}" "steps.length")
 for (( i=0; i<dialog_step_length; i++ )); do
-    listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
+    listitem=$(get_json_value "${policyJSON}" "steps[$i].listitem")
     list_item_array+=("$listitem")
-    icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
+    icon=$(get_json_value "${policyJSON}" "steps[$i].icon")
     icon_url_array+=("$icon")
 done
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Determine the "progress: increment" value based on the number of steps in policy_array
+# Determine the "progress: increment" value based on the number of steps in policyJSON
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Output Line Number in `verbose` Debug Mode
 if [[ "${debugMode}" == "verbose" ]]; then updateScriptLog "# # # SETUP YOUR MAC VERBOSE DEBUG MODE: Line No. ${LINENO} # # #" ; fi
 
-totalProgressSteps=$(get_json_value "${policy_array[*]}" "steps.length")
+totalProgressSteps=$(get_json_value "${policyJSON}" "steps.length")
 progressIncrementValue=$(( 100 / totalProgressSteps ))
 updateScriptLog "SETUP YOUR MAC DIALOG: Total Number of Steps: ${totalProgressSteps}"
 updateScriptLog "SETUP YOUR MAC DIALOG: Progress Increment Value: ${progressIncrementValue}"
@@ -1771,16 +2167,15 @@ if [[ -n ${comment} ]]; then infobox+="**Comment:**  \n$comment  \n\n" ; fi
 if [[ -n ${computerName} ]]; then infobox+="**Computer Name:**  \n$computerName  \n\n" ; fi
 if [[ -n ${userName} ]]; then infobox+="**Username:**  \n$userName  \n\n" ; fi
 if [[ -n ${assetTag} ]]; then infobox+="**Asset Tag:**  \n$assetTag  \n\n" ; fi
+if [[ -n ${symConfiguration} ]]; then infobox+="**Configuration:**  \n$symConfiguration  \n\n" ; fi
 if [[ -n ${department} ]]; then infobox+="**Department:**  \n$department  \n\n" ; fi
-if [[ -n ${selectB} ]]; then infobox+="**Select B:**  \n$selectB  \n\n" ; fi
-if [[ -n ${selectC} ]]; then infobox+="**Select C:**  \n$selectC  \n\n" ; fi
 
 dialogUpdateSetupYourMac "infobox: ${infobox}"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# This for loop will iterate over each distinct step in the policy_array array
+# This for loop will iterate over each distinct step in the policyJSON
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 for (( i=0; i<dialog_step_length; i++ )); do 
@@ -1792,14 +2187,14 @@ for (( i=0; i<dialog_step_length; i++ )); do
     SECONDS="0"
 
     # Creating initial variables
-    listitem=$(get_json_value "${policy_array[*]}" "steps[$i].listitem")
-    icon=$(get_json_value "${policy_array[*]}" "steps[$i].icon")
-    progresstext=$(get_json_value "${policy_array[*]}" "steps[$i].progresstext")
-    trigger_list_length=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list.length")
+    listitem=$(get_json_value "${policyJSON}" "steps[$i].listitem")
+    icon=$(get_json_value "${policyJSON}" "steps[$i].icon")
+    progresstext=$(get_json_value "${policyJSON}" "steps[$i].progresstext")
+    trigger_list_length=$(get_json_value "${policyJSON}" "steps[$i].trigger_list.length")
 
     # If there's a value in the variable, update running swiftDialog
     if [[ -n "$listitem" ]]; then
-        updateScriptLog "\n\n# # #\n# SETUP YOUR MAC DIALOG: policy_array > listitem: ${listitem}\n# # #\n"
+        updateScriptLog "\n\n# # #\n# SETUP YOUR MAC DIALOG: policyJSON > listitem: ${listitem}\n# # #\n"
         dialogUpdateSetupYourMac "listitem: index: $i, status: wait, statustext: Installing …, "
     fi
     if [[ -n "$icon" ]]; then dialogUpdateSetupYourMac "icon: ${setupYourMacPolicyArrayIconPrefixUrl}${icon}"; fi
@@ -1809,8 +2204,8 @@ for (( i=0; i<dialog_step_length; i++ )); do
         for (( j=0; j<trigger_list_length; j++ )); do
 
             # Setting variables within the trigger_list
-            trigger=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].trigger")
-            validation=$(get_json_value "${policy_array[*]}" "steps[$i].trigger_list[$j].validation")
+            trigger=$(get_json_value "${policyJSON}" "steps[$i].trigger_list[$j].trigger")
+            validation=$(get_json_value "${policyJSON}" "steps[$i].trigger_list[$j].validation")
             case ${validation} in
                 "Local" | "Remote" )
                     updateScriptLog "SETUP YOUR MAC DIALOG: Skipping Policy Execution due to '${validation}' validation"

@@ -1,8 +1,8 @@
 # Setup Your Mac via swiftDialog
 
-> **Setup Your Mac** (1.7.0) benefits from the latest `swiftDialog 2.1` features and easily allows Mac Admins to specify a minimum OS version to help mitigate zero-day attacks
+> **Setup Your Mac** (1.8.0) introduces **Configurations** which enables users with high-bandwidth Internet access to maximize initial computer setup, while also allowing users with low-bandwidth access to configure an organizationally compliant Mac in a single step
 
-[<img alt="[Setup Your Mac (1.7.0)" src="images/Setup_Your_Mac_1.7.0.png" />](https://snelson.us/sym)
+[<img alt="[Setup Your Mac (1.8.0)" src="images/Setup_Your_Mac_1.8.0.jpg" />](https://snelson.us/sym)
 
 ## Introduction
 
@@ -12,7 +12,7 @@ Apple's Automated Device Enrollment helps streamline Mobile Device Management (M
 
 [Continue reading …](https://snelson.us/sym)
 
-## Script
+### Script
 - [Setup-Your-Mac-via-Dialog.bash](Setup-Your-Mac-via-Dialog.bash)
 
 
@@ -28,5 +28,5 @@ While we _thought_ we'd done everything to help ensure our users had a seamless 
 
 [Continue reading …](https://snelson.us/2022/07/setup-your-mac-please/)
 
-## Script
+### Script
 - [Prompt-to-Setup-Your-Mac.bash](Prompt-to-Setup-Your-Mac.bash)
