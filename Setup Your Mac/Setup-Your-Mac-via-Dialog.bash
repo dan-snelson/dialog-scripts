@@ -30,7 +30,7 @@
 # Script Version and Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="1.8.0-rc5"
+scriptVersion="1.8.0-rc6"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 scriptLog="${4:-"/var/log/org.churchofjesuschrist.log"}"                        # Parameter 4: Script Log Location [ /var/log/org.churchofjesuschrist.log ] (i.e., Your organization's default location for client-side logs)
 debugMode="${5:-"verbose"}"                                                     # Parameter 5: Debug Mode [ verbose (default) | true | false ]
@@ -517,6 +517,7 @@ dialogSetupYourMacCMD="$dialogBinary \
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
 # "Setup Your Mac" policies to execute (Thanks, Obi-@smithjw!)
 #
 # For each configuration step, specify:
@@ -532,15 +533,22 @@ dialogSetupYourMacCMD="$dialogBinary \
 #       - Remote (for validation via a single-script Jamf Pro policy, for example: "symvGlobalProtect")
 #       - None (for triggers which don't require validation, for example: recon; always evaluates as successful)
 #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
 # From @wakco: If you would prefer to get your policyJSON externally replace it with:
 #  - policyJSON="$(cat /path/to/file.json)" # For getting from a file, replacing /path/to/file.json with the path to your file, or
 #  - policyJSON="$(curl -sL https://server.name/jsonquery)" # For a URL, replacing https://server.name/jsonquery with the URL of your file.
 #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# From @astrugatch: I added this line to global variables:
+# jsonURL=${10}                                                               # URL Hosting JSON for policy_array
+#
+# And this line replaces the entirety of the policy_array (~ line 503):
+# policy_array=("$(curl -sL $jsonURL)")
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # shellcheck disable=SC1112 # use literal slanted single quotes for typographic reasons
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# The fully qualified domain name of the server which hosts your icons, including any required sub-directories
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/hash_"
@@ -554,7 +562,7 @@ setupYourMacPolicyArrayIconPrefixUrl="https://ics.services.jamfcloud.com/icon/ha
 
 function policyJSONConfiguration() {
 
-    updateScriptLog "WELCOME DIALOG: Polcy JSON Configuration: $symConfiguration"
+    updateScriptLog "WELCOME DIALOG: PolicyJSON Configuration: $symConfiguration"
 
     case ${symConfiguration} in
 
