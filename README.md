@@ -1,7 +1,7 @@
 # dialog-scripts
 Scripts which leverage Bart Reardon's [swiftDialog](https://github.com/bartreardon/swiftDialog).
 
-- [Setup Your Mac](Setup%20Your%20Mac/README.md)
+- [Setup Your Mac](https://github.com/dan-snelson/Setup-Your-Mac/blob/main/README.md)
 - [Display Message](Display%20Message/README.md)
 - :new: [Disk Usage](Disk%20Usage/README.md)
 - [sysdiagnose Progress](sysdiagnose%20Progress/README.md)
