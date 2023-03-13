@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 ####################################################################################################
 #
@@ -13,6 +13,9 @@
 # Version 0.0.1, 06-Feb-2023, Dan K. Snelson (@dan-snelson)
 #   Original version
 #
+# Version 0.0.2, 13-Mar-2023, Dan K. Snelson (@dan-snelson)
+#   Prepend Serial Number on output file
+#
 ####################################################################################################
 
 
@@ -23,16 +26,16 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.1"
-export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
+scriptVersion="0.0.2"
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 falconBinary="/Applications/Falcon.app/Contents/Resources/falconctl"
 osVersion=$( /usr/bin/sw_vers -productVersion )
 osMajorVersion=$( echo "${osVersion}" | /usr/bin/awk -F '.' '{print $1}' )
 dialogBinary="/usr/local/bin/dialog"
 dialogCommandLog=$( mktemp /var/tmp/dialogCommandLog.XXX )
-timestamp=$( date +%Y-%m-%d\ %H:%M:%S )
+serialNumber=$( system_profiler SPHardwareDataType | grep "Serial Number" | awk -F ": " '{ print $2 }' )
 scriptLog="${4:-"/var/tmp/com.company.log"}"    # Parameter 4: Full path to your company's client-side log
-estimatedTotalSeconds="${5:-"252"}"             # Parameter 5: Estimated number of seconds to complete diagnose
+estimatedTotalSeconds="${5:-"333"}"             # Parameter 5: Estimated number of seconds to complete diagnose
 
 
 
@@ -43,76 +46,86 @@ estimatedTotalSeconds="${5:-"252"}"             # Parameter 5: Estimated number 
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Logging
+# Pre-flight Check: Client-side Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ! -f "${scriptLog}" ]]; then
     touch "${scriptLog}"
-    echo "${timestamp} - PRE-FLIGHT CHECK: Created log file via script" | tee -a "${scriptLog}"
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Initiate Pre-flight Checks
+# Pre-flight Check: Client-side Script Logging Function
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-echo -e "\n###\n# CrowdStrike Falcon diagnose with Progress (${scriptVersion})\n###\n" | tee -a "${scriptLog}"
-echo "${timestamp} - PRE-FLIGHT CHECK: Initiating …"
+function updateScriptLog() {
+    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
+}
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm script is running as root
+# Pre-flight Check: Logging Preamble
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "\n\n###\n# CrowdStrike Falcon diagnose with Progress (${scriptVersion})\n###\n"
+updateScriptLog "PRE-FLIGHT CHECK: Initiating …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Confirm script is running as root
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ $(id -u) -ne 0 ]]; then
-    echo "${timestamp} - PRE-FLIGHT CHECK: This script must be run as root; exiting." | tee -a "${scriptLog}"
+    updateScriptLog "PRE-FLIGHT CHECK: This script must be run as root; exiting."
     exit 1
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate Operating System
+# Pre-flight Check: Validate Operating System
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ "${osMajorVersion}" -ge 11 ]] ; then
-    echo "${timestamp} - PRE-FLIGHT CHECK: macOS ${osMajorVersion} installed; proceeding …"
+    updateScriptLog "PRE-FLIGHT CHECK: macOS ${osMajorVersion} installed; proceeding …"
 else
-    echo "${timestamp} - PRE-FLIGHT CHECK: macOS ${osMajorVersion} installed; exiting."
+    updateScriptLog "PRE-FLIGHT CHECK: macOS ${osMajorVersion} installed; exiting."
     exit 1
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm CrowdStrike Falcon is installed
+# Pre-flight Check: Confirm CrowdStrike Falcon is installed
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ -f "${falconBinary}" ]]; then
-    echo "${timestamp} - PRE-FLIGHT CHECK: CrowdStrike Falcon installed; proceeding …" | tee -a "${scriptLog}"
+    updateScriptLog "PRE-FLIGHT CHECK: CrowdStrike Falcon installed; proceeding …"
 else
-    echo "${timestamp} - PRE-FLIGHT CHECK: CrowdStrike Falcon NOT found; exiting." | tee -a "${scriptLog}"
+    updateScriptLog "PRE-FLIGHT CHECK: CrowdStrike Falcon NOT found; exiting."
     exit 1
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm Apple's sysdiagnose directory is empty / Delete any previous diagnose files
+# Pre-flight Check: Confirm Apple's sysdiagnose directory is empty / Delete any previous diagnose files
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ -d "/private/var/db/sysdiagnose/" ]]; then
-    echo "${timestamp} - PRE-FLIGHT CHECK: sysdiagnose directory found; deleting …" | tee -a "${scriptLog}"
+    updateScriptLog "PRE-FLIGHT CHECK: sysdiagnose directory found; deleting …"
     rm -Rf /private/var/db/sysdiagnose/
     rm /private/tmp/falconctl_diagnose_*
+    rm /Users/Shared/"${serialNumber}_"*
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (Thanks big bunches, @acodega!)
+# Pre-flight Check: Check for / install swiftDialog (Thanks big bunches, @acodega!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialogCheck() {
@@ -126,7 +139,7 @@ function dialogCheck() {
     # Check for Dialog and install if not found
     if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
 
-        echo "${timestamp} - PRE-FLIGHT CHECK: Dialog not found. Installing..." | tee -a "${scriptLog}"
+        updateScriptLog "PRE-FLIGHT CHECK: Dialog not found. Installing..."
 
         # Create temporary working directory
         workDirectory=$( /usr/bin/basename "$0" )
@@ -144,7 +157,7 @@ function dialogCheck() {
             /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
             sleep 2
             dialogVersion=$( /usr/local/bin/dialog --version )
-            echo "${timestamp} - PRE-FLIGHT CHECK: swiftDialog version ${dialogVersion} installed; proceeding..." | tee -a "${scriptLog}"
+            updateScriptLog "PRE-FLIGHT CHECK: swiftDialog version ${dialogVersion} installed; proceeding..."
 
         else
 
@@ -159,7 +172,7 @@ function dialogCheck() {
 
     else
 
-        echo "${timestamp} - PRE-FLIGHT CHECK: swiftDialog version $(dialog --version) found; proceeding..." | tee -a "${scriptLog}"
+        updateScriptLog "PRE-FLIGHT CHECK: swiftDialog version $( /usr/local/bin/dialog --version) found; proceeding..."
 
     fi
 
@@ -168,7 +181,7 @@ function dialogCheck() {
 if [[ ! -e "/Library/Application Support/Dialog/Dialog.app" ]]; then
     dialogCheck
 else
-    echo "${timestamp} - PRE-FLIGHT CHECK: swiftDialog version $(dialog --version) found; proceeding..." | tee -a "${scriptLog}"
+    updateScriptLog "PRE-FLIGHT CHECK: swiftDialog version $(dialog --version) found; proceeding..."
 fi
 
 
@@ -177,7 +190,7 @@ fi
 # Pre-flight Checks Complete
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-echo "${timestamp} - PRE-FLIGHT CHECK: Complete" | tee -a "${scriptLog}"
+updateScriptLog "PRE-FLIGHT CHECK: Complete"
 
 
 
@@ -186,16 +199,6 @@ echo "${timestamp} - PRE-FLIGHT CHECK: Complete" | tee -a "${scriptLog}"
 # Functions
 #
 ####################################################################################################
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Script Logging
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function updateScriptLog() {
-    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
-}
-
-
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Update Dialog
@@ -214,28 +217,8 @@ function updateDialog() {
 
 function quitScript() {
 
-    if [[ "${1}" == "1" ]]; then
-
-        updateScriptLog "QUIT SCRIPT: Diagnose Failure"
-        failureMessage="Something went sideways."
-        updateDialog "message: ${failureMessage}"
-        sleep 5
-        updateDialog "quit:"
-
-    else
-
-        updateScriptLog "QUIT SCRIPT: Diagnose Sucessful"
-        updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-        updateDialog "message: CrowdStrike Falcon Diagnose Complete"
-        updateDialog "progress: 100"
-        updateDialog "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
-        updateScriptLog "Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
-        sleep 5
-        updateDialog "quit:"
-
-    fi
-
     updateScriptLog "QUIT SCRIPT: Exiting …"
+    updateDialog "quit:"
 
     # Remove dialogCommandLog
     if [[ -e ${dialogCommandLog} ]]; then
@@ -265,7 +248,7 @@ function quitScript() {
 # Dialog Title, Message and Icon
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-title="CrowdStrike Falcon Diagnose"
+title="CrowdStrike Falcon Diagnose (${scriptVersion})"
 message="Please wait while a diagnosis is performed …"
 icon="https://ics.services.jamfcloud.com/icon/hash_37bf84a34fb6d957fab0718cbf9dfea0a54562db2cd9ecfe8e16cdbe5a24197c"
 # overlay=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
@@ -317,6 +300,61 @@ while [[ -n $(pgrep "sysdiagnose_helper") ]]; do
     updateDialog "progresstext: ${progressPercentage}%"
 
 done
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Update results in diagnose progress
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "QUIT SCRIPT: Diagnose Sucessful"
+updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
+updateDialog "message: CrowdStrike Falcon Diagnose Complete"
+updateDialog "progress: 100"
+updateDialog "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+updateScriptLog "Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+sleep 5
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Wait for 'falconctl_diagnose_' directory to be removed
+# See: https://macadmins.slack.com/archives/C07MGJ2SD/p1678735637841009
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "Wait for 'falconctl_diagnose_' directory to be removed from /private/tmp/ …"
+updateDialog "icon: SF=deskclock.fill,weight=bold,colour1=#0066ff,colour2=#003380"
+updateDialog "message: Waiting for file output …"
+updateDialog "progresstext: Please wait …"
+updateDialog "progress: reset"
+
+falconctlDiagnoseTempDir=$( find /private/tmp/falconctl_diagnose_* -type d )
+
+until [[ -z "${falconctlDiagnoseTempDir}" ]]; do
+
+    updateScriptLog "Pausing for one second before re-checking …"
+    updateDialog "progress: increment 6"
+    sleep 1
+    falconctlDiagnoseTempDir=$( find /private/tmp/falconctl_diagnose_* -type d )
+
+done
+
+updateDialog "progress: 100"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Prepend output with Serial Number
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+originalFilename=$( ls /private/tmp/falconctl_diagnose_* | xargs basename )
+updateScriptLog "Original Filename: ${originalFilename}"
+
+updateScriptLog "Move ${originalFilename} to /User/Shared/ …"
+mv -v "/private/tmp/${originalFilename}" "/Users/Shared/${serialNumber}_${originalFilename}"
+
+updateScriptLog "Reveal /User/Shared/${serialNumber}_${originalFilename}"
+open -R "/Users/Shared/${serialNumber}_${originalFilename}"
 
 
 
