@@ -331,14 +331,11 @@ updateDialog "message: Waiting for file output …"
 updateDialog "progresstext: Please wait …"
 updateDialog "progress: reset"
 
-falconctlDiagnoseTempDir=$( find . /private/tmp/ -name "falconctl_diagnose_*" -type d )
-
-until [[ -z "${falconctlDiagnoseTempDir}" ]]; do
+until [[ -z "$( find /private/tmp -name "falconctl_diagnose_*" -type d )" ]]; do
 
     updateScriptLog "Pausing for one second before re-checking …"
     updateDialog "progress: increment 6"
     sleep 1
-    falconctlDiagnoseTempDir=$( find . /private/tmp/ -name "falconctl_diagnose_*" -type d )
 
 done
 
@@ -350,7 +347,7 @@ updateDialog "progress: 100"
 # Prepend output with Serial Number
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-originalFilename=$( find . /private/tmp/ -name "falconctl_diagnose_*" -type f -print0 | xargs basename )
+originalFilename=$( find /private/tmp -name "falconctl_diagnose_*" -type f -print0 | xargs basename )
 updateScriptLog "Original Filename: ${originalFilename}"
 
 updateScriptLog "Move ${originalFilename} to /User/Shared/ …"
