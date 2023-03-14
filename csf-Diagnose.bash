@@ -16,6 +16,9 @@
 # Version 0.0.2, 13-Mar-2023, Dan K. Snelson (@dan-snelson)
 #   Prepend Serial Number on output file
 #
+# Version 0.0.3, 14-Mar-2023, Dan K. Snelson (@dan-snelson)
+#   Modified `find` command (thanks, @Samantha Demi and @Pico)
+#
 ####################################################################################################
 
 
@@ -26,7 +29,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.2"
+scriptVersion="0.0.3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 falconBinary="/Applications/Falcon.app/Contents/Resources/falconctl"
 osVersion=$( /usr/bin/sw_vers -productVersion )
@@ -328,14 +331,14 @@ updateDialog "message: Waiting for file output …"
 updateDialog "progresstext: Please wait …"
 updateDialog "progress: reset"
 
-falconctlDiagnoseTempDir=$( find /private/tmp/falconctl_diagnose_* -type d )
+falconctlDiagnoseTempDir=$( find . /private/tmp/ -name "falconctl_diagnose_*" -type d )
 
 until [[ -z "${falconctlDiagnoseTempDir}" ]]; do
 
     updateScriptLog "Pausing for one second before re-checking …"
     updateDialog "progress: increment 6"
     sleep 1
-    falconctlDiagnoseTempDir=$( find /private/tmp/falconctl_diagnose_* -type d )
+    falconctlDiagnoseTempDir=$( find . /private/tmp/ -name "falconctl_diagnose_*" -type d )
 
 done
 
@@ -347,7 +350,7 @@ updateDialog "progress: 100"
 # Prepend output with Serial Number
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-originalFilename=$( ls /private/tmp/falconctl_diagnose_* | xargs basename )
+originalFilename=$( find . /private/tmp/ -name "falconctl_diagnose_*" -type f -print0 | xargs basename )
 updateScriptLog "Original Filename: ${originalFilename}"
 
 updateScriptLog "Move ${originalFilename} to /User/Shared/ …"
