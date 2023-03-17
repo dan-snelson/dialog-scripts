@@ -12,7 +12,11 @@
 # HISTORY
 #
 #   Version 0.0.1, 14-Nov-2022, Dan K. Snelson (@dan-snelson)
-#       Original proof-of-concept version
+#       - Original proof-of-concept version
+#   
+#   Version 0.0.3, 16-Mar-2023, Dan K. Snelson (@dan-snelson)
+#       - Updates from 'swiftDialog Pre-install.bash'
+#       - Matched version number of 'swiftDialog Pre-install.bash'
 #
 ####################################################################################################
 
@@ -28,8 +32,8 @@
 # Global Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.1"
-export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
+scriptVersion="0.0.3"
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 dialogApp="/usr/local/bin/dialog"
 dialogNotificationLog=$( mktemp /var/tmp/dialogNotificationLog.XXX )
@@ -43,12 +47,22 @@ if [[ -n ${7} ]]; then messageoption="--message"; message="${7}"; fi
 
 ####################################################################################################
 #
-# Functions
+# Pre-flight Checks
 #
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Script Logging
+# Pre-flight Check: Client-side Logging
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ ! -f "${scriptLog}" ]]; then
+    touch "${scriptLog}"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Client-side Script Logging Function
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function updateScriptLog() {
@@ -56,6 +70,63 @@ function updateScriptLog() {
 }
 
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Current Logged-in User Function
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function currentLoggedInUser() {
+    loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+    updateScriptLog "PRE-FLIGHT CHECK: Current Logged-in User: ${loggedInUser}"
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Logging Preamble
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "\n\n###\n# swiftDialog Notifications (${scriptVersion})\n# https://snelson.us\n###\n"
+updateScriptLog "PRE-FLIGHT CHECK: Initiating …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Confirm script is running as root
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ $(id -u) -ne 0 ]]; then
+    updateScriptLog "PRE-FLIGHT CHECK: This script must be run as root; exiting."
+    exit 1
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Validate logged-in user
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+currentLoggedInUser
+if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
+    updateScriptLog "PRE-FLIGHT CHECK: No user logged-in; exiting"
+    exit 1
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Complete
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "PRE-FLIGHT CHECK: Complete"
+
+
+
+####################################################################################################
+#
+# Functions
+#
+####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Quit Script (thanks, @bartreadon!)
@@ -75,57 +146,6 @@ function quitScript() {
     exit "${1}"
 
 }
-
-
-####################################################################################################
-#
-# Pre-flight Checks
-#
-####################################################################################################
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm script is running as root
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ $(id -u) -ne 0 ]]; then
-    echo "This script must be run as root; exiting."
-    exit 1
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate logged-in user
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
-    echo "No user logged-in; exiting."
-    exit 0
-# else
-#     uid=$(id -u "${loggedInUser}")
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Logging
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ ! -f "${scriptLog}" ]]; then
-    touch "${scriptLog}"
-    updateScriptLog "*** Created log file via script ***"
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Logging preamble
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-updateScriptLog "\n\n###\n# swiftDialog Notifications (${scriptVersion})\n###\n"
-
-
-
 
 
 
@@ -164,9 +184,9 @@ updateScriptLog "Message: ${message}"
 
 ${dialogApp} \
     --notification \
-    ${titleoption} "${title}" \
-    ${subtitleoption} "${subtitle}" \
-    ${messageoption} "${message}" \
+    "${titleoption}" "${title}" \
+    "${subtitleoption}" "${subtitle}" \
+    "${messageoption}" "${message}" \
     --commandfile "$dialogNotificationLog}"
 
 
@@ -176,5 +196,3 @@ ${dialogApp} \
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 quitScript "0"
-
-exit 0
