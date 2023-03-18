@@ -5,7 +5,7 @@
 #
 #   swiftDialog Notifications
 #
-#   See: https://snelson.us/2022/11/macos-notifications-via-swiftdialog-0-0-1/
+#   See: https://snelson.us/2023/03/swiftdialog-notifications/
 #
 ####################################################################################################
 #
