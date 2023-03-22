@@ -1,15 +1,16 @@
 # Display Message via swiftDialog
 
-> Leverages [swiftDialog](https://github.com/bartreardon/swiftDialog/releases) and Jamf Pro Policy Script Parameters to display a message to end-users.
+> Leverage `switftDialog` and Jamf Pro Policy Script Parameters to easily display engaging end-user messages.
 
 ![Upgrade to macOS Ventura](images/Upgrade_to_Ventura.png "Upgrade to macOS Ventura")
 ![Display Message via Dialog](images/Display-Message-via-Dialog-Instructions.png "Display Message via Dialog")
 
 
+
 ## Introduction
-Using Bart Reardon's [swiftDialog](https://github.com/bartreardon/swiftDialog/wiki) and Jamf Pro Policy Script Parameters, easily create engaging end-user messages.
+Using Bart Reardon's `swiftDialog` and Jamf Pro Policy Script Parameters, creating engaging end-user messages is easy.
 
-[Continue reading …](https://snelson.us/2022/12/display-message-via-swiftdialog-0-0-6/)
+[Continue reading …](https://snelson.us/2023/03/display-message-0-0-7-via-swiftdialog/)
 
-## Script
+### Script
 - [Display-Message-via-Dialog.bash](Display-Message-via-Dialog.bash)

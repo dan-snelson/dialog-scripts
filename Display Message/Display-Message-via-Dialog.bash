@@ -4,8 +4,8 @@
 #
 # Display Message via swiftDialog
 #
-#   Purpose: Displays an end-user message via swiftDialog
-#   See: https://snelson.us/2022/12/display-message-via-swiftdialog-0-0-6/
+# Purpose: Displays an end-user message via swiftDialog
+# See: https://snelson.us/2022/12/display-message-via-swiftdialog-0-0-6/
 #
 ####################################################################################################
 #
@@ -35,6 +35,11 @@
 #   - Hard-code `overlayicon` to use Self Service's icon (to help overcome the inability to include
 #     spaces in Jamf Pro Script Parameters)
 #
+# Version 0.0.7, 21-Mar-2023, Dan K. Snelson (@dan-snelson)
+#   - Overlayicon can now be included via: `--overlayicon /var/tmp/overlayicon.icns`
+#   - Updates from Setup Your Mac code
+#   - Revised default dialog instructions
+#
 ####################################################################################################
 
 
@@ -45,15 +50,14 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.6"
+scriptVersion="0.0.7"
 scriptLog="/var/tmp/org.churchofjesuschrist.log"
-export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 osVersion=$( sw_vers -productVersion )
 osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
 dialogBinary="/usr/local/bin/dialog"
 dialogMessageLog=$( mktemp /var/tmp/dialogWelcomeLog.XXX )
-overlayicon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 if [[ -n ${4} ]]; then titleoption="--title"; title="${4}"; fi
 if [[ -n ${5} ]]; then messageoption="--message"; message="${5}"; fi
 if [[ -n ${6} ]]; then iconoption="--icon"; icon="${6}"; fi
@@ -63,48 +67,68 @@ if [[ -n ${9} ]]; then infobuttonoption="--infobuttontext"; infobuttontext="${9}
 extraflags="${10}"
 action="${11}"
 
+# Create `overlayicon` from Self Service's custom icon (thanks, @meschwartz!)
+xxd -p -s 260 "$(defaults read /Library/Preferences/com.jamfsoftware.jamf self_service_app_path)"/Icon$'\r'/..namedfork/rsrc | xxd -r -p > /var/tmp/overlayicon.icns
+overlayicon="/var/tmp/overlayicon.icns"
 
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Default icon to Jamf Pro Self Service if not specified
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
 if [[ -z ${icon} ]]; then
     iconoption="--icon"
-    icon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
+    icon="/var/tmp/overlayicon.icns"
 fi
 
 
 
 ####################################################################################################
 #
-# Functions
+# Pre-flight Checks
 #
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Script Logging
+# Pre-flight Check: Client-side Logging
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ ! -f "${scriptLog}" ]]; then
+    touch "${scriptLog}"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Client-side Script Logging Function
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function updateScriptLog() {
-    echo -e "$( date +%Y-%m-%d\ %H:%M:%S )  ${1}" | tee -a "${scriptLog}"
+    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
 }
 
 
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# JAMF Display Message (for fallback in case swiftDialog fails to install)
+# Pre-flight Check: Logging Preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function jamfDisplayMessage() {
-    updateScriptLog "Jamf Display Message: ${1}"
-    /usr/local/jamf/bin/jamf displayMessage -message "${1}" &
-}
+updateScriptLog "\n\n###\n# Display Message via swiftDialog (${scriptVersion})\n###\n"
+updateScriptLog "PRE-FLIGHT CHECK: Initiating …"
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (Thanks big bunches, @acodega!)
+# Pre-flight Check: Validate Operating System
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ "${osMajorVersion}" -ge 11 ]] ; then
+    updateScriptLog "PRE-FLIGHT CHECK: macOS ${osMajorVersion} installed; proceeding ..."
+else
+    updateScriptLog "PRE-FLIGHT CHECK: macOS ${osVersion} installed; exiting."
+    osascript -e 'display dialog "Display Message via swiftDialog ('"${scriptVersion}"')\rby Dan K. Snelson (https://snelson.us)\r\rmacOS '"${osVersion}"' installed; macOS Big Sur 11\r(or later) required" buttons {"OK"} with icon caution with title "Display Message via swiftDialog: Error"'
+    exit 1
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Validate / install swiftDialog (Thanks big bunches, @acodega!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function dialogCheck() {
@@ -118,7 +142,7 @@ function dialogCheck() {
     # Check for Dialog and install if not found
     if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
 
-        updateScriptLog "Dialog not found. Installing..."
+        updateScriptLog "PRE-FLIGHT CHECK: Dialog not found. Installing..."
 
         # Create temporary working directory
         workDirectory=$( /usr/bin/basename "$0" )
@@ -135,28 +159,41 @@ function dialogCheck() {
 
             /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
             sleep 2
-            updateScriptLog "swiftDialog version $(dialog --version) installed; proceeding..."
+            dialogVersion=$( /usr/local/bin/dialog --version )
+            updateScriptLog "PRE-FLIGHT CHECK: swiftDialog version ${dialogVersion} installed; proceeding..."
 
         else
 
             # Display a so-called "simple" dialog if Team ID fails to validate
-            runAsUser osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Display Message: Error" buttons {"Close"} with icon caution'
+            osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
             quitScript "1"
 
         fi
 
         # Remove the temporary working directory when done
-        /bin/rm -Rf "$tempDirectory"  
+        /bin/rm -Rf "$tempDirectory"
 
     else
 
-        updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
+        updateScriptLog "PRE-FLIGHT CHECK: swiftDialog version $(${dialogBinary} --version) found; proceeding..."
 
     fi
 
 }
 
+if [[ ! -e "/Library/Application Support/Dialog/Dialog.app" ]]; then
+    dialogCheck
+else
+    updateScriptLog "PRE-FLIGHT CHECK: swiftDialog version $(${dialogBinary} --version) found; proceeding..."
+fi
 
+
+
+####################################################################################################
+#
+# Functions
+#
+####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Quit Script (thanks, @bartreadon!)
@@ -171,9 +208,15 @@ function quitScript() {
     updateScriptLog "Exiting …"
 
     # Remove dialogMessageLog
-    if [[ -e ${dialogMessageLog} ]]; then
+    if [[ -f ${dialogMessageLog} ]]; then
         updateScriptLog "Removing ${dialogMessageLog} …"
         rm "${dialogMessageLog}"
+    fi
+
+    # Remove overlayicon
+    if [[ -f ${overlayicon} ]]; then
+        updateScriptLog "Removing ${overlayicon} …"
+        rm "${overlayicon}"
     fi
 
     updateScriptLog "Goodbye!"
@@ -190,40 +233,6 @@ function quitScript() {
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Logging
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ ! -f "${scriptLog}" ]]; then
-    touch "${scriptLog}"
-    echo "$( date +%Y-%m-%d\ %H:%M:%S )  *** Created log file via script ***" >>"${scriptLog}"
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Logging preamble
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-updateScriptLog "\n\n###\n# Display Message via Dialog (${scriptVersion})\n###\n"
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate Operating System
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ "${osMajorVersion}" -ge 11 ]] ; then
-    updateScriptLog "macOS ${osMajorVersion} installed; proceeding ..."
-    scriptResult="${scriptResult} macOS ${osMajorVersion} installed; proceeding;"
-else
-    updateScriptLog "macOS ${osVersion} installed; exiting."
-    jamfDisplayMessage "Display Message via swiftDialog (${scriptVersion}) by Dan K. Snelson  macOS ${osVersion} installed; macOS Big Sur 11 (or later) required"
-    exit 1
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Validate Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -231,13 +240,13 @@ if [[ -z "${title}" ]] || [[ -z "${message}" ]]; then
 
     updateScriptLog "Either Parameter 4 or Parameter 5 are NOT populated; displaying instructions …"
 
-    extraflags="--width 825 --height 400 --moveable --timer 75 --position topright --blurscreen --titlefont size=26 --messagefont size=13 --iconsize 125"
+    extraflags="--width 825 --height 400 --moveable --timer 75 --position topright --blurscreen --titlefont size=26 --messagefont size=13 --iconsize 125 --overlayicon /var/tmp/overlayicon.icns --quitoninfo"
 
     titleoption="--title"
     title="Title [Parameter 4] goes here"
 
     messageoption="--message"
-    message="### Message [Parameter 5] goes here  \n\n**Note:** Please review this [blog post](https://snelson.us/2022/12/display-message-via-swiftdialog-0-0-6/) for additional information.  \n\n--- \n\nDisplaying with the following \"extraflags:\"  \n\n${extraflags}  \n\nThank you, [Bart Reardon](https://www.buymeacoffee.com/bartreardon), for making [swiftDialog](https://github.com/bartreardon/swiftDialog)! (Two words: **Rock. Star.**)"
+    message="### Message [Parameter 5] goes here  \n\n- [Dialog](https://github.com/bartreardon/swiftDialog) v\`$(${dialogBinary} --version)\`  \n- [Display Message via swiftDialog](https://snelson.us/2023/03/display-message-0-0-7-via-swiftdialog/) v\`${scriptVersion}\`  \n- Displaying with the following \`extraflags\`:  \n\n\`${extraflags}\`  \n\nThank you, [Bart Reardon](https://www.buymeacoffee.com/bartreardon), for making \`swiftDialog\`!  \n\n---\n\n**Note:** Please review this [blog post](https://snelson.us/2023/03/display-message-0-0-7-via-swiftdialog/) for additional information."
 
     button1option="--button1text"
     button1text="Button 1 [Parameter 7]"
@@ -253,14 +262,6 @@ else
     updateScriptLog "Both \"title\" and \"message\" Parameters are populated; proceeding ..."
 
 fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dialogCheck
 
 
 
@@ -283,7 +284,6 @@ ${dialogBinary} \
     --infobuttonaction "https://servicenow.company.com/support?id=kb_article_view&sysparm_article=${infobuttontext}" \
     --messagefont "size=14" \
     --commandfile "$dialogMessageLog}" \
-    --overlayicon "$overlayicon" \
     ${extraflags}
 
 returncode=$?
