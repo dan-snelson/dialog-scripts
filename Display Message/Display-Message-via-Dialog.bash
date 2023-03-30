@@ -40,6 +40,9 @@
 #   - Updates from Setup Your Mac code
 #   - Revised default dialog instructions
 #
+# Version 0.0.8, 30-Mar-2023, Dan K. Snelson (@dan-snelson)
+#   - Updated default dialog instructions to include an `action`
+#
 ####################################################################################################
 
 
@@ -50,7 +53,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.7"
+scriptVersion="0.0.8"
 scriptLog="/var/tmp/org.churchofjesuschrist.log"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
@@ -256,6 +259,8 @@ if [[ -z "${title}" ]] || [[ -z "${message}" ]]; then
 
     infobuttonoption="--infobuttontext"
     infobuttontext="Infobutton [Paramter 9]"
+
+    action="https://snelson.us/2023/03/display-message-0-0-7-via-swiftdialog/"
 
 else
 
