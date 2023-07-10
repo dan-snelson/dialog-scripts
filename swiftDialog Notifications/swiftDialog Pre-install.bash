@@ -23,6 +23,9 @@
 #       - Create 'Dialog.png' from Self Service's custom icon (thanks, @meschwartz!)
 #       - Remove no longer required 'loggedInUser'-related code
 #
+#   Version 0.0.4, 10-Jul-2023, Dan K. Snelson (@dan-snelson)
+#       - Installation Action (Parameter 5) [ none (default) | remove ]
+#
 ####################################################################################################
 
 
@@ -37,9 +40,10 @@
 # Global Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.3"
+scriptVersion="0.0.4"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
+installationAction="${5:-"none"}"   # [ none (default) | remove ]
 
 
 
@@ -102,6 +106,29 @@ updateScriptLog "PRE-FLIGHT CHECK: Complete"
 # Program
 #
 ####################################################################################################
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Installation Action
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+updateScriptLog "Installation Action: ${installationAction} …"
+
+case ${installationAction} in
+
+    "remove" )
+        updateScriptLog "Removing swiftDialog …"
+        rm -fv /usr/local/bin/dialog
+        rm -Rfv /Library/Application\ Support/Dialog/
+        updateScriptLog "swiftDialog has been removed"
+        ;;
+
+    "none" | * )
+        updateScriptLog "Skipping Installation Action"
+        ;;
+
+esac
+
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Validate Dialog Branding Image
