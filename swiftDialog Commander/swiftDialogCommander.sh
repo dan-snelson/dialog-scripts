@@ -22,6 +22,9 @@
 #   Version 0.0.3, 06-Jun-2022, Dan K. Snelson (@dan-snelson)
 #       Added link to blog post for additional examples
 #
+#   Version 0.0.4, 09-Sep-2023, Dan K. Snelson (@dan-snelson)
+#       Updated `dialogURL`
+#
 ####################################################################################################
 
 
@@ -36,7 +39,7 @@
 # Script Version
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.3"
+scriptVersion="0.0.4"
 
 
 
@@ -189,7 +192,7 @@ function dialog_update() {
 
 function dialogCheck(){
   # Get the URL of the latest PKG From the Dialog GitHub repo
-  dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+  dialogURL=$(curl -L --silent --fail "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
   # Expected Team ID of the downloaded PKG
   expectedDialogTeamID="PWA5E9TQ59"
 

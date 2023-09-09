@@ -27,6 +27,9 @@
 #   Updated `sed` regex (thanks, @Nick Koval!)
 #   Updated `updateScriptLog` function (thanks, @tlark!)
 #
+# Version 1.3.2, 09-Sep-2023, Dan K. Snelson (@dan-snelson)
+#   Updated `dialogURL`
+#
 ####################################################################################################
 
 
@@ -37,7 +40,7 @@
 #
 ####################################################################################################
 
-scriptVersion="1.3.1"
+scriptVersion="1.3.2"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 loggedInUserHome=$( dscl . read /Users/"${loggedInUser}" NFSHomeDirectory | awk -F ": " '{print $2}' )
@@ -207,7 +210,7 @@ function jamfDisplayMessage() {
 
 function dialogCheck(){
   # Get the URL of the latest PKG From the Dialog GitHub repo
-  dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+  dialogURL=$(curl -L --silent --fail "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
   # Expected Team ID of the downloaded PKG
   expectedDialogTeamID="PWA5E9TQ59"

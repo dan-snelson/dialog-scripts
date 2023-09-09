@@ -27,6 +27,9 @@
 # Version 0.0.5, 27-Dec-2022, Dan K. Snelson (@dan-snelson)
 #   Provided alternate `recon` option to address Issue No. 24
 #
+# Version 0.0.6, 09-Sep-2023, Dan K. Snelson (@dan-snelson)
+#   - Updated `dialogURL`
+#
 ####################################################################################################
 
 
@@ -37,7 +40,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.5"
+scriptVersion="0.0.6"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 osVersion=$( /usr/bin/sw_vers -productVersion )
@@ -141,7 +144,7 @@ function jamfDisplayMessage() {
 
 function dialogCheck(){
   # Get the URL of the latest PKG From the Dialog GitHub repo
-  dialogURL=$(curl --silent --fail "https://api.github.com/repos/bartreardon/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+  dialogURL=$(curl -L --silent --fail "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
   # Expected Team ID of the downloaded PKG
   expectedDialogTeamID="PWA5E9TQ59"
