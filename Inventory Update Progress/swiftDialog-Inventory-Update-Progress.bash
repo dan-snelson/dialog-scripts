@@ -51,6 +51,7 @@ inventoryLog=$( mktemp /var/tmp/inventoryLog.XXX )
 scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
 estimatedTotalSeconds="${5:-"298"}"
 debugMode="${6:-"false"}"
+windowPosition="${7:-"center"}"
 
 
 
@@ -73,6 +74,7 @@ dialogInventoryUpdate="$dialogApp \
 --title \"$title\" \
 --message \"$message\" \
 --icon \"$icon\" \
+--position \"$windowPosition\" \
 --mini \
 --moveable \
 --progress \
