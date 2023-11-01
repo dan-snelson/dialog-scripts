@@ -46,6 +46,9 @@
 # Version 0.0.9, 09-Sep-2023, Dan K. Snelson (@dan-snelson)
 #   - Updated `dialogURL`
 #
+# Version 0.0.10, 01-Nov-2023, Dan K. Snelson (@dan-snelson)
+#   - Updated `osascript` error message
+#
 ####################################################################################################
 
 
@@ -56,7 +59,7 @@
 #
 ####################################################################################################
 
-scriptVersion="0.0.9"
+scriptVersion="0.0.10"
 scriptLog="/var/tmp/org.churchofjesuschrist.log"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
@@ -171,7 +174,7 @@ function dialogCheck() {
         else
 
             # Display a so-called "simple" dialog if Team ID fails to validate
-            osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
+            osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Display Message via Dialog: Error" buttons {"Close"} with icon caution'
             quitScript "1"
 
         fi
