@@ -17,6 +17,14 @@
 #   Version 0.0.4, 28-Jan-2024, Dan K. Snelson (@dan-snelson)
 #       - Updated for swiftDialog v2.4.0
 #
+#       :fire: **Breaking Change** for users prior to `0.0.4` :fire:
+#       
+#       Version `0.0.4` modifies the Script Parameter Label for `scriptLog` — changing it to a
+#       hard-coded variable in the script (as it should have been all along) — Sorry for any
+#       Dan-induced confusion.
+#       
+#       Additionally, the Script Parameter for `subtitle` has been removed.
+#
 ####################################################################################################
 
 
