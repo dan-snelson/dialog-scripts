@@ -11,7 +11,7 @@ One of the more welcome features of swiftDialog 2.4.0 is actionable macOS Notifi
 ![Custom Branded Notification](images/sd_Notifications-00002.png)
 
 
-[Continue reading …](https://snelson.us/)
+[Continue reading …](https://snelson.us/2024/02/actionable-custom-branded-macos-notifications-with-swiftdialog-2-4-0/)
 
 ---
 
@@ -19,9 +19,9 @@ One of the more welcome features of swiftDialog 2.4.0 is actionable macOS Notifi
 
 > :fire: **Breaking Change** for users prior to `0.0.4` :fire:
 > 
-> Version `0.0.4` modifies the Script Parameter Label for `scriptLog` — changing it to a hard-coded variable in the script (as it should have been all along) — Sorry for any Dan-induced confusion.
+> Version `0.0.4` modifies the Script Parameter Label for `scriptLog` — changing it to a hard-coded variable in the script (as it should have been all along) — Sorry for any Dan-induced headaches.
 > 
 > Additionally, the Script Parameter for `subtitle` has been removed.
 
-- [swiftDialog Pre-install.bash](swiftDialog%20Pre-install.bash)
-- [swiftDialog Notifications.bash](swiftDialog%20Notifications.bash)
+- [swiftDialog Pre-install.bash](swiftDialog%20Pre-install.bash) (0.0.4)
+- [swiftDialog Notifications.bash](swiftDialog%20Notifications.bash) (0.0.4)

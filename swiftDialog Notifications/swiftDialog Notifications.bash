@@ -8,7 +8,7 @@
 #
 #   swiftDialog Notifications
 #
-#   See: https://snelson.us/?s=swiftdialog
+#   See: https://snelson.us/2024/02/actionable-custom-branded-macos-notifications-with-swiftdialog-2-4-0/
 #
 ####################################################################################################
 #
@@ -21,7 +21,7 @@
 #       
 #       Version `0.0.4` modifies the Script Parameter Label for `scriptLog` — changing it to a
 #       hard-coded variable in the script (as it should have been all along) — Sorry for any
-#       Dan-induced confusion.
+#       Dan-induced headaches.
 #       
 #       Additionally, the Script Parameter for `subtitle` has been removed.
 #
