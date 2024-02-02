@@ -284,7 +284,7 @@ ${dialogBinary} \
     "${button1ActionOption}" "${button1action}" \
     "${button2TextOption}" "${button2text}" \
     "${button2ActionOption}" "${button2action}" \
-    --commandfile "$dialogNotificationLog}"
+    --commandfile "${dialogNotificationLog}"
 
 
 
