@@ -15,4 +15,9 @@ Hopefully after implementing this script, you'll never have to be asked that que
 [Continue reading …](https://snelson.us/2022/10/inventory-update-progress/)
 
 ## Script
-- [swiftDialog-Inventory-Update-Progress.bash](swiftDialog-Inventory-Update-Progress.bash)
+
+> :fire: **Breaking Change** for users prior to `0.0.7` :fire:
+> 
+> Version `0.0.7` modifies the Script Parameter Label for `scriptLog` — changing it to a hard-coded variable in the script (as it should have been all along) — Sorry for any Dan-induced headaches.
+
+- [swiftDialog-Inventory-Update-Progress.zsh](swiftDialog-Inventory-Update-Progress.zsh)
