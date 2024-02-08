@@ -53,7 +53,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
-scriptVersion="0.0.7-b2"
+scriptVersion="0.0.7-b3"
 scriptLog="/var/log/org.churchofjesuschrist.log"
 
 # swiftDialog Binary & Logs 
@@ -551,6 +551,7 @@ done
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 logComment "Complete Inventory Update dialog"
+updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
 updateDialog "message: Inventory update complete"
 updateDialog "progress: 100"
 updateDialog "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
