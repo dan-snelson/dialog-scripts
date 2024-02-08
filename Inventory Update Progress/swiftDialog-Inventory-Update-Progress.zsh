@@ -53,7 +53,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
-scriptVersion="0.0.7"
+scriptVersion="0.0.7-b2"
 scriptLog="/var/log/org.churchofjesuschrist.log"
 
 # swiftDialog Binary & Logs 
@@ -498,7 +498,7 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Gracefully exit when less than Seconds To Wait before updating inventory
+# Evaluate Seconds To Wait Before Updating Inventory
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 testFileSeconds=$( /bin/date -j -f "%s" "$(/usr/bin/stat -f "%m" $inventoryDelayFilepath)" +"%s" )
@@ -509,14 +509,13 @@ ageInSecondsHumanReadable=$( printf '"%dd, %dh, %dm, %ds"\n' $((ageInSeconds/864
 
 if [[ ${ageInSeconds} -le ${secondsToWait} ]] && [[ ${resetConfiguration} != "All" ]]; then
     notice "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago"
-    logComment "Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
     logComment "So long!"
     exit 0
 elif [[ ${ageInSeconds} -ge ${secondsToWait} ]]; then
     notice "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago; proceeding …"
+    touch "${inventoryDelayFilepath}"
 elif [[ ${resetConfiguration} == "All" ]]; then
     notice "Reset Configuration is set to ${resetConfiguration}; proceeding …"
-    logComment "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago; proceeding …"
 fi
 
 
