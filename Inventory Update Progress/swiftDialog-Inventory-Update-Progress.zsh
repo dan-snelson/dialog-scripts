@@ -53,7 +53,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
-scriptVersion="0.0.7-b3"
+scriptVersion="0.0.7-b4"
 scriptLog="/var/log/org.churchofjesuschrist.log"
 
 # swiftDialog Binary & Logs 
@@ -508,14 +508,29 @@ secondsToWaitHumanReadable=$( printf '"%dd, %dh, %dm, %ds"\n' $((secondsToWait/8
 ageInSecondsHumanReadable=$( printf '"%dd, %dh, %dm, %ds"\n' $((ageInSeconds/86400)) $((ageInSeconds%86400/3600)) $((ageInSeconds%3600/60)) $((ageInSeconds%60)) )
 
 if [[ ${ageInSeconds} -le ${secondsToWait} ]] && [[ ${resetConfiguration} != "All" ]]; then
-    notice "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago"
+
+    notice "*** INVENTORY WILL NOT BE UPDATED ***"
+    logComment "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago"
+
+    eval "$dialogInventoryUpdate" &
+    updateDialog "progress: 1"
+    updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
+    updateDialog "message: Inventory update not required"
+    updateDialog "progress: 100"
+    updateDialog "progresstext: "
     logComment "So long!"
-    exit 0
+    sleep 3
+    quitScript "0"
+
 elif [[ ${ageInSeconds} -ge ${secondsToWait} ]]; then
+
     notice "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago; proceeding …"
     touch "${inventoryDelayFilepath}"
+
 elif [[ ${resetConfiguration} == "All" ]]; then
+
     notice "Reset Configuration is set to ${resetConfiguration}; proceeding …"
+
 fi
 
 
