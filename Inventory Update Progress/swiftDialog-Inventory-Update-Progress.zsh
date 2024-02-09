@@ -53,8 +53,11 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
-scriptVersion="0.0.7-b5"
-scriptLog="/var/log/org.churchofjesuschrist.log"
+scriptVersion="0.0.7-b6"
+scriptLog="/var/log/org.churchofjesuschrist.ics.log"
+
+# Display an inventory progress dialog even if an inventory update is not required
+displayProgessSansUpdate="true"
 
 # swiftDialog Binary & Logs 
 swiftDialogMinimumRequiredVersion="2.4.0.4750"
@@ -561,15 +564,17 @@ if [[ ${ageInSeconds} -le ${secondsToWait} ]]; then
 
         * | "Default" ) # Default Catch-all
             notice "Inventory will NOT be updated …"
-            logComment "Display 'Inventory update not required' dialog …"
-            eval "$dialogInventoryUpdate" &
-            updateDialog "progress: 1"
-            updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-            updateDialog "message: Inventory update not required"
-            updateDialog "progress: 100"
-            updateDialog "progresstext: "
-            logComment "So long!"
-            sleep 3
+            if [[ "${displayProgessSansUpdate}" == "true" ]]; then
+                logComment "Display 'Inventory update not required' dialog …"
+                eval "$dialogInventoryUpdate" &
+                updateDialog "progress: 1"
+                updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
+                updateDialog "message: Inventory update not required"
+                updateDialog "progress: 100"
+                updateDialog "progresstext: "
+                logComment "So long!"
+                sleep 3
+            fi
             quitScript "0"
             ;;
 
