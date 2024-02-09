@@ -53,7 +53,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
-scriptVersion="0.0.7-b4"
+scriptVersion="0.0.7-b5"
 scriptLog="/var/log/org.churchofjesuschrist.log"
 
 # swiftDialog Binary & Logs 
@@ -78,8 +78,8 @@ secondsToWait="${4:-"86400"}"
 # Parameter 5: Estimated Total Seconds
 estimatedTotalSeconds="${5:-"120"}"
 
-# Parameter 6: Configuration Files to Reset (i.e., None (blank) | All | Uninstall)
-resetConfiguration="${6:-""}"
+# Parameter 6: Operation Mode [ Default (i.e., delayed inventory update) | Self Service | Silent | Uninstall ]
+operationMode="${6:-"Default"}"
 
 
 
@@ -98,16 +98,6 @@ organizationDirectory="/path/to/your/client/side/scripts/"
 
 # Inventory Delay File
 inventoryDelayFilepath="${organizationDirectory}.${organizationScriptName}"
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Computer Variables
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-computerName=$( scutil --get ComputerName )
-serialNumber=$( ioreg -rd1 -c IOPlatformExpertDevice | awk -F'"' '/IOPlatformSerialNumber/{print $4}' )
-modelName=$( /usr/libexec/PlistBuddy -c 'Print :0:_items:0:machine_name' /dev/stdin <<< "$(system_profiler -xml SPHardwareDataType)" )
 
 
 
@@ -218,48 +208,61 @@ function quitOut(){
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Reset Configuration
+# Update Inventory, showing progress via swiftDialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function resetConfiguration() {
+function updateInventoryProgress() {
 
-    notice "Reset Configuration: ${1}"
+    notice "Create Inventory Update dialog …"
+    eval "$dialogInventoryUpdate" &
 
-    case ${1} in
+    SECONDS="0"
+    updateDialog "progress: 1"
 
-        "All" )
+    /usr/local/bin/jamf recon -endUsername "${loggedInUser}" --verbose >> "$inventoryLog" &
 
-            info "Reset All Configuration Files … "
+    until [[ "$inventoryProgressText" == "Submitting data to"* ]]; do
 
-            # Reset inventoryDelayFilepath
-            info "Reset inventoryDelayFilepath … "
-            logComment "Removing '${inventoryDelayFilepath}' … "
-            rm -f "${inventoryDelayFilepath}"
-            logComment "Removed '${inventoryDelayFilepath}'"
-            ;;
+        progressPercentage=$( echo "scale=2 ; ( $SECONDS / $estimatedTotalSeconds ) * 100" | bc )
+        updateDialog "progress: ${progressPercentage}"
 
-        "Uninstall" )
+        inventoryProgressText=$( tail -n1 "$inventoryLog" | sed -e 's/verbose: //g' -e 's/Found app: \/System\/Applications\///g' -e 's/Utilities\///g' -e 's/Found app: \/Applications\///g' -e 's/Running script for the extension attribute //g' )
+        updateDialog "progresstext: ${inventoryProgressText}"
 
-            warning "*** UNINSTALLING ${humanReadableScriptName} ***"
+    done
 
-            # Uninstall Script
-            info "Reset inventoryDelayFilepath … "
-            logComment "Removing '${inventoryDelayFilepath}' … "
-            rm -f "${inventoryDelayFilepath}"
-            logComment "Removed '${inventoryDelayFilepath}'"
+}
 
-            # Exit
-            logComment "Uninstalled all ${humanReadableScriptName} configuration files"
-            notice "Thanks for using ${humanReadableScriptName}!"
-            exit 0
-            ;;
-            
-        * )
 
-            warning "None of the expected reset options was entered; don't reset anything"
-            ;;
 
-    esac
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Complete "Inventory Update" dialog
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function completeInventoryProgress() {
+
+    logComment "Complete Inventory Update dialog"
+    updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
+    updateDialog "message: Inventory update complete"
+    updateDialog "progress: 100"
+    updateDialog "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+    logComment "Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+    sleep 3
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Self Service Inventory Update (i.e., ALWAYS update inventory)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function selfServiceInventoryUpdate() {
+
+    logComment "Inventory WILL BE updated, showing progress via swiftDialog …"
+    touch "${inventoryDelayFilepath}"
+    updateInventoryProgress
+    completeInventoryProgress
 
 }
 
@@ -395,6 +398,24 @@ function updateDialog() {
 
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Uninstall
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function uninstall() {
+
+    warning "*** UNINSTALLING ${humanReadableScriptName} ***"
+    info "Reset inventoryDelayFilepath … "
+    logComment "Removing '${inventoryDelayFilepath}' … "
+    rm -f "${inventoryDelayFilepath}"
+    logComment "Removed '${inventoryDelayFilepath}'"
+    logComment "Uninstalled all ${humanReadableScriptName} configuration files"
+    notice "Thanks for using ${humanReadableScriptName}!"
+
+}
+
+
+
 ####################################################################################################
 #
 # Pre-flight Checks
@@ -466,6 +487,23 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Validate / Create Inventory Delay File
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ ! -f "${inventoryDelayFilepath}" ]]; then
+    touch "${inventoryDelayFilepath}"
+    if [[ -f "${inventoryDelayFilepath}" ]]; then
+        preFlight "Created specified inventoryDelayFilepath"
+    else
+        fatal "Unable to create specified inventoryDelayFilepath; exiting.\n\n(Is this script running as 'root' ?)"
+    fi
+else
+    preFlight "Specified inventoryDelayFilepath exists; proceeding …"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Pre-flight Check: Complete
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -480,104 +518,102 @@ preFlight "Complete!"
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate / Create Inventory Delay File
+# "Seconds To Wait" Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ ! -f "${inventoryDelayFilepath}" ]]; then
-    touch "${inventoryDelayFilepath}"
-    if [[ -f "${inventoryDelayFilepath}" ]]; then
-        notice "Created specified inventoryDelayFilepath"
-        resetConfiguration="All"
-    else
-        fatal "Unable to create specified inventoryDelayFilepath; exiting.\n\n(Is this script running as 'root' ?)"
-    fi
-else
-    notice "Specified inventoryDelayFilepath exists; proceeding …"
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Evaluate Seconds To Wait Before Updating Inventory
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-testFileSeconds=$( /bin/date -j -f "%s" "$(/usr/bin/stat -f "%m" $inventoryDelayFilepath)" +"%s" )
-nowSeconds=$( /bin/date +"%s" )
+testFileSeconds=$( date -j -f "%s" "$( stat -f "%m" $inventoryDelayFilepath)" +"%s" )
+nowSeconds=$( date +"%s" )
 ageInSeconds=$((nowSeconds-testFileSeconds))
 secondsToWaitHumanReadable=$( printf '"%dd, %dh, %dm, %ds"\n' $((secondsToWait/86400)) $((secondsToWait%86400/3600)) $((secondsToWait%3600/60)) $((secondsToWait%60)) )
 ageInSecondsHumanReadable=$( printf '"%dd, %dh, %dm, %ds"\n' $((ageInSeconds/86400)) $((ageInSeconds%86400/3600)) $((ageInSeconds%3600/60)) $((ageInSeconds%60)) )
 
-if [[ ${ageInSeconds} -le ${secondsToWait} ]] && [[ ${resetConfiguration} != "All" ]]; then
 
-    notice "*** INVENTORY WILL NOT BE UPDATED ***"
-    logComment "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago"
 
-    eval "$dialogInventoryUpdate" &
-    updateDialog "progress: 1"
-    updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-    updateDialog "message: Inventory update not required"
-    updateDialog "progress: 100"
-    updateDialog "progresstext: "
-    logComment "So long!"
-    sleep 3
-    quitScript "0"
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Evaluate "Seconds To Wait" and "Operation Mode" before updating inventory
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+notice "*** Evaluating 'Seconds To Wait' and 'Operation Mode' before updating inventory ***"
+logComment "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago"
+logComment "Operation Mode: '${operationMode}'"
+
+if [[ ${ageInSeconds} -le ${secondsToWait} ]]; then
+    
+    # Current Inventory is "fresh" (i.e., inventory isn't yet stale enough to be updated)
+
+    case ${operationMode} in
+
+        "Self Service" ) # When executed via Self Service, *always* update inventory 
+            selfServiceInventoryUpdate
+            quitScript "0"
+            ;;
+
+        "Silent" ) # Don't leverage swiftDialog
+            notice "Inventory will NOT be updated …"
+            quitScript "0"
+            ;;
+
+        "Uninstall" ) # Remove client-side files
+            notice "Sorry to see you go …"
+            uninstall
+            quitScript "0"
+            ;;
+
+        * | "Default" ) # Default Catch-all
+            notice "Inventory will NOT be updated …"
+            logComment "Display 'Inventory update not required' dialog …"
+            eval "$dialogInventoryUpdate" &
+            updateDialog "progress: 1"
+            updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
+            updateDialog "message: Inventory update not required"
+            updateDialog "progress: 100"
+            updateDialog "progresstext: "
+            logComment "So long!"
+            sleep 3
+            quitScript "0"
+            ;;
+
+    esac
 
 elif [[ ${ageInSeconds} -ge ${secondsToWait} ]]; then
 
-    notice "Set to wait ${secondsToWaitHumanReadable} and inventoryDelayFilepath was created ${ageInSecondsHumanReadable} ago; proceeding …"
-    touch "${inventoryDelayFilepath}"
+    # Current Inventory is "stale" (i.e., inventory is stale and should be updated)
 
-elif [[ ${resetConfiguration} == "All" ]]; then
+    case ${operationMode} in
 
-    notice "Reset Configuration is set to ${resetConfiguration}; proceeding …"
+        "Self Service" ) # When executed via Self Service, *always* update inventory 
+            selfServiceInventoryUpdate
+            quitScript "0"
+            ;;
+
+        "Silent" ) # Update inventory, sans swiftDialog
+            logComment "Inventory WILL BE updated, sans swiftDialog …"
+            /usr/local/bin/jamf recon -endUsername "${loggedInUser}"
+            quitScript "0"
+            ;;
+
+        "Uninstall" ) # Remove client-side files
+            logComment "Sorry to see you go …"
+            uninstall
+            quitScript "0"
+            ;;
+
+        * | "Default" ) # Default Catch-all
+            logComment "Inventory WILL BE updated, showing progress via swiftDialog …"
+            touch "${inventoryDelayFilepath}"
+            updateInventoryProgress
+            completeInventoryProgress
+            quitScript "0"
+            ;;
+
+    esac
 
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Create "Inventory Update" dialog
+# Sideways Exit
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-notice "Create Inventory Update dialog …"
-eval "$dialogInventoryUpdate" &
-
-
-
-SECONDS="0"
-updateDialog "progress: 1"
-
-/usr/local/bin/jamf recon -endUsername "${loggedInUser}" --verbose >> "$inventoryLog" &
-
-until [[ "$inventoryProgressText" == "Submitting data to"* ]]; do
-
-    progressPercentage=$( echo "scale=2 ; ( $SECONDS / $estimatedTotalSeconds ) * 100" | bc )
-    updateDialog "progress: ${progressPercentage}"
-
-    inventoryProgressText=$( tail -n1 "$inventoryLog" | sed -e 's/verbose: //g' -e 's/Found app: \/System\/Applications\///g' -e 's/Utilities\///g' -e 's/Found app: \/Applications\///g' -e 's/Running script for the extension attribute //g' )
-    updateDialog "progresstext: ${inventoryProgressText}"
-
-done
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Complete "Inventory Update" dialog
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-logComment "Complete Inventory Update dialog"
-updateDialog "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
-updateDialog "message: Inventory update complete"
-updateDialog "progress: 100"
-updateDialog "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
-logComment "Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
-
-sleep 3
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Exit
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-quitScript
+quitScript "1"
