@@ -54,7 +54,7 @@ export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
 scriptVersion="0.0.7"
-scriptLog="/var/log/org.churchofjesuschrist.ics.log"
+scriptLog="/var/log/org.churchofjesuschrist.log"
 
 # Display an inventory progress dialog, even if an inventory update is not required
 displayProgessSansUpdate="true"
