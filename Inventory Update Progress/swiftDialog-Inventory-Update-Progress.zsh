@@ -3,10 +3,10 @@
 
 ####################################################################################################
 #
-#   swiftDialog Inventory Update Progress
-#   https://snelson.us/2022/10/inventory-update-progress/
+#   Duration-triggered Inventory Update Progress with swiftDialog
+#   https://snelson.us/2024/02/duration-triggered-inventory-update-progress-with-swiftdialog/
 #
-#   Purpose: Provide more detailed feedback on Jamf Pro Self Service Inventory Update
+#   Provide your users more detailed feedback when updating inventory via Jamf Pro Self Service, at the duration **you** specify
 #
 ####################################################################################################
 #
