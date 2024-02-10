@@ -31,7 +31,7 @@
 # Version 0.0.6, 29-Nov-2022, Dan K. Snelson (@dan-snelson)
 #	Added --position bottomright
 #
-# Version 0.0.7, 07-Feb-2024, Dan K. Snelson (@dan-snelson)
+# Version 0.0.7, 10-Feb-2024, Dan K. Snelson (@dan-snelson)
 #   Added check for recently executed inventory update
 #
 #       :fire: **Breaking Change** for users prior to `0.0.7` :fire:
@@ -53,10 +53,10 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
-scriptVersion="0.0.7-b6"
+scriptVersion="0.0.7"
 scriptLog="/var/log/org.churchofjesuschrist.ics.log"
 
-# Display an inventory progress dialog even if an inventory update is not required
+# Display an inventory progress dialog, even if an inventory update is not required
 displayProgessSansUpdate="true"
 
 # swiftDialog Binary & Logs 
