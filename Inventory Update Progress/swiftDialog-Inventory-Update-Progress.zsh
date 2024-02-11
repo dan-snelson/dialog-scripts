@@ -4,7 +4,7 @@
 ####################################################################################################
 #
 #   Duration-triggered Inventory Update Progress with swiftDialog
-#   https://snelson.us/2024/02/duration-triggered-inventory-update-progress-with-swiftdialog/
+#   https://snelson.us/2024/02/inventory-update-progress/
 #
 #   Provide your users more detailed feedback when updating inventory via Jamf Pro Self Service, at the duration **you** specify
 #
