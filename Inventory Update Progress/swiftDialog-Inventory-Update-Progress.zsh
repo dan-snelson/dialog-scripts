@@ -1,4 +1,4 @@
-#!/bin/zsh 
+#!/bin/zsh --no-rcs
 # shellcheck shell=bash
 
 ####################################################################################################
@@ -40,6 +40,9 @@
 #       hard-coded variable in the script (as it should have been all along) — Sorry for any
 #       Dan-induced headaches.
 #
+# Version 0.0.8, 14-Mar-2024, Dan K. Snelson (@dan-snelson)
+#   Updated shebang to include `--no-rcs`
+#
 ####################################################################################################
 
 
@@ -53,7 +56,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
-scriptVersion="0.0.7"
+scriptVersion="0.0.8"
 scriptLog="/var/log/org.churchofjesuschrist.log"
 
 # Display an inventory progress dialog, even if an inventory update is not required
