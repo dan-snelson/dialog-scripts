@@ -24,4 +24,4 @@ One of the more welcome features of swiftDialog 2.4.0 is actionable macOS Notifi
 > Additionally, the Script Parameter for `subtitle` has been removed.
 
 - [swiftDialog Pre-install.bash](swiftDialog%20Pre-install.bash) (0.0.4)
-- [swiftDialog Notifications.bash](swiftDialog%20Notifications.bash) (0.0.4)
+- [swiftDialog Notifications.zsh](swiftDialog%20Notifications.zsh) (0.0.5)
