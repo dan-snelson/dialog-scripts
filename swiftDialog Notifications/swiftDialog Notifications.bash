@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh --no-rcs
 # shellcheck shell=bash
 # shellcheck disable=SC2317
 
@@ -24,6 +24,9 @@
 #       Dan-induced headaches.
 #       
 #       Additionally, the Script Parameter for `subtitle` has been removed.
+#       
+#       Version `0.0.5`, 21-Mar-2024, Andrew Spokes (@techtrekkie)
+#        - Added `--no-rcs` to shebang of script. This addresses CVE-2024-27301. https://nvd.nist.gov/vuln/detail/CVE-2024-27301/change-record?changeRecordedOn=03/14/2024T15:15:50.680-0400
 #
 ####################################################################################################
 
