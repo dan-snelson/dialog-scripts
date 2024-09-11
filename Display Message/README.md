@@ -2,7 +2,7 @@
 
 > Leverage `switftDialog` and Jamf Pro Policy Script Parameters to easily display engaging end-user messages.
 
-![Upgrade to macOS Ventura](images/Upgrade_to_Ventura.png "Upgrade to macOS Ventura")
+![Upgrade to macOS Sequoia](images/Upgrade_to_Sequoia.png "Upgrade to macOS Sequoia")
 ![Display Message via Dialog](images/Display-Message-via-Dialog-Instructions.png "Display Message via Dialog")
 
 
