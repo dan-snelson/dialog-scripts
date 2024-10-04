@@ -599,6 +599,12 @@ elif [[ ${ageInSeconds} -ge ${secondsToWait} ]]; then
             selfServiceInventoryUpdate
             quitScript "0"
             ;;
+            
+        "Silent Always" ) # Update inventory, sans swiftDialog bypassing the ageInSeconds parameter
+            logComment "Inventory WILL BE updated, sans swiftDialog …"
+            /usr/local/bin/jamf recon -endUsername "${loggedInUser}"
+            quitScript "0"
+            ;;
 
         "Silent" ) # Update inventory, sans swiftDialog
             logComment "Inventory WILL BE updated, sans swiftDialog …"
