@@ -43,6 +43,10 @@
 # Version 0.0.8, 14-Mar-2024, Dan K. Snelson (@dan-snelson)
 #   Updated shebang to include `--no-rcs`
 #
+# Version 0.0.9, 12-Oct-2024, Dan K. Snelson (@dan-snelson)
+#   - Added new Operation Mode: Silent Always (thanks for #61, @mechman27!)
+#   - Updated `swiftDialogMinimumRequiredVersion` to 2.5.2.4777
+#
 ####################################################################################################
 
 
@@ -56,14 +60,14 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Script Version & Client-side Log
-scriptVersion="0.0.8"
+scriptVersion="0.0.9"
 scriptLog="/var/log/org.churchofjesuschrist.log"
 
 # Display an inventory progress dialog, even if an inventory update is not required
 displayProgessSansUpdate="true"
 
 # swiftDialog Binary & Logs 
-swiftDialogMinimumRequiredVersion="2.4.0.4750"
+swiftDialogMinimumRequiredVersion="2.5.2.4777"
 dialogBinary="/usr/local/bin/dialog"
 dialogLog=$( mktemp -u /var/tmp/dialogLog.XXX )
 inventoryLog=$( mktemp -u /var/tmp/inventoryLog.XXX )
@@ -84,7 +88,7 @@ secondsToWait="${4:-"86400"}"
 # Parameter 5: Estimated Total Seconds
 estimatedTotalSeconds="${5:-"120"}"
 
-# Parameter 6: Operation Mode [ Default (i.e., delayed inventory update with swiftDialog progress) | Self Service | Silent | Uninstall ]
+# Parameter 6: Operation Mode [ Default (i.e., delayed inventory update with swiftDialog progress) | Self Service |  Silent Always |  Silent | Uninstall ]
 operationMode="${6:-"Default"}"
 
 
@@ -399,7 +403,7 @@ function quitScript() {
 
 function updateDialog() {
     echo "${1}" >> "${dialogLog}"
-    sleep 0.4
+    sleep 0.1
 }
 
 
@@ -553,6 +557,12 @@ if [[ ${ageInSeconds} -le ${secondsToWait} ]]; then
             selfServiceInventoryUpdate
             quitScript "0"
             ;;
+        
+        "Silent Always" ) # Update inventory, sans swiftDialog bypassing the ageInSeconds parameter
+            logComment "Inventory WILL BE updated, sans swiftDialog …"
+            /usr/local/bin/jamf recon -endUsername "${loggedInUser}"
+            quitScript "0"
+            ;;
 
         "Silent" ) # Don't leverage swiftDialog
             notice "Inventory will NOT be updated …"
@@ -591,6 +601,12 @@ elif [[ ${ageInSeconds} -ge ${secondsToWait} ]]; then
 
         "Self Service" ) # When executed via Self Service, *always* update inventory 
             selfServiceInventoryUpdate
+            quitScript "0"
+            ;;
+            
+        "Silent Always" ) # Update inventory, sans swiftDialog bypassing the ageInSeconds parameter
+            logComment "Inventory WILL BE updated, sans swiftDialog …"
+            /usr/local/bin/jamf recon -endUsername "${loggedInUser}"
             quitScript "0"
             ;;
 
