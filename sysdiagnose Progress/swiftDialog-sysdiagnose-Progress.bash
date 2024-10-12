@@ -30,6 +30,9 @@
 # Version 1.3.2, 09-Sep-2023, Dan K. Snelson (@dan-snelson)
 #   Updated `dialogURL`
 #
+# Version 1.3.3, 12-Oct-2024, Dan K. Snelson (@dan-snelson)
+#   Updated for macOS 15.0.1
+#
 ####################################################################################################
 
 
@@ -40,7 +43,7 @@
 #
 ####################################################################################################
 
-scriptVersion="1.3.2"
+scriptVersion="1.3.3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
 loggedInUserHome=$( dscl . read /Users/"${loggedInUser}" NFSHomeDirectory | awk -F ": " '{print $2}' )
@@ -57,7 +60,7 @@ timestamp=$( date '+%Y.%m.%d_%H-%M-%S' )
 caseNumber="${4:-"86753099"}"
 gigafilesLink="${5:-"https://gigafiles.apple.com/data-capture/edc"}"
 scriptLog="${6:-"/var/tmp/org.churchofjesuschrist.log"}"
-estimatedTotalBytes="${7:-"1587046"}"
+estimatedTotalBytes="${7:-"256955877"}"
 
 
 
@@ -146,7 +149,7 @@ dialogSysdiagnoseProgress="$dialogApp \
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 title="AppleCare Enterprise Support Case No. ${caseNumber}"
-message="### Log gathering complete  \n\nPlease complete the following steps to provide your logs to  \nAppleCare Enterprise Support:  \n1. Click **Upload** to open Safari to the Apple Support site for this case  \n1. Login with your Apple ID\n1. Add the file listed below from your Desktop  \n\n**sysdiagnose_${serialNumber}_${timestamp}.tar.gz**"
+message="### Log gathering complete  \n\nPlease complete the following steps to provide your logs to  \nAppleCare Enterprise Support:  \n1. Click **Upload** to open Safari to the Apple Support site for this case  \n1. Login with your Apple Account\n1. Add the file listed below from your Desktop  \n\n**sysdiagnose_${serialNumber}_${timestamp}.tar.gz**"
 icon="https://ics.services.jamfcloud.com/icon/hash_4a2fef8d10a0e9ab126cfbafd4950615a0dc647e4e300493787e504aefebf62a"
 overlayIcon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 uploadButton1text="Upload"
@@ -284,7 +287,7 @@ function sysdiagnoseWithProgress() {
 
     updateProgressDialog "progress: 0"
 
-    while [[ -n $(pgrep "sysdiagnose_helper") ]]; do
+    while pgrep -q -x "sysdiagnose"; do
 
         currentTotal=$( du -HAdP "$sysdiagnoseProgressDirectory" | awk '{ print $1 }' )
         # updateScriptLog "currentTotal: $currentTotal" # Uncomment to determine value for estimatedTotalBytes
@@ -408,7 +411,7 @@ function quitScript() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function updateProgressDialog() {
-    sleep 0.4
+    sleep 0.1
     echo "${1}" >> "${dialogProgressLog}"
 }
 
