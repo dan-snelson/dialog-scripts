@@ -33,47 +33,117 @@
 # Version 1.3.3, 12-Oct-2024, Dan K. Snelson (@dan-snelson)
 #   Updated for macOS 15.0.1
 #
+# Version 1.4.0, 17-Oct-2024, Dan K. Snelson (@dan-snelson)
+#   Manually include system and user /Library/Logs/DiagnosticReports
+#
+# Version 1.4.1, 20-Dec-2024, Dan K. Snelson (@dan-snelson)
+#   - Updates for swiftDialog 2.5.5
+#
 ####################################################################################################
 
 
 
 ####################################################################################################
 #
-# Variables
+# Global Variables
 #
 ####################################################################################################
 
-scriptVersion="1.3.3"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
-loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
-loggedInUserHome=$( dscl . read /Users/"${loggedInUser}" NFSHomeDirectory | awk -F ": " '{print $2}' )
+
+# Script Version
+scriptVersion="1.4.1"
+
+# Client-side Log
+scriptLog="/var/log/org.churchofjesuschrist.log"
+
+# Progress Directory
+sysdiagnoseProgressDirectory="/var/tmp/sysdiagnoseProgress"
+
+# Timestamp
+timestamp=$( date '+%Y.%m.%d_%H-%M-%S' )
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Jamf Pro Script Parameters
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Parameter 4: AppleCare Enterprise Case Number
+caseNumber="${4:-"86753099"}"
+
+# Parameter 5: GigaFiles URL
+gigafilesLink="${5:-"https://gigafiles.apple.com/data-capture/edc"}"
+
+# Parameter 6: Estimated Total Seconds
+estimatedTotalSeconds="${6:-"240"}"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Organization Variables
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Script Human-readabale Name
+humanReadableScriptName="sysdiagnose with Progress"
+
+# Organization's Script Name
+organizationScriptName="SDwP"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Serial Number and Operating System
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+serialNumber=$( system_profiler SPHardwareDataType | grep Serial |  awk '{print $NF}' )
 osVersion=$( sw_vers -productVersion )
+osVersionExtra=$( sw_vers -productVersionExtra ) 
+osBuild=$( sw_vers -buildVersion )
 osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
-dialogApp="/usr/local/bin/dialog"
+
+# Report RSR sub version if applicable
+if [[ -n $osVersionExtra ]] && [[ "${osMajorVersion}" -ge 13 ]]; then osVersion="${osVersion} ${osVersionExtra}"; fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Logged-in User Variables
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+loggedInUserFullname=$( id -F "${loggedInUser}" )
+loggedInUserFirstname=$( echo "$loggedInUserFullname" | sed -E 's/^.*, // ; s/([^ ]*).*/\1/' | sed 's/\(.\{25\}\).*/\1…/' | awk '{print ( $0 == toupper($0) ? toupper(substr($0,1,1))substr(tolower($0),2) : toupper(substr($0,1,1))substr($0,2) )}' )
+loggedInUserID=$( id -u "${loggedInUser}" )
+loggedInUserGroupMembership=$( id -Gn "${loggedInUser}" )
+loggedInUserHome=$( dscl . read /Users/"${loggedInUser}" NFSHomeDirectory | awk -F ": " '{print $2}' )
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Dialog binary (and enable swiftDialog's `--verbose` mode with script's operationMode)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# swiftDialog Binary Path
+dialogBinary="/usr/local/bin/dialog"
+
+# swiftDialog Minimum Required Version
+swiftDialogMinimumRequiredVersion="2.5.5.4802"
+
+# swiftDialog Command Files
 dialogWelcomeLog=$( mktemp /var/tmp/dialogWelcomeLog.XXX )
 dialogProgressLog=$( mktemp /var/tmp/dialogProgressLog.XXX )
 dialogCompleteLog=$( mktemp /var/tmp/dialogCompleteLog.XXX )
 sysdiagnoseExecutionLog=$( mktemp /var/tmp/sysdiagnoseExecutionLog.XXX )
-sysdiagnoseProgressDirectory="/var/tmp/sysdiagnoseProgress"
-serialNumber=$( system_profiler SPHardwareDataType | grep Serial |  awk '{print $NF}' )
-timestamp=$( date '+%Y.%m.%d_%H-%M-%S' )
-caseNumber="${4:-"86753099"}"
-gigafilesLink="${5:-"https://gigafiles.apple.com/data-capture/edc"}"
-scriptLog="${6:-"/var/tmp/org.churchofjesuschrist.log"}"
-estimatedTotalBytes="${7:-"256955877"}"
 
+# Set Permissions on Dialog Command Files
+chmod -vv 644 "${dialogWelcomeLog}" | tee -a "${scriptLog}"
+chmod -vv 644 "${dialogProgressLog}" | tee -a "${scriptLog}"
+chmod -vv 644 "${dialogCompleteLog}" | tee -a "${scriptLog}"
+chmod -vv 644 "${sysdiagnoseExecutionLog}" | tee -a "${scriptLog}"
 
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate logged-in user
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
-    updateScriptLog "No user logged-in; exiting."
-    exit 0
-else
-    uid=$(id -u "${loggedInUser}")
-fi
+# The total number of steps for the progress bar, plus one (i.e., updateWelcomeDialog "progress: increment")
+progressSteps="18"
 
 
 
@@ -97,11 +167,10 @@ welcomeProgressText="Waiting; click Continue to proceed"
 # Welcome Dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogSysdiagnoseWelcome="$dialogApp \
+dialogSysdiagnoseWelcome="$dialogBinary \
 --title \"$title\" \
 --message \"$message\" \
 --icon \"$icon\" \
---overlayicon \"$overlayIcon\" \
 --button1text \"$button1text\" \
 --button2text \"$button2text\" \
 --infobuttontext \"$infobuttontext\" \
@@ -112,8 +181,10 @@ dialogSysdiagnoseWelcome="$dialogApp \
 --titlefont size=22 \
 --messagefont size=13 \
 --width 700 \
---height 450 \
+--height 500 \
 --commandfile \"$dialogWelcomeLog\" "
+
+# --overlayicon \"$overlayIcon\" \
 
 
 
@@ -132,7 +203,7 @@ progressProgressText="Initializing …"
 # Progress Dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogSysdiagnoseProgress="$dialogApp \
+dialogSysdiagnoseProgress="$dialogBinary \
 --title \"$title\" \
 --message \"$message\" \
 --icon \"$icon\" \
@@ -149,7 +220,7 @@ dialogSysdiagnoseProgress="$dialogApp \
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 title="AppleCare Enterprise Support Case No. ${caseNumber}"
-message="### Log gathering complete  \n\nPlease complete the following steps to provide your logs to  \nAppleCare Enterprise Support:  \n1. Click **Upload** to open Safari to the Apple Support site for this case  \n1. Login with your Apple Account\n1. Add the file listed below from your Desktop  \n\n**sysdiagnose_${serialNumber}_${timestamp}.tar.gz**"
+message="### Log gathering complete  \n\nPlease complete the following steps to provide your logs to  \nAppleCare Enterprise Support:  \n1. Click **Upload** to open Safari to the Apple Support site for this case  \n1. Login with your Apple Account\n1. Add the file listed below from your Desktop  \n\n- **sysdiagnose_${serialNumber}_${timestamp}.tar.gz**\n- **${serialNumber}_System_DiagnosticReports-${timestamp}.zip**\n- **${serialNumber}_User_DiagnosticReports-${timestamp}.zip**"
 icon="https://ics.services.jamfcloud.com/icon/hash_4a2fef8d10a0e9ab126cfbafd4950615a0dc647e4e300493787e504aefebf62a"
 overlayIcon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 uploadButton1text="Upload"
@@ -162,7 +233,7 @@ infobuttonaction="https://servicenow.company.com/support?id=kb_article_view&sysp
 # Complete Dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogSysdiagnoseUpload="$dialogApp \
+dialogSysdiagnoseUpload="$dialogBinary \
 --title \"$title\" \
 --message \"$message\" \
 --icon \"$icon\" \
@@ -173,7 +244,7 @@ dialogSysdiagnoseUpload="$dialogApp \
 --moveable \
 --titlefont size=22 \
 --messagefont size=13 \
---width 700 \
+--width 725 \
 --height 450 \
 --commandfile \"$dialogCompleteLog\" "
 
@@ -186,73 +257,132 @@ dialogSysdiagnoseUpload="$dialogApp \
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Script Logging
+# Client-side Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function updateScriptLog() {
-    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
+    echo "${organizationScriptName} ($scriptVersion): $( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
+}
+
+function preFlight() {
+    updateScriptLog "[PRE-FLIGHT]      ${1}"
+}
+
+function logComment() {
+    updateScriptLog "                  ${1}"
+}
+
+function notice() {
+    updateScriptLog "[NOTICE]          ${1}"
+}
+
+function info() {
+    updateScriptLog "[INFO]            ${1}"
+}
+
+function debug() {
+    if [[ "$operationMode" == "debug" ]]; then
+        updateScriptLog "[DEBUG]           ${1}"
+    fi
+}
+
+function errorOut(){
+    updateScriptLog "[ERROR]           ${1}"
+}
+
+function error() {
+    updateScriptLog "[ERROR]           ${1}"
+    let errorCount++
+}
+
+function warning() {
+    updateScriptLog "[WARNING]         ${1}"
+    let errorCount++
+}
+
+function fatal() {
+    updateScriptLog "[FATAL ERROR]     ${1}"
+    exit 1
+}
+
+function quitOut(){
+    updateScriptLog "[QUIT]            ${1}"
 }
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# JAMF Display Message (for fallback in case swiftDialog fails to install)
+# Validate / install swiftDialog (Thanks big bunches, @acodega!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function jamfDisplayMessage() {
-    updateScriptLog "Jamf Display Message: ${1}"
-    /usr/local/jamf/bin/jamf displayMessage -message "${1}" &
-}
+function dialogInstall() {
 
+    # Get the URL of the latest PKG From the Dialog GitHub repo
+    dialogURL=$(curl -L --silent --fail "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
+    # Expected Team ID of the downloaded PKG
+    expectedDialogTeamID="PWA5E9TQ59"
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (thanks, Adam!)
-# https://github.com/acodega/dialog-scripts/blob/main/dialogCheckFunction.sh
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function dialogCheck(){
-  # Get the URL of the latest PKG From the Dialog GitHub repo
-  dialogURL=$(curl -L --silent --fail "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
-
-  # Expected Team ID of the downloaded PKG
-  expectedDialogTeamID="PWA5E9TQ59"
-
-  # Check for Dialog and install if not found
-  if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
-
-    updateScriptLog "Dialog not found. Installing..."
+    preFlight "Installing swiftDialog..."
 
     # Create temporary working directory
-    workDirectory=$( basename "$0" )
-    tempDirectory=$( mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+    workDirectory=$( /usr/bin/basename "$0" )
+    tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
 
     # Download the installer package
-    curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
+    /usr/bin/curl --location --silent "$dialogURL" -o "$tempDirectory/Dialog.pkg"
 
     # Verify the download
     teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
 
     # Install the package if Team ID validates
-    if [ "$expectedDialogTeamID" = "$teamID" ] || [ "$expectedDialogTeamID" = "" ]; then
- 
-      /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+    if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
+
+        /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+        sleep 2
+        dialogVersion=$( /usr/local/bin/dialog --version )
+        preFlight "swiftDialog version ${dialogVersion} installed; proceeding..."
 
     else
 
-      jamfDisplayMessage "Dialog Team ID verification failed."
-      exit 1
+        # Display a so-called "simple" dialog if Team ID fails to validate
+        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Setup Your Mac: Error" buttons {"Close"} with icon caution'
+        completionActionOption="Quit"
+        exitCode="1"
+        quitScript
 
     fi
- 
+
     # Remove the temporary working directory when done
-    /bin/rm -Rf "$tempDirectory"  
+    /bin/rm -Rf "$tempDirectory"
 
-  else
+}
 
-    updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
 
-  fi
+
+function dialogCheck() {
+
+    # Check for Dialog and install if not found
+    if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
+
+        preFlight "swiftDialog not found. Installing..."
+        dialogInstall
+
+    else
+
+        dialogVersion=$(/usr/local/bin/dialog --version)
+        if [[ "${dialogVersion}" < "${swiftDialogMinimumRequiredVersion}" ]]; then
+            
+            preFlight "swiftDialog version ${dialogVersion} found but swiftDialog ${swiftDialogMinimumRequiredVersion} or newer is required; updating..."
+            dialogInstall
+            
+        else
+
+        preFlight "swiftDialog version ${dialogVersion} found; proceeding..."
+
+        fi
+    
+    fi
 
 }
 
@@ -279,19 +409,19 @@ function sysdiagnoseWithProgress() {
 
     eval "$dialogSysdiagnoseProgress" &
 
+    SECONDS="0"
+
     updateScriptLog "Starting sysdiagnose …"
 
     echo -ne '\n' | sysdiagnose -u -A sysdiagnose_"${serialNumber}"_"${timestamp}" -f "$sysdiagnoseProgressDirectory" -V / | cat > "$sysdiagnoseExecutionLog" &
 
     sleep 0.5
 
-    updateProgressDialog "progress: 0"
+    updateProgressDialog "progress: 1"
 
     while pgrep -q -x "sysdiagnose"; do
 
-        currentTotal=$( du -HAdP "$sysdiagnoseProgressDirectory" | awk '{ print $1 }' )
-        # updateScriptLog "currentTotal: $currentTotal" # Uncomment to determine value for estimatedTotalBytes
-        progressPercentage=$( echo "scale=2 ; ( $currentTotal / $estimatedTotalBytes ) *100 " | bc )
+        progressPercentage=$( echo "scale=2 ; ( $SECONDS / $estimatedTotalSeconds ) * 100" | bc )
         updateProgressDialog "progress: ${progressPercentage}"
 
         sysdialogProgressText=$( tail -n1 "$sysdiagnoseExecutionLog" | sed -e 's|Executing container: ||g' -e 's|^[.)]|Processing …|g' -Ee 's|/?.*/[^/]*\.tmp||g' )
@@ -300,15 +430,31 @@ function sysdiagnoseWithProgress() {
 
     done
 
-    updateProgressDialog "progress: 100"
-    updateProgressDialog "progresstext: Complete!"
+    logComment "Compress System DiagnosticReports …"
+    zip -rjq "$sysdiagnoseProgressDirectory/${serialNumber}_System_DiagnosticReports-${timestamp}.zip" "/Library/Logs/DiagnosticReports"
 
-    sleep 5
+    logComment "Compress User DiagnosticReports …"
+    zip -rjq "$sysdiagnoseProgressDirectory/${serialNumber}_User_DiagnosticReports-${timestamp}.zip" "${loggedInUserHome}/Library/Logs/DiagnosticReports"
 
-    updateProgressDialog "quit: "
+    updateProgressDialog "progress: 98"
+    updateProgressDialog "progresstext: Moving files …"
 
     updateScriptLog "Move sysdiagnose file to user's Desktop …"
-    mv -v "$sysdiagnoseProgressDirectory"/sysdiagnose_"${serialNumber}"_"${timestamp}".tar.gz "${loggedInUserHome}"/Desktop/
+    mv -v "$sysdiagnoseProgressDirectory/sysdiagnose_${serialNumber}_${timestamp}.tar.gz" "${loggedInUserHome}/Desktop/"
+
+    updateScriptLog "Move System DiagnosticReports file to user's Desktop …"
+    mv -v "$sysdiagnoseProgressDirectory/${serialNumber}_System_DiagnosticReports-${timestamp}.zip" "${loggedInUserHome}/Desktop/"
+
+    updateScriptLog "Move User DiagnosticReports file to user's Desktop …"
+    mv -v "$sysdiagnoseProgressDirectory/${serialNumber}_User_DiagnosticReports-${timestamp}.zip" "${loggedInUserHome}/Desktop/"
+
+    updateProgressDialog "progress: 100"
+    updateProgressDialog "progresstext: Complete! Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+    logComment "Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+
+    sleep 3
+
+    updateProgressDialog "quit: "
 
 }
 
@@ -419,35 +565,61 @@ function updateProgressDialog() {
 
 ####################################################################################################
 #
-# Program
+# Pre-flight Checks
 #
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm script is running as root
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ $(id -u) -ne 0 ]]; then
-  echo "This script must be run as root; exiting."
-  exit 1
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Logging
+# Pre-flight Check: Client-side Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ! -f "${scriptLog}" ]]; then
     touch "${scriptLog}"
-    updateScriptLog "*** Created log file via script ***"
+    if [[ -f "${scriptLog}" ]]; then
+        preFlight "Created specified scriptLog: ${scriptLog}"
+    else
+        fatal "Unable to create specified scriptLog '${scriptLog}'; exiting.\n\n(Is this script running as 'root' ?)"
+    fi
+else
+    preFlight "Specified scriptLog '${scriptLog}' exists; writing log entries to it"
+fi
+
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Logging Preamble
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+preFlight "\n\n###\n# $humanReadableScriptName (${scriptVersion})\n# Operation Mode: ${operationMode}\n###\n"
+preFlight "Initiating …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Confirm script is running as root
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ $(id -u) -ne 0 ]]; then
+    fatal "This script must be run as root; exiting."
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Create sysdiagnose Temporary Directory
+# Pre-flight Check: Validate swiftDialog is installed
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+preFlight "Validate swiftDialog is installed"
+dialogCheck
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Create sysdiagnose Temporary Directory
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+preFlight "Create sysdiagnose Temporary Directory"
 
 if [[ ! -d "${sysdiagnoseProgressDirectory}" ]]; then
     mkdir -p "${sysdiagnoseProgressDirectory}"
@@ -459,12 +631,18 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Logging preamble
+# Pre-flight Check: Complete
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "User-friendly sysdiagnose (${scriptVersion})"
+preFlight "Complete!"
 
 
+
+####################################################################################################
+#
+# Program
+#
+####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Validate Operating System
@@ -476,14 +654,6 @@ else
     echo "macOS ${osMajorVersion} installed; executing sysdiagnose sans progress …"
     sysdiagnoseForOlderOSes
 fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate swiftDialog is installed
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-dialogCheck
 
 
 
@@ -542,12 +712,12 @@ case ${uploadReturncode} in
         updateScriptLog "${loggedInUser} clicked ${uploadButton1text};"
 
         updateScriptLog "Open upload link … "
-        runAsUser open -a /Applications/Safari.app $gigafilesLink
+        runAsUser open -a /Applications/Safari.app "$gigafilesLink"
 
         sleep 30
 
         updateScriptLog "Reveal sysdiagnose in Finder … "
-        runAsUser open -R ${loggedInUserHome}/Desktop/sysdiagnose_${serialNumber}_${timestamp}.tar.gz
+        runAsUser open -R "${loggedInUserHome}/Desktop/sysdiagnose_${serialNumber}_${timestamp}.tar.gz"
 
         quitScript "0"
 
