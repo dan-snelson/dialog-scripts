@@ -1,4 +1,5 @@
 #!/bin/bash
+
 ####################################################################################################
 #
 # ABOUT
@@ -26,47 +27,110 @@
 #   Version 0.0.4, 09-Sep-2023, Dan K. Snelson (@dan-snelson)
 #       Updated `dialogURL`
 #
+#   Version 0.0.5, 03-Jan-2025, Dan K. Snelson (@dan-snelson)
+#       - Updated to latest standard
+#       - Updates for swiftDialog 2.5.5
+#
 ####################################################################################################
 
 
 
 ####################################################################################################
 #
-# Variables
-#
-####################################################################################################
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Global Variables
+#
+####################################################################################################
+
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
+
+# Script Version
+scriptVersion="0.0.5"
+
+# Client-side Log
+scriptLog="/var/log/org.churchofjesuschrist.log"
+
+# Timestamp
+timestamp=$( date '+%Y-%m-%d-%H%M%S' )
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Jamf Pro Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-scriptVersion="0.0.4"
-export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
+# Parameter 4: Debug Mode
+debugMode="${4:-"false"}"
+
+# Parameter 5: Estimated Total Seconds
+estimatedTotalSeconds="${5:-"120"}"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Organization Variables
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Script Human-readabale Name
+humanReadableScriptName="Disk Usage"
+
+# Organization's Script Name
+organizationScriptName="DU"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Logged-in User Variables
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 loggedInUser=$( echo "show State:/Users/ConsoleUser" | scutil | awk '/Name :/ { print $3 }' )
+loggedInUserFullname=$( id -F "${loggedInUser}" )
+loggedInUserFirstname=$( echo "$loggedInUserFullname" | sed -E 's/^.*, // ; s/([^ ]*).*/\1/' | sed 's/\(.\{25\}\).*/\1…/' | awk '{print ( $0 == toupper($0) ? toupper(substr($0,1,1))substr(tolower($0),2) : toupper(substr($0,1,1))substr($0,2) )}' )
+loggedInUserID=$( id -u "${loggedInUser}" )
 loggedInUserHome=$( dscl . read /Users/"${loggedInUser}" NFSHomeDirectory | awk -F ": " '{print $2}' )
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Operating System, Machine and Volume Names
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+osVersion=$( sw_vers -productVersion )
+osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
 machineName=$( scutil --get LocalHostName )
 volumeName=$( diskutil info / | grep "Volume Name:" | awk '{print $3,$4}' )
-timestamp=$( date '+%Y-%m-%d-%H%M%S' )
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Dialog binary (and enable swiftDialog's `--verbose` mode with script's operationMode)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# swiftDialog Binary Path
+dialogBinary="/usr/local/bin/dialog"
+
+# swiftDialog Minimum Required Version
+swiftDialogMinimumRequiredVersion="2.5.5.4802"
+
+# swiftDialog Command Files
+dialogWelcomeLog=$( mktemp /var/tmp/dialogWelcomeLog.XXXX )
+dialogProgressLog=$( mktemp /var/tmp/dialogProgressLog.XXXX )
+dialogCompleteLog=$( mktemp /var/tmp/dialogCompleteLog.XXXX )
+
+# Set Permissions on Dialog Command Files
+chmod -vv 644 "${dialogWelcomeLog}" | tee -a "${scriptLog}"
+chmod -vv 644 "${dialogProgressLog}" | tee -a "${scriptLog}"
+chmod -vv 644 "${dialogCompleteLog}" | tee -a "${scriptLog}"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Disk Usage-related Variables
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 diskUsageEntireVolumeTop50=$( mktemp /var/tmp/diskUsageEntireVolumeTop50.XXXX )
 diskUsageUsersHomeTop50=$( mktemp /var/tmp/diskUsageUsersHomeTop50.XXXX )
 outputFileNameEntireVolume="$loggedInUserHome/Desktop/$machineName-Volume-Usage-$timestamp.txt"
 outputFileNameUsersHome="$loggedInUserHome/Desktop/$loggedInUser-Home-Usage-$timestamp.txt"
-osVersion=$( sw_vers -productVersion )
-osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
-dialogApp="/usr/local/bin/dialog"
-dialogWelcomeLog=$( mktemp /var/tmp/dialogWelcomeLog.XXXX )
-dialogProgressLog=$( mktemp /var/tmp/dialogProgressLog.XXXX )
-dialogCompleteLog=$( mktemp /var/tmp/dialogCompleteLog.XXXX )
-scriptLog="${4:-"/var/tmp/org.churchofjesuschrist.log"}"
-debugMode="${5:-"true"}"
-estimatedTotalSeconds="${6:-"120"}"
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Free Space Variables
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
 freeSpace=$( diskutil info / | grep -E 'Free Space|Available Space|Container Free Space' | awk -F ":\s*" '{ print $2 }' | awk -F "(" '{ print $1 }' | xargs )
 freeBytes=$( diskutil info / | grep -E 'Free Space|Available Space|Container Free Space' | awk -F "(\\\(| Bytes\\\))" '{ print $2 }' )
 diskBytes=$( diskutil info / | grep -E 'Total Space' | awk -F "(\\\(| Bytes\\\))" '{ print $2 }' )
@@ -80,10 +144,7 @@ diskSpace="$freeSpace free ( ${freePercentage}% available )"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 welcomeTitle="Disk Usage ($scriptVersion)"
-if [[ ${debugMode} == "true" ]]; then
-    welcomeTitle="DEBUG MODE | $welcomeTitle"
-fi
-welcomeMessage="This script analyzes the following locations and outputs text files to your Desktop, which list the 50 largest directories for both:  \n- **${volumeName}** (non-system files)  \n- **${loggedInUserHome}**  \n\nPlease be patient as execution time can be in excess of ${estimatedTotalSeconds} seconds.  \n\nClick **Continue** to proceed."
+welcomeMessage="Happy $( date +'%A' ), ${loggedInUserFirstname}!  \n  \nThis script analyzes the following locations and outputs text files to your Desktop, which list the 50 largest directories for both:  \n- **${volumeName}** (non-system files)  \n- **${loggedInUserHome}**  \n\nPlease be patient as execution time can be in excess of ${estimatedTotalSeconds} seconds.  \n\nClick **Continue** to proceed."
 welcomeIcon="/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/Internal.icns"
 overlayIcon=$( defaults read /Library/Preferences/com.jamfsoftware.jamf.plist self_service_app_path )
 button1text="Continue …"
@@ -92,13 +153,19 @@ infobuttontext="KB8675309"
 infobuttonaction="https://servicenow.company.com/support?id=kb_article_view&sysparm_article=${infobuttontext}"
 welcomeProgressText="Waiting; click Continue to proceed"
 
+# Debug Mode
+if [[ ${debugMode} == "true" ]]; then
+    welcomeTitle="DEBUG MODE | $welcomeTitle"
+    button1text="DEBUG MODE | $button1text"
+fi
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Welcome Dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogWelcome="$dialogApp \
+dialogWelcome="$dialogBinary \
 --title \"$welcomeTitle\" \
 --message \"$welcomeMessage\" \
 --icon \"$welcomeIcon\" \
@@ -115,7 +182,7 @@ dialogWelcome="$dialogApp \
 --messagefont size=14 \
 --iconsize 135 \
 --width 700 \
---height 325 \
+--height 375 \
 --commandfile \"$dialogWelcomeLog\" "
 
 
@@ -135,7 +202,7 @@ progressProgressText="Initializing …"
 # Progress Dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogProgress="$dialogApp \
+dialogProgress="$dialogBinary \
 --title \"$progressTitle\" \
 --message \"$progressMessage\" \
 --icon \"$progressIcon\" \
@@ -166,7 +233,7 @@ completeButton1text="Close"
 # Complete Dialog Settings and Features
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-dialogComplete="$dialogApp \
+dialogComplete="$dialogBinary \
 --title \"$completeTitle\" \
 --message \"$completeMessage\" \
 --icon \"$completeIcon\" \
@@ -185,19 +252,6 @@ dialogComplete="$dialogApp \
 
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate logged-in user
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ -z "${loggedInUser}" || "${loggedInUser}" == "loginwindow" ]]; then
-    echo "No user logged-in; exiting."
-    exit 0
-else
-    uid=$(id -u "${loggedInUser}")
-fi
-
-
-
 ####################################################################################################
 #
 # Functions
@@ -205,42 +259,73 @@ fi
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Script Logging
+# Client-side Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function updateScriptLog() {
-    echo -e "$( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
+    echo "${organizationScriptName} ($scriptVersion): $( date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | tee -a "${scriptLog}"
+}
+
+function preFlight() {
+    updateScriptLog "[PRE-FLIGHT]      ${1}"
+}
+
+function logComment() {
+    updateScriptLog "                  ${1}"
+}
+
+function notice() {
+    updateScriptLog "[NOTICE]          ${1}"
+}
+
+function info() {
+    updateScriptLog "[INFO]            ${1}"
+}
+
+function debug() {
+    if [[ "$operationMode" == "debug" ]]; then
+        updateScriptLog "[DEBUG]           ${1}"
+    fi
+}
+
+function errorOut(){
+    updateScriptLog "[ERROR]           ${1}"
+}
+
+function error() {
+    updateScriptLog "[ERROR]           ${1}"
+    let errorCount++
+}
+
+function warning() {
+    updateScriptLog "[WARNING]         ${1}"
+    let errorCount++
+}
+
+function fatal() {
+    updateScriptLog "[FATAL ERROR]     ${1}"
+    exit 1
+}
+
+function quitOut(){
+    updateScriptLog "[QUIT]            ${1}"
 }
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# JAMF Display Message (for fallback in case swiftDialog fails to install)
+# Validate / install swiftDialog (Thanks big bunches, @acodega!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function jamfDisplayMessage() {
-    updateScriptLog "Jamf Display Message: ${1}"
-    /usr/local/jamf/bin/jamf displayMessage -message "${1}" &
-}
+function dialogInstall() {
 
+    # Get the URL of the latest PKG From the Dialog GitHub repo
+    dialogURL=$(curl -L --silent --fail "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
 
+    # Expected Team ID of the downloaded PKG
+    expectedDialogTeamID="PWA5E9TQ59"
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check for / install swiftDialog (Thanks big bunches, @acodega!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function dialogCheck() {
-
-  # Get the URL of the latest PKG From the Dialog GitHub repo
-  dialogURL=$(curl -L --silent --fail "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
-
-  # Expected Team ID of the downloaded PKG
-  expectedDialogTeamID="PWA5E9TQ59"
-
-  # Check for Dialog and install if not found
-  if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
-
-    updateScriptLog "Dialog not found. Installing..."
+    preFlight "Installing swiftDialog..."
 
     # Create temporary working directory
     workDirectory=$( /usr/bin/basename "$0" )
@@ -253,25 +338,51 @@ function dialogCheck() {
     teamID=$(/usr/sbin/spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
 
     # Install the package if Team ID validates
-    if [ "$expectedDialogTeamID" = "$teamID" ] || [ "$expectedDialogTeamID" = "" ]; then
- 
-      /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+    if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
+
+        /usr/sbin/installer -pkg "$tempDirectory/Dialog.pkg" -target /
+        sleep 2
+        dialogVersion=$( /usr/local/bin/dialog --version )
+        preFlight "swiftDialog version ${dialogVersion} installed; proceeding..."
 
     else
 
-      jamfDisplayMessage "Dialog Team ID verification failed."
-      exit 1
+        # Display a so-called "simple" dialog if Team ID fails to validate
+        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Error" buttons {"Close"} with icon caution'
+        quitScript
 
     fi
- 
+
     # Remove the temporary working directory when done
-    /bin/rm -Rf "$tempDirectory"  
+    /bin/rm -Rf "$tempDirectory"
 
-  else
+}
 
-    updateScriptLog "swiftDialog version $(dialog --version) found; proceeding..."
 
-  fi
+
+function dialogCheck() {
+
+    # Check for Dialog and install if not found
+    if [ ! -e "/Library/Application Support/Dialog/Dialog.app" ]; then
+
+        preFlight "swiftDialog not found. Installing..."
+        dialogInstall
+
+    else
+
+        dialogVersion=$(/usr/local/bin/dialog --version)
+        if [[ "${dialogVersion}" < "${swiftDialogMinimumRequiredVersion}" ]]; then
+            
+            preFlight "swiftDialog version ${dialogVersion} found but swiftDialog ${swiftDialogMinimumRequiredVersion} or newer is required; updating..."
+            dialogInstall
+            
+        else
+
+        preFlight "swiftDialog version ${dialogVersion} found; proceeding..."
+
+        fi
+    
+    fi
 
 }
 
@@ -283,9 +394,8 @@ function dialogCheck() {
 
 function runAsUser() {
 
-    # shellcheck disable=SC2145
-    updateScriptLog "Run \"$@\" as \"$uid\" … "
-    launchctl asuser "$uid" sudo -u "$loggedInUser" "$@"
+    notice "Run \"$@\" as \"$loggedInUserID\" … "
+    launchctl asuser "$loggedInUserID" sudo -u "$loggedInUser" "$@"
 
 }
 
@@ -297,43 +407,43 @@ function runAsUser() {
 
 function quitScript() {
 
-    updateScriptLog "Quitting …"
+    notice "Quitting …"
     updateProgressDialog "quit: "
 
     sleep 1
-    updateScriptLog "Exiting …"
+    logComment "Exiting …"
 
     # Remove dialogWelcomeLog
     if [[ -e ${dialogWelcomeLog} ]]; then
-        updateScriptLog "Removing ${dialogWelcomeLog} …"
+        logComment "Removing ${dialogWelcomeLog} …"
         rm "${dialogWelcomeLog}"
     fi
 
     # Remove dialogProgressLog
     if [[ -e ${dialogProgressLog} ]]; then
-        updateScriptLog "Removing ${dialogProgressLog} …"
+        logComment "Removing ${dialogProgressLog} …"
         rm "${dialogProgressLog}"
     fi
 
     # Remove dialogCompleteLog
     if [[ -e ${dialogCompleteLog} ]]; then
-        updateScriptLog "Removing ${dialogCompleteLog} …"
+        logComment "Removing ${dialogCompleteLog} …"
         rm "${dialogCompleteLog}"
     fi
 
     # Remove diskUsageEntireVolumeTop50
     if [[ -e ${diskUsageEntireVolumeTop50} ]]; then
-        updateScriptLog "Removing ${diskUsageEntireVolumeTop50} …"
+        logComment "Removing ${diskUsageEntireVolumeTop50} …"
         rm "${diskUsageEntireVolumeTop50}"
     fi
 
     # Remove diskUsageUsersHomeTop50
     if [[ -e ${diskUsageUsersHomeTop50} ]]; then
-        updateScriptLog "Removing ${diskUsageUsersHomeTop50} …"
+        logComment "Removing ${diskUsageUsersHomeTop50} …"
         rm "${diskUsageUsersHomeTop50}"
     fi
 
-    updateScriptLog "Goodbye!"
+    logComment "Goodbye!"
     exit "${1}"
 
 }
@@ -356,7 +466,7 @@ function updateProgressDialog() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function analyzeDiskUsageEntireVolume() {
-    updateScriptLog "Output disk usage statistics of \"${volumeName}\" to: ${diskUsageEntireVolumeTop50}"    
+    notice "Output disk usage statistics of \"${volumeName}\" to: ${diskUsageEntireVolumeTop50}"    
     du -I System -axrg / 2>/dev/null | sort -nr | head -n 50 >> "$diskUsageEntireVolumeTop50"
 
 }
@@ -368,7 +478,7 @@ function analyzeDiskUsageEntireVolume() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function analyzeDiskUsageUsersHome() {
-    updateScriptLog "Output disk usage statistics of \"$loggedInUserHome\" to: ${diskUsageUsersHomeTop50}"    
+    notice "Output disk usage statistics of \"$loggedInUserHome\" to: ${diskUsageUsersHomeTop50}"    
     du -axrg "$loggedInUserHome" 2>/dev/null | sort -nr | head -n 50 >> "$diskUsageUsersHomeTop50"
 
 }
@@ -396,8 +506,8 @@ function openStorageInformation() {
 
 function outputResultsEntireVolume() {
 
-    updateScriptLog "Disk usage for volume \"$volumeName\" on computer \"$machineName\" "
-    updateScriptLog "Report Location: $outputFileNameEntireVolume"
+    notice "Disk usage for volume \"$volumeName\" on computer \"$machineName\" "
+    logComment "Report Location: $outputFileNameEntireVolume"
 
     echo "--------------------------------------------------------------------------------------------------" > "$outputFileNameEntireVolume"
     echo "Disk usage for volume \"$volumeName\" on computer \"$machineName\" " >> "$outputFileNameEntireVolume"
@@ -424,8 +534,8 @@ function outputResultsEntireVolume() {
 
 function outputResultsUsersHome() {
 
-    updateScriptLog "Disk usage for \"$loggedInUserHome\" for volume \"$volumeName\" on computer \"$machineName\" "
-    updateScriptLog "Report Location: $outputFileNameUsersHome"
+    notice "Disk usage for \"$loggedInUserHome\" for volume \"$volumeName\" on computer \"$machineName\" "
+    logComment "Report Location: $outputFileNameUsersHome"
 
     echo "--------------------------------------------------------------------------------------------------" > "$outputFileNameUsersHome"
     echo "Disk usage for \"$loggedInUserHome\" for volume \"$volumeName\" on computer \"$machineName\" " >> "$outputFileNameUsersHome"
@@ -497,14 +607,15 @@ fi
 
 function analyzeDiskUsageWithProgress() {
 
-    updateScriptLog "Disk Space: $diskSpace"
+    notice "Disk Space: $diskSpace"
 
-    updateScriptLog "Analyze Disk Usage with Progress (1 of 2)"
+    logComment "Analyze Disk Usage with Progress (1 of 2)"
 
     eval "$dialogProgress" & sleep 0.35
 
     if [[ ${debugMode} == "true" ]]; then
 
+        debug "DEBUG MODE ENABLED"
         updateProgressDialog "title: DEBUG MODE | $progressTitle"
         updateProgressDialog "message: DEBUG MODE. Please wait for 10 seconds …"
         sleep 2
@@ -524,7 +635,7 @@ function analyzeDiskUsageWithProgress() {
         # Analyze Disk Usage for entire volume
         ###
 
-        updateScriptLog "Analyze Disk Usage for \"${volumeName}\""
+        notice "Analyze Disk Usage for \"${volumeName}\""
         updateProgressDialog "message: Analyze Disk Usage for \"${volumeName}\""
         updateProgressDialog "progress: 0"
         updateProgressDialog "progresstext: Initializing …"
@@ -543,7 +654,7 @@ function analyzeDiskUsageWithProgress() {
 
         updateProgressDialog "progress: 100"
         updateProgressDialog "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
-        updateScriptLog "Elapsed Time for \"${volumeName}\": $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+        info "Elapsed Time for \"${volumeName}\": $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
         outputResultsEntireVolume
 
 
@@ -552,8 +663,8 @@ function analyzeDiskUsageWithProgress() {
         # Analyze Disk Usage for user's home directory
         ###
 
-        updateScriptLog "Analyze Disk Usage with Progress (2 of 2)"
-        updateScriptLog "Analyze Disk Usage for \"${loggedInUserHome}\""
+        notice "Analyze Disk Usage with Progress (2 of 2)"
+        logComment "Analyze Disk Usage for \"${loggedInUserHome}\""
         updateProgressDialog "message: Analyze Disk Usage for \"${loggedInUserHome}\""
         updateProgressDialog "progress: 0"
         updateProgressDialog "progresstext: Initializing …"
@@ -573,7 +684,7 @@ function analyzeDiskUsageWithProgress() {
 
         updateProgressDialog "progress: 100"
         updateProgressDialog "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
-        updateScriptLog "Elapsed Time for \"${loggedInUserHome}\": $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+        info "Elapsed Time for \"${loggedInUserHome}\": $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
 
         outputResultsUsersHome
 
@@ -592,58 +703,55 @@ function analyzeDiskUsageWithProgress() {
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Confirm script is running as root
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ $(id -u) -ne 0 ]]; then
-    echo "This script must be run as root; exiting."
-    exit 1
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Logging
+# Pre-flight Check: Client-side Logging
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if [[ ! -f "${scriptLog}" ]]; then
     touch "${scriptLog}"
-    updateScriptLog "*** Created log file via script ***"
-fi
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Logging preamble
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-if [[ ${debugMode} == "true" ]]; then
-    updateScriptLog "\n\n###\n# DEBUG MODE | Disk Usage (${scriptVersion})\n###\n"
+    if [[ -f "${scriptLog}" ]]; then
+        preFlight "Created specified scriptLog: ${scriptLog}"
+    else
+        fatal "Unable to create specified scriptLog '${scriptLog}'; exiting.\n\n(Is this script running as 'root' ?)"
+    fi
 else
-    updateScriptLog "\n\n###\n# Disk Usage (${scriptVersion})\n###\n"
+    preFlight "Specified scriptLog '${scriptLog}' exists; writing log entries to it"
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate Operating System
+# Pre-flight Check: Logging Preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-if [[ "${osMajorVersion}" -ge 11 ]] ; then
-    echo "macOS ${osMajorVersion} installed; proceeding ..."
-else
-    echo "macOS ${osMajorVersion} installed; exiting"
-    jamfDisplayMessage "macOS ${osMajorVersion} installed. Please use the previous version of this script. Exiting."
-    exit 1
+preFlight "\n\n###\n# $humanReadableScriptName (${scriptVersion})\n# Operation Mode: ${operationMode}\n###\n"
+preFlight "Initiating …"
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Confirm script is running as root
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ $(id -u) -ne 0 ]]; then
+    fatal "This script must be run as root; exiting."
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Validate swiftDialog is installed
+# Pre-flight Check: Validate swiftDialog is installed
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+preFlight "Validate swiftDialog is installed"
 dialogCheck
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Complete
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+preFlight "Complete!"
 
 
 
@@ -657,7 +765,7 @@ dialogCheck
 # Create Welcome Dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "Create Welcome Dialog …"
+notice "Create Welcome Dialog …"
 
 eval "$dialogWelcome"
 
@@ -666,7 +774,7 @@ welcomeReturncode=$?
 case ${welcomeReturncode} in
 
     0)  ## Process exit code 0 scenario here
-        updateScriptLog "${loggedInUser} clicked ${button1text};"
+        info "${loggedInUser} clicked ${button1text};"
         analyzeDiskUsageWithProgress
         eval "$dialogComplete" 
         # shellcheck disable=SC2086
@@ -676,27 +784,27 @@ case ${welcomeReturncode} in
             openStorageInformation
             quitScript "0"
         else
-            updateScriptLog "Something went sideways; couldn't find ${outputFileNameEntireVolume} or ${outputFileNameUsersHome}"
+            warning "Something went sideways; couldn't find ${outputFileNameEntireVolume} or ${outputFileNameUsersHome}"
             quitScript "1"
         fi
         ;;
 
     2)  ## Process exit code 2 scenario here
-        updateScriptLog "${loggedInUser} clicked ${button2text};"
+        info "${loggedInUser} clicked ${button2text};"
         quitScript "0"
         ;;
 
     3)  ## Process exit code 3 scenario here
-        updateScriptLog "${loggedInUser} clicked ${infobuttontext};"
+        info "${loggedInUser} clicked ${infobuttontext};"
         ;;
 
     4)  ## Process exit code 4 scenario here
-        updateScriptLog "${loggedInUser} allowed timer to expire;"
+        info "${loggedInUser} allowed timer to expire;"
         quitScript "1"
         ;;
 
     *)  ## Catch all processing
-        updateScriptLog "Something else happened; Exit code: ${welcomeReturncode};"
+        info "Something else happened; Exit code: ${welcomeReturncode};"
         quitScript "1"
         ;;
 
@@ -708,6 +816,6 @@ esac
 # Exit
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-updateScriptLog "End-of-line."
+quitOut "End-of-line."
 
 quitScript "0"
