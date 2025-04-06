@@ -75,7 +75,7 @@ previousMinorOS="2"
 
 # Allowed number of uptime minutes
 # - 1 day = 24 hours × 60 minutes/hour = 1,440 minutes
-#- 7 days, multiply: 7 × 1,440 minutes = 10,080 minutes
+# - 7 days, multiply: 7 × 1,440 minutes = 10,080 minutes
 allowedUptimeMinutes="10080"
 
 # Allowed percentage of free disk space
