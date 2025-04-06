@@ -70,7 +70,7 @@ kerberosRealm=""
 # "Anticipation" Duration (in seconds)
 anticipationDuration="2"
 
-# How many previous minor OS path versions will be marked as compliant
+# How many previous minor OS versions will be marked as compliant
 previousMinorOS="2"
 
 # Allowed number of uptime minutes
