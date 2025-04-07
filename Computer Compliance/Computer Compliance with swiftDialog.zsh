@@ -25,6 +25,10 @@
 #   - Included the output of several "helpmessage" variables to ${scriptLog}
 #   - Skipped Compliant OS Version check for Beta OSes
 #
+# Version 0.0.3, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added `exitCode` variable (to better report failures as errors in the Jamf Pro policy)
+#   - Adjusted `tmLastBackup` message (for when no Time Machine destination is configured)
+#
 ####################################################################################################
 
 
@@ -38,7 +42,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.2"
+scriptVersion="0.0.3"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -427,6 +431,7 @@ function quitScript() {
         dialogUpdate "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
         dialogUpdate "title: Computer Non-compliant (as of $( date '+%Y-%m-%d-%H%M%S' ))"
         errorOut "${overallCompliance}"
+        exitCode="1"
     else
         dialogUpdate "icon: SF=checkmark.circle.fill,weight=bold,colour1=#00ff44,colour2=#075c1e"
         dialogUpdate "title: Computer Compliant (as of $( date '+%Y-%m-%d-%H%M%S' ))"
@@ -452,7 +457,7 @@ function quitScript() {
 
     quitOut "Goodbye!"
 
-    exit
+    exit "${exitCode}"
 
 }
 
@@ -1121,7 +1126,7 @@ function checkTimeMachine() {
     sleep "${anticipationDuration}"
 
     if [[ "${tmDestinationInfo}" == *"No destinations configured"* ]]; then
-        tmLastBackup="N/A"
+        tmLastBackup="No destination configured"
         dialogUpdate "listitem: index: ${1}, status: error, statustext: ${tmLastBackup}"
     else
         runCommand=$( tmutil latestbackup | awk -F "/" '{print $NF}' | cut -d'.' -f1 )
