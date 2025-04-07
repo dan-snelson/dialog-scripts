@@ -28,6 +28,16 @@
 # Version 0.0.3, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Added `exitCode` variable (to better report failures as errors in the Jamf Pro policy)
 #   - Adjusted `tmLastBackup` message (for when no Time Machine destination is configured)
+# 
+# Version 0.0.4, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added `infobuttontext` and `infobuttonaction` for the Knowledge Base article (in main dialog)
+# 
+# Version 0.0.5, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added check for Microsoft OneDrive's last sync time
+#
+# Version 0.0.6, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added check for the Jamf Pro MDM Profile
+#   - Improved `checkSetupYourMacValidation` logic
 #
 ####################################################################################################
 
@@ -42,7 +52,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.3"
+scriptVersion="0.0.6"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -138,6 +148,7 @@ loggedInUserFullname=$( id -F "${loggedInUser}" )
 loggedInUserFirstname=$( echo "$loggedInUserFullname" | sed -E 's/^.*, // ; s/([^ ]*).*/\1/' | sed 's/\(.\{25\}\).*/\1…/' | awk '{print ( $0 == toupper($0) ? toupper(substr($0,1,1))substr(tolower($0),2) : toupper(substr($0,1,1))substr($0,2) )}' )
 loggedInUserID=$( id -u "${loggedInUser}" )
 loggedInUserGroupMembership=$( id -Gn "${loggedInUser}" )
+loggedInUserHomeDirectory=$( dscl . read "/Users/${loggedInUser}" NFSHomeDirectory | awk -F ' ' '{print $2}' )
 
 # Kerberos Single Sign-on Extension
 if [[ -n "${kerberosRealm}" ]]; then
@@ -159,6 +170,35 @@ if [[ -n "${pssoeEmail}" ]]; then
     platformSSOeResult="${pssoeEmail}"
 else
     platformSSOeResult="${loggedInUser} NOT logged in"
+fi
+
+# Last modified time of user's Microsoft OneDrive sync file (thanks, @pbowden-msft!)
+DataFile=$(ls -t $loggedInUserHomeDirectory/Library/Application\ Support/OneDrive/settings/Business1/*.ini | head -n 1)
+if [[ "$DataFile" != "" ]]; then
+    EpochTime=$( stat -f %m "$DataFile" )
+    UTCDate=$( date -u -r $EpochTime '+%d-%b-%Y' )
+    oneDriveSyncDate="${UTCDate}"
+else
+    oneDriveSyncDate="Not configured"
+fi
+
+
+
+# Time Machine Backup Date
+tmDestinationInfo=$( tmutil destinationinfo )
+if [[ "${tmDestinationInfo}" == *"No destinations configured"* ]]; then
+    tmStatus="Not configured"
+    tmLastBackup=""
+else
+    runCommand=$( tmutil destinationinfo | grep "Name" | awk -F ':' '{print $NF}' )
+    tmStatus="$runCommand"
+
+    runCommand=$( tmutil latestbackup | awk -F "/" '{print $NF}' | cut -d'.' -f1 )
+    if [[ -z $runCommand ]]; then
+        tmLastBackup="Last backup date unknown; connect destination"
+    else
+        tmLastBackup="$runCommand"
+    fi
 fi
 
 
@@ -268,7 +308,8 @@ supportTeamEmail="rescue@domain.org"
 supportTeamWebsite="https://support.domain.org"
 supportTeamHyperlink="[${supportTeamWebsite}](${supportTeamWebsite})"
 supportKB="KB8675309"
-supportKBURL="[${supportKB}](https://servicenow.domain.org/support?id=kb_article_view&sysparm_article=${supportKB})"
+infobuttonaction="https://servicenow.domain.org/support?id=kb_article_view&sysparm_article=${supportKB}"
+supportKBURL="[${supportKB}](${infobuttonaction})"
 
 
 
@@ -276,7 +317,7 @@ supportKBURL="[${supportKB}](https://servicenow.domain.org/support?id=kb_article
 # Help Message Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telephone:** ${supportTeamPhone}<br>- **Email:** ${supportTeamEmail}<br>- **Website:** ${supportTeamWebsite}<br>- **Knowledge Base Article:** ${supportKBURL}<br><br>---<br><br>**User Information:**<br>- **Full Name:** ${loggedInUserFullname}<br>- **User Name:** ${loggedInUser}<br>- **User ID:** ${loggedInUserID}<br>- **Kerberos SSOe:** ${kerberosSSOeResult}<br>- **Platform SSOe:** ${platformSSOeResult}<br><br>---<br><br>**Computer Information:**<br>- **macOS:** ${osVersion} (${osBuild})<br>- **Computer Name:** ${computerName}<br>- **Serial Number:** ${serialNumber}<br>- **Computer Model:** ${computerModel}<br>- **LocalHostName:** ${localHostName}<br>- **Battery Cycle Count:** ${batteryCycleCount}<br>- **Wi-Fi:** ${ssid}<br>- ${wiFiIpAddress}<br>- **VPN IP:** ${globalProtectStatus}<br>- ${networkTimeServer}<br><br>---<br><br>**Jamf Pro Information:**<br>- **Jamf Pro ID:** ${jamfProID}<br>- **Site:** ${jamfProSiteName}"
+helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telephone:** ${supportTeamPhone}<br>- **Email:** ${supportTeamEmail}<br>- **Website:** ${supportTeamWebsite}<br>- **Knowledge Base Article:** ${supportKBURL}<br><br>---<br><br>**User Information:**<br>- **Full Name:** ${loggedInUserFullname}<br>- **User Name:** ${loggedInUser}<br>- **User ID:** ${loggedInUserID}<br>- **Microsoft OneDrive Sync Date:** ${oneDriveSyncDate}<br>- **Time Machine Backup Date:** ${tmStatus} ${tmLastBackup}<br>- **Kerberos SSOe:** ${kerberosSSOeResult}<br>- **Platform SSOe:** ${platformSSOeResult}<br><br>---<br><br>**Computer Information:**<br>- **macOS:** ${osVersion} (${osBuild})<br>- **Computer Name:** ${computerName}<br>- **Serial Number:** ${serialNumber}<br>- **Computer Model:** ${computerModel}<br>- **LocalHostName:** ${localHostName}<br>- **Battery Cycle Count:** ${batteryCycleCount}<br>- **Wi-Fi:** ${ssid}<br>- ${wiFiIpAddress}<br>- **VPN IP:** ${globalProtectStatus}<br>- ${networkTimeServer}<br><br>---<br><br>**Jamf Pro Information:**<br>- **Jamf Pro ID:** ${jamfProID}<br>- **Site:** ${jamfProSiteName}"
 
 
 
@@ -287,16 +328,17 @@ helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telep
 dialogJSON='
 {
     "commandfile" : "'"${dialogCommandFile}"'",
-    "title" : "'"${humanReadableScriptName}"'",
+    "title" : "'"${humanReadableScriptName} (${scriptVersion})"'",
     "icon" : "'"${icon}"'",
     "overlayicon" : "'"${overlayicon}"'",
     "message" : "none",
     "iconsize" : "198.0",
     "infobox" : "**User:** '"{userfullname}"'<br><br>**Computer Model:** '"{computermodel}"'<br><br>**Serial Number:** '"{serialnumber} "'<br><br>**macOS Version:** '"{osversion} (${osBuild})"' ",
-    "helpmessage" : "'"${helpmessage}"'",
-    "infotext" : "'"${scriptVersion}"'",
+    "infobuttontext" : "'"${supportKB}"'",
+    "infobuttonaction" : "'"${infobuttonaction}"'",
     "button1text" : "Wait",
     "button1disabled" : "true",
+    "helpmessage" : "'"${helpmessage}"'",
     "position" : "center",
     "progress" :  "'"${progressSteps}"'",
     "progresstext" : "Please wait …",
@@ -309,15 +351,15 @@ dialogJSON='
         {"title" : "Compliant OS Version", "subtitle" : "Organizational standards are the current and immediately previous versions of macOS", "icon" : "SF=01.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
         {"title" : "Last Reboot", "subtitle" : "Restart your Mac regularly — at least once a week — can help resolve many common issues", "icon" : "SF=02.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
         {"title" : "Free Disk Space", "subtitle" : "See KB0080685 Disk Usage to help identify the 50 largest directories", "icon" : "SF=03.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=04.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=05.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=06.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=07.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=08.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=09.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=10.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=11.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Time Machine", "subtitle" : "You can use Time Machine to automatically back up your files", "icon" : "SF=12.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"}
+        {"title" : "MDM Profile", "subtitle" : "The presence of the Jamf Pro MDM profile helps ensure your Mac is enrolled", "icon" : "SF=04.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=05.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=06.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=07.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=08.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=09.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=10.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=11.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=12.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"}
     ]
 }
 '
@@ -425,7 +467,7 @@ function quitScript() {
 
     quitOut "Exiting …"
 
-    notice "${results}; User: ${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}] ${loggedInUserGroupMembership}; Kerberos SSOe: ${kerberosSSOeResult}; Platform SSOe: ${platformSSOeResult}; SSH: ${sshStatus}; Wi-Fi: ${ssid}; ${wiFiIpAddress}; VPN IP: ${globalProtectStatus}; Site: ${jamfProSiteName}"
+    notice "${results}; User: ${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}] ${loggedInUserGroupMembership}; Kerberos SSOe: ${kerberosSSOeResult}; Platform SSOe: ${platformSSOeResult}; SSH: ${sshStatus}; Microsoft OneDrive Sync Date: ${oneDriveSyncDate}; Time Machine Backup Date: ${tmStatus} ${tmLastBackup}; Wi-Fi: ${ssid}; ${wiFiIpAddress}; VPN IP: ${globalProtectStatus}; Site: ${jamfProSiteName}"
 
     if [[ -n "${overallCompliance}" ]]; then
         dialogUpdate "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
@@ -843,6 +885,45 @@ function checkFreeDiskSpace() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check the status of the Jamf Pro MDM Profile
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function checkJamfProMdmProfile() {
+
+    notice "Check the status of the Jamf Pro MDM Profile …"
+
+    dialogUpdate "icon: SF=globe,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+
+    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
+    dialogUpdate "progress: increment"
+    dialogUpdate "progresstext: Determining MDM Profile status …"
+    sleep "${anticipationDuration}"
+
+    mdmProfileTest=$( profiles list -all | grep "00000000-0000-0000-A000-4A414D460003" )
+
+    if [[ -n "${mdmProfileTest}" ]]; then
+
+        jamfProMdmProfileStatus="Installed"
+        dialogUpdate "listitem: index: ${1}, status: success, statustext: ${jamfProMdmProfileStatus}"
+
+    else
+
+        jamfProMdmProfileStatus="NOT Installed"
+        dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${jamfProMdmProfileStatus}"
+        overallCompliance+="Failed: ${1}; "
+        errorOut "${1}"
+
+    fi
+ 
+    # dialogUpdate "icon: ${icon}"
+
+    results+="Jamf Pro MDM Profile: ${jamfProMdmProfileStatus}; "
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Check MDM Last Check-In (thanks, @jordywitteman!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -1029,19 +1110,25 @@ function checkSetupYourMacValidation() {
     dialogUpdate "progresstext: Determining status of ${appPath} …"
     sleep "${anticipationDuration}"
 
-    symValidation=$( /usr/local/bin/jamf policy -event $trigger )
+    symValidation=$( /usr/local/bin/jamf policy -event $trigger | grep "Script result:")
 
     logComment "symValidation: $symValidation"
 
     case ${symValidation} in
+        *"Error"* | *"Failed"* )
+            dialogUpdate "listitem: index: ${1}, status: fail, statustext: Failed"
+            results+="${trigger}: Failed; "
+            overallCompliance+="Failed: ${1}; "
+            errorOut "${1}"
+            ;;
         *"Running"* ) 
             dialogUpdate "listitem: index: ${1}, status: success, statustext: Running"
             results+="${trigger}: Running; "
             ;;
         *  )
-            dialogUpdate "listitem: index: ${1}, status: error, statustext: Failed"
-            results+="${trigger}: Failed; "
-            overallCompliance+="Failed: ${1}; "
+            dialogUpdate "listitem: index: ${1}, status: error, statustext: Error"
+            results+="${trigger}: Error; "
+            overallCompliance+="Error: ${1}; "
             errorOut "${1}"
             ;;
     esac
@@ -1091,53 +1178,6 @@ function checkNetworkQuality() {
     mbps=$( echo "scale=2; ( $dlThroughput / 1000000 )" | bc )
     dialogUpdate "listitem: index: ${1}, status: success, statustext: $mbps Mbps"
     results+="Download: $mbps Mbps, Responsiveness: $dlResponsiveness; "
-
-    dialogUpdate "icon: ${icon}"
-
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check Time Machine
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function checkTimeMachine() {
-    
-    notice "Checking Time Machine …"
-
-    dialogUpdate "icon: SF=externaldrive.fill.badge.timemachine,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
-    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
-    dialogUpdate "progress: increment"
-    dialogUpdate "progresstext: Checking Time Machine …"
-    sleep "${anticipationDuration}"
-
-    tmDestinationInfo=$( tmutil destinationinfo )
-    if [[ "${tmDestinationInfo}" == *"No destinations configured"* ]]; then
-        tmStatus="No destination configured"
-        dialogUpdate "listitem: index: ${1}, status: error, statustext: ${tmStatus}"
-    else
-        runCommand=$( tmutil destinationinfo | grep "Name" | awk -F ':' '{print $NF}' )
-        tmStatus="$runCommand"
-        dialogUpdate "listitem: index: ${1}, status: success, statustext: ${tmStatus}"
-    fi
-
-    sleep "${anticipationDuration}"
-
-    if [[ "${tmDestinationInfo}" == *"No destinations configured"* ]]; then
-        tmLastBackup="No destination configured"
-        dialogUpdate "listitem: index: ${1}, status: error, statustext: ${tmLastBackup}"
-    else
-        runCommand=$( tmutil latestbackup | awk -F "/" '{print $NF}' | cut -d'.' -f1 )
-        if [[ -z $runCommand ]]; then
-            tmLastBackup="Unknown; connect destination"
-            dialogUpdate "listitem: index: ${1}, status: error, statustext: ${tmLastBackup}"
-        else
-            tmLastBackup="$runCommand"
-            dialogUpdate "listitem: index: ${1}, status: success, statustext: ${tmLastBackup}"
-        fi
-    fi
 
     dialogUpdate "icon: ${icon}"
 
@@ -1196,18 +1236,18 @@ dialogUpdate "list: show"
 checkOS "0"
 checkUptime "1"
 checkFreeDiskSpace "2"
-checkMdmCheckIn "3"
-checkMdmInventory "4"
-checkFileVault "5"
-checkSetupYourMacValidation "6" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
-checkSetupYourMacValidation "7" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
-checkSetupYourMacValidation "8" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
-checkSetupYourMacValidation "9" "symvGlobalProtect" "/Applications/GlobalProtect.app"
-checkNetworkQuality "10"
-checkTimeMachine "11"
+checkJamfProMdmProfile "3"
+checkMdmCheckIn "4"
+checkMdmInventory "5"
+checkFileVault "6"
+checkSetupYourMacValidation "7" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
+checkSetupYourMacValidation "8" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
+checkSetupYourMacValidation "9" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
+checkSetupYourMacValidation "10" "symvGlobalProtect" "/Applications/GlobalProtect.app"
+checkNetworkQuality "11"
 
 dialogUpdate "icon: ${icon}"
-dialogUpdate "progresstext: Analyzing …"
+dialogUpdate "progresstext: Final Analysis …"
 sleep "${anticipationDuration}"
 
 
