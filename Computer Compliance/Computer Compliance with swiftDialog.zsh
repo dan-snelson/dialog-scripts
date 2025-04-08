@@ -39,6 +39,9 @@
 #   - Added check for the Jamf Pro MDM Profile
 #   - Improved `checkSetupYourMacValidation` logic
 #
+# Version 0.0.7, 8-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added multiple drive support to Time Machine check (thanks, obi-@bartreadon!) [Issue #65](#65)
+#
 ####################################################################################################
 
 
@@ -52,7 +55,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.6"
+scriptVersion="0.0.7"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -190,14 +193,14 @@ if [[ "${tmDestinationInfo}" == *"No destinations configured"* ]]; then
     tmStatus="Not configured"
     tmLastBackup=""
 else
-    runCommand=$( tmutil destinationinfo | grep "Name" | awk -F ':' '{print $NF}' )
-    tmStatus="$runCommand"
+    tmDestinations=$( tmutil destinationinfo | grep "Name" | awk -F ':' '{print $NF}' | awk '{$1=$1};1')
+    tmStatus="${tmDestinations//$'\n'/, }"
 
-    runCommand=$( tmutil latestbackup | awk -F "/" '{print $NF}' | cut -d'.' -f1 )
-    if [[ -z $runCommand ]]; then
-        tmLastBackup="Last backup date unknown; connect destination"
+    tmBackupDates=$( tmutil latestbackup | awk -F "/" '{print $NF}' | cut -d'.' -f1 )
+    if [[ -z $tmBackupDates ]]; then
+        tmLastBackup="Last backup date(s) unknown; connect destination(s)"
     else
-        tmLastBackup="$runCommand"
+        tmLastBackup="; Date(s): ${tmBackupDates//$'\n'/, }"
     fi
 fi
 
@@ -317,7 +320,7 @@ supportKBURL="[${supportKB}](${infobuttonaction})"
 # Help Message Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telephone:** ${supportTeamPhone}<br>- **Email:** ${supportTeamEmail}<br>- **Website:** ${supportTeamWebsite}<br>- **Knowledge Base Article:** ${supportKBURL}<br><br>---<br><br>**User Information:**<br>- **Full Name:** ${loggedInUserFullname}<br>- **User Name:** ${loggedInUser}<br>- **User ID:** ${loggedInUserID}<br>- **Microsoft OneDrive Sync Date:** ${oneDriveSyncDate}<br>- **Time Machine Backup Date:** ${tmStatus} ${tmLastBackup}<br>- **Kerberos SSOe:** ${kerberosSSOeResult}<br>- **Platform SSOe:** ${platformSSOeResult}<br><br>---<br><br>**Computer Information:**<br>- **macOS:** ${osVersion} (${osBuild})<br>- **Computer Name:** ${computerName}<br>- **Serial Number:** ${serialNumber}<br>- **Computer Model:** ${computerModel}<br>- **LocalHostName:** ${localHostName}<br>- **Battery Cycle Count:** ${batteryCycleCount}<br>- **Wi-Fi:** ${ssid}<br>- ${wiFiIpAddress}<br>- **VPN IP:** ${globalProtectStatus}<br>- ${networkTimeServer}<br><br>---<br><br>**Jamf Pro Information:**<br>- **Jamf Pro ID:** ${jamfProID}<br>- **Site:** ${jamfProSiteName}"
+helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telephone:** ${supportTeamPhone}<br>- **Email:** ${supportTeamEmail}<br>- **Website:** ${supportTeamWebsite}<br>- **Knowledge Base Article:** ${supportKBURL}<br><br>---<br><br>**User Information:**<br>- **Full Name:** ${loggedInUserFullname}<br>- **User Name:** ${loggedInUser}<br>- **User ID:** ${loggedInUserID}<br>- **Microsoft OneDrive Sync Date:** ${oneDriveSyncDate}<br>- **Time Machine Destination(s) / Backup Date(s):** ${tmStatus} ${tmLastBackup}<br>- **Kerberos SSOe:** ${kerberosSSOeResult}<br>- **Platform SSOe:** ${platformSSOeResult}<br><br>---<br><br>**Computer Information:**<br>- **macOS:** ${osVersion} (${osBuild})<br>- **Computer Name:** ${computerName}<br>- **Serial Number:** ${serialNumber}<br>- **Computer Model:** ${computerModel}<br>- **LocalHostName:** ${localHostName}<br>- **Battery Cycle Count:** ${batteryCycleCount}<br>- **Wi-Fi:** ${ssid}<br>- ${wiFiIpAddress}<br>- **VPN IP:** ${globalProtectStatus}<br>- ${networkTimeServer}<br><br>---<br><br>**Jamf Pro Information:**<br>- **Jamf Pro ID:** ${jamfProID}<br>- **Site:** ${jamfProSiteName}"
 
 
 
