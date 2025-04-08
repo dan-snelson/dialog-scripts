@@ -42,6 +42,9 @@
 # Version 0.0.7, 8-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Added multiple drive support to Time Machine check (thanks, obi-@bartreadon!) [Issue #65](#65)
 #
+# Version 0.0.8, 8-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added JSS Built-in Certificate Authority expiration check (thanks, @isaacatmann!) [JNUC 2024](https://github.com/mannconsulting/JNUC2024/)
+#
 ####################################################################################################
 
 
@@ -55,7 +58,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.7"
+scriptVersion="0.0.8"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -101,7 +104,7 @@ allowedFreeDiskPercentage="10"
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Jamf Pro Configuration Profile Variable
+# Jamf Pro Configuration Profile Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Organization's Client-side Jamf Pro Variables
@@ -184,8 +187,6 @@ if [[ "$DataFile" != "" ]]; then
 else
     oneDriveSyncDate="Not configured"
 fi
-
-
 
 # Time Machine Backup Date
 tmDestinationInfo=$( tmutil destinationinfo )
@@ -355,14 +356,15 @@ dialogJSON='
         {"title" : "Last Reboot", "subtitle" : "Restart your Mac regularly — at least once a week — can help resolve many common issues", "icon" : "SF=02.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
         {"title" : "Free Disk Space", "subtitle" : "See KB0080685 Disk Usage to help identify the 50 largest directories", "icon" : "SF=03.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
         {"title" : "MDM Profile", "subtitle" : "The presence of the Jamf Pro MDM profile helps ensure your Mac is enrolled", "icon" : "SF=04.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=05.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=06.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=07.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=08.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=09.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=10.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=11.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=12.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"}
+        {"title" : "MDM Certficate", "subtitle" : "Validate the expiration date of the Jamf Pro MDM certficate", "icon" : "SF=05.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=06.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=07.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=08.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=09.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=10.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=11.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=12.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=13.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"}
     ]
 }
 '
@@ -927,6 +929,59 @@ function checkJamfProMdmProfile() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check the expiration date of the JSS Built-in Certificate Authority (thanks, @isaacatmann!)
+# For updates or support options, please visit https://mann.com/jamf or contact us at support@mann.com.
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function checkJssCertificateExpiration() {
+
+    notice "Check the expiration date of the JSS Built-in Certificate Authority …"
+
+    dialogUpdate "icon: SF=mail.and.text.magnifyingglass,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+
+    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
+    dialogUpdate "progress: increment"
+    dialogUpdate "progresstext: Determining MDM Certificate expiration date …"
+    sleep "${anticipationDuration}"
+
+    identities=( $( security find-identity -v /Library/Keychains/System.keychain | awk '{print $3}' | tr -d '"' | head -n 1 ) )
+    now_seconds=$( date +%s )
+
+    if [[ "${identities}" != "identities" ]]; then
+
+        for i in $identities; do
+            if [[ $(security find-certificate -c "$i" | grep issu | tr -d '"') == *"JSS BUILT-IN CERTIFICATE AUTHORITY"* ]] || [[ $(security find-certificate -c "$i" | grep issu | tr -d '"') == *"JSS Built-in Certificate Authority"* ]]; then
+                expiry=$(security find-certificate -c "$i" -p | openssl x509 -noout -enddate | cut -f2 -d"=")
+                expirationDateFormatted=$( date -j -f "%b %d %H:%M:%S %Y GMT" "${expiry}" "+%d-%b-%Y" )
+                date_seconds=$(date -j -f "%b %d %T %Y %Z" "$expiry" +%s)
+                if (( date_seconds > now_seconds )); then
+                    dialogUpdate "listitem: index: ${1}, status: success, statustext: ${expirationDateFormatted}"
+                else
+                    dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${expirationDateFormatted}"
+                    overallCompliance+="Failed: ${1}; "
+                    errorOut "${1}"
+                fi
+            fi
+        done
+    
+    else
+
+        expirationDateFormatted="NOT Installed"
+        dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${expirationDateFormatted}"
+        overallCompliance+="Failed: ${1}; "
+        errorOut "${1}"
+
+    fi
+ 
+    # dialogUpdate "icon: ${icon}"
+
+    results+="Jamf Pro Certificate Expiration: ${expirationDateFormatted}; " 
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Check MDM Last Check-In (thanks, @jordywitteman!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -1240,14 +1295,15 @@ checkOS "0"
 checkUptime "1"
 checkFreeDiskSpace "2"
 checkJamfProMdmProfile "3"
-checkMdmCheckIn "4"
-checkMdmInventory "5"
-checkFileVault "6"
-checkSetupYourMacValidation "7" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
-checkSetupYourMacValidation "8" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
-checkSetupYourMacValidation "9" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
-checkSetupYourMacValidation "10" "symvGlobalProtect" "/Applications/GlobalProtect.app"
-checkNetworkQuality "11"
+checkJssCertificateExpiration "4"
+checkMdmCheckIn "5"
+checkMdmInventory "6"
+checkFileVault "7"
+checkSetupYourMacValidation "8" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
+checkSetupYourMacValidation "9" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
+checkSetupYourMacValidation "10" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
+checkSetupYourMacValidation "11" "symvGlobalProtect" "/Applications/GlobalProtect.app"
+checkNetworkQuality "12"
 
 dialogUpdate "icon: ${icon}"
 dialogUpdate "progresstext: Final Analysis …"
