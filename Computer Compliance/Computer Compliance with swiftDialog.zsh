@@ -1035,7 +1035,7 @@ function checkMdmCheckIn() {
 
     # dialogUpdate "icon: ${icon}"
 
-    results+="Last Check-In: ${lastCheckInTimeReadable}; "
+    results+="Last Check-In: ${last_check_in_time_human_reable}; "
 
 }
 
