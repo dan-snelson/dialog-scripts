@@ -27,10 +27,10 @@ The following compliance checks and information reporting are included in versio
 1. Apple Push Notification service
 1. Jamf Pro Check-in
 1. Jamf Pro Inventory
-1. BeyondTrust Privilege Management
-1. Cisco Umbrella
-1. CrowdStrike Falcon
-1. Palo Alto GlobalProtect
+1. BeyondTrust Privilege Management*
+1. Cisco Umbrella*
+1. CrowdStrike Falcon*
+1. Palo Alto GlobalProtect*
 1. Network Quality Test
 
 *[Setup Your Mac Validations](https://github.com/setup-your-mac/Setup-Your-Mac/tree/main/Validations)
