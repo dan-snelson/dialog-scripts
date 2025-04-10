@@ -16,18 +16,22 @@ The following compliance checks and information reporting are included in versio
 
 ### Compliance Checks
 
-1. Compliant OS Version
+1. macOS Version
+1. System Integrity Protection
+1. Firewall
+1. FileVault Encryption
 1. Last Reboot
 1. Free Disk Space
-1. MDM Check-in
-1. MDM Inventory
-1. FileVault Encryption
-1. BeyondTrust Privilege Management*
-1. Cisco Umbrella*
-1. CrowdStrike Falcon*
-1. Palo Alto GlobalProtect*
+1. MDM Profile
+1. MDM Certificate Expiration
+1. Apple Push Notification service
+1. Jamf Pro Check-in
+1. Jamf Pro Inventory
+1. BeyondTrust Privilege Management
+1. Cisco Umbrella
+1. CrowdStrike Falcon
+1. Palo Alto GlobalProtect
 1. Network Quality Test
-1. Time Machine
 
 *[Setup Your Mac Validations](https://github.com/setup-your-mac/Setup-Your-Mac/tree/main/Validations)
 
@@ -43,6 +47,8 @@ The following compliance checks and information reporting are included in versio
 - Full Name
 - User Name
 - User ID
+- Microsoft OneDrive Sync Date
+- Time Machine Backup Date
 - Kerberos Single Sign-on Extension
 - Platform Single Sign-on Extension
 

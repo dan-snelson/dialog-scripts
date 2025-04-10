@@ -45,6 +45,13 @@
 # Version 0.0.8, 8-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Added JSS Built-in Certificate Authority expiration check (thanks, @isaacatmann!) [JNUC 2024](https://github.com/mannconsulting/JNUC2024/)
 #
+# Version 0.0.9, 10-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added check for System Integrity Protection
+#   - Added check for built-in firewall
+#   - Added check for APNs
+#       - Renamed the previous, so-called "MDM" checks to "Jamf Pro"
+#   - Replaced `errorOut "${1}"` in indvidual checks with more verbose, specific log output
+#
 ####################################################################################################
 
 
@@ -58,7 +65,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.8"
+scriptVersion="0.0.9"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -286,8 +293,8 @@ dialogCommandFile=$( mktemp /var/tmp/dialogCommandFile_${organizationScriptName}
 # Set Permissions on Dialog Command Files
 chmod -vv 644 "${dialogCommandFile}" | tee -a "${scriptLog}"
 
-# The total number of steps for the progress bar, plus two (i.e., updateDialog "progress: increment")
-progressSteps="14"
+# The total number of steps for the progress bar, plus two (i.e., "progress: increment")
+progressSteps="17"
 
 # Set initial icon based on whether the Mac is a desktop or laptop
 if system_profiler SPPowerDataType | grep -q "Battery Power"; then
@@ -352,19 +359,22 @@ dialogJSON='
     "messagefont" : "size=14",
     "titlefont" : "shadow=true, size=24",
     "listitem" : [
-        {"title" : "Compliant OS Version", "subtitle" : "Organizational standards are the current and immediately previous versions of macOS", "icon" : "SF=01.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Last Reboot", "subtitle" : "Restart your Mac regularly — at least once a week — can help resolve many common issues", "icon" : "SF=02.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Free Disk Space", "subtitle" : "See KB0080685 Disk Usage to help identify the 50 largest directories", "icon" : "SF=03.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Profile", "subtitle" : "The presence of the Jamf Pro MDM profile helps ensure your Mac is enrolled", "icon" : "SF=04.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Certficate", "subtitle" : "Validate the expiration date of the Jamf Pro MDM certficate", "icon" : "SF=05.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=06.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=07.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=08.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=09.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=10.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=11.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=12.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=13.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"}
+        {"title" : "macOS Version", "subtitle" : "Organizational standards are the current and immediately previous versions of macOS", "icon" : "SF=01.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "System Integrity Protection", "subtitle" : "System Integrity Protection (SIP) in macOS protects the entire system by preventing the execution of unauthorized code.", "icon" : "SF=02.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Firewall", "subtitle" : "The built-in macOS firewall helps protect your Mac from unauthorized access.", "icon" : "SF=03.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=04.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Last Reboot", "subtitle" : "Restart your Mac regularly — at least once a week — can help resolve many common issues", "icon" : "SF=05.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Free Disk Space", "subtitle" : "See KB0080685 Disk Usage to help identify the 50 largest directories", "icon" : "SF=06.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Profile", "subtitle" : "The presence of the Jamf Pro MDM profile helps ensure your Mac is enrolled", "icon" : "SF=07.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Certficate Expiration", "subtitle" : "Validate the expiration date of the Jamf Pro MDM certficate", "icon" : "SF=08.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Apple Push Notification service", "subtitle" : "Validate communication between Apple, Jamf Pro and your Mac", "icon" : "SF=09.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Jamf Pro Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=10.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Jamf Pro Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=11.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=12.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=13.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=14.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=15.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=16.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"}
     ]
 }
 '
@@ -472,7 +482,7 @@ function quitScript() {
 
     quitOut "Exiting …"
 
-    notice "${results}; User: ${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}] ${loggedInUserGroupMembership}; Kerberos SSOe: ${kerberosSSOeResult}; Platform SSOe: ${platformSSOeResult}; SSH: ${sshStatus}; Microsoft OneDrive Sync Date: ${oneDriveSyncDate}; Time Machine Backup Date: ${tmStatus} ${tmLastBackup}; Wi-Fi: ${ssid}; ${wiFiIpAddress}; VPN IP: ${globalProtectStatus}; Site: ${jamfProSiteName}"
+    notice "User: ${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}] ${loggedInUserGroupMembership}; Kerberos SSOe: ${kerberosSSOeResult}; Platform SSOe: ${platformSSOeResult}; SSH: ${sshStatus}; Microsoft OneDrive Sync Date: ${oneDriveSyncDate}; Time Machine Backup Date: ${tmStatus} ${tmLastBackup}; Wi-Fi: ${ssid}; ${wiFiIpAddress}; VPN IP: ${globalProtectStatus}; Site: ${jamfProSiteName}"
 
     if [[ -n "${overallCompliance}" ]]; then
         dialogUpdate "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
@@ -502,6 +512,8 @@ function quitScript() {
     # Remove default dialog.log
     rm -rf /var/tmp/dialog.log
 
+    notice "Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
+
     quitOut "Goodbye!"
 
     exit "${exitCode}"
@@ -530,6 +542,16 @@ if [[ ! -f "${scriptLog}" ]]; then
 else
     preFlight "Specified scriptLog '${scriptLog}' exists; writing log entries to it"
 fi
+
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Logging Preamble
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+preFlight "\n\n###\n# $humanReadableScriptName (${scriptVersion})\n# https://snelson.us/2025/04/computer-compliance-0-0-2/\n###\n"
+preFlight "Initiating …"
 
 
 
@@ -655,21 +677,22 @@ function checkOS() {
     notice "Checking macOS version compatibility..."
 
     dialogUpdate "icon: SF=rectangle.and.pencil.and.ellipsis,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Comparing installed OS version with compliant version …"
+
     sleep "${anticipationDuration}"
 
     if [[ "${osBuild}" =~ [a-zA-Z]$ ]]; then
 
         logComment "OS Build, ${osBuild}, ends with a letter; skipping"
         osResult="Non-Compliant Beta OS"
-        dialogUpdate "listitem: index: ${1}, status: error, statustext: $osResult"
+        dialogUpdate "listitem: index: ${1}, status: error, statustext: ${osResult}"
+        warning "${osResult}"
     
     else
 
-        logComment "OS Build, ${osBuild}, ends with a number; proceeding …"
+        # logComment "OS Build, ${osBuild}, ends with a number; proceeding …"
 
         # N-rule variable [How many previous minor OS path versions will be marked as compliant]
         n="${previousMinorOS}"
@@ -688,41 +711,41 @@ function checkOS() {
 
         # check local vs online using etag
         if [[ -f "$etag_cache" && -f "$json_cache" ]]; then
-            info "e-tag stored, will download only if e-tag doesn't match"
+            # logComment "e-tag stored, will download only if e-tag doesn’t match"
             etag_old=$(/bin/cat "$etag_cache")
             /usr/bin/curl --compressed --silent --etag-compare "$etag_cache" --etag-save "$etag_cache" --header "User-Agent: $user_agent" "$online_json_url" --output "$json_cache"
             etag_new=$(/bin/cat "$etag_cache")
             if [[ "$etag_old" == "$etag_new" ]]; then
-                info "Cached ETag matched online ETag - cached json file is up to date"
+                # logComment "Cached ETag matched online ETag - cached json file is up to date"
             else
-                info "Cached ETag did not match online ETag, so downloaded new SOFA json file"
+                # logComment "Cached ETag did not match online ETag, so downloaded new SOFA json file"
             fi
         else
-            info "No e-tag cached, proceeding to download SOFA json file"
+            # logComment "No e-tag cached, proceeding to download SOFA json file"
             /usr/bin/curl --compressed --location --max-time 3 --silent --header "User-Agent: $user_agent" "$online_json_url" --etag-save "$etag_cache" --output "$json_cache"
         fi
 
         # 1. Get model (DeviceID)
         model=$(sysctl -n hw.model)
-        info "Model Identifier: $model"
+        # logComment "Model Identifier: $model"
 
         # check that the model is virtual or is in the feed at all
         if [[ $model == "VirtualMac"* ]]; then
             model="Macmini9,1"
         elif ! grep -q "$model" "$json_cache"; then
-            info "Unsupported Hardware"
-            return 1
+            warning "Unsupported Hardware"
+            # return 1
         fi
 
         # 2. Get current system OS
         system_version=$( /usr/bin/sw_vers -productVersion )
         system_os=$(cut -d. -f1 <<< "$system_version")
         # system_version="15.3"
-        info "System Version: $system_version"
+        # logComment "System Version: $system_version"
 
         if [[ $system_version == *".0" ]]; then
             system_version=${system_version%.0}
-            info "Corrected System Version: $system_version"
+            logComment "Corrected System Version: $system_version"
         fi
 
         # exit if less than macOS 12
@@ -730,12 +753,12 @@ function checkOS() {
             osResult="Unsupported macOS"
             result "$osResult"
             dialogUpdate "listitem: index: 1, status: fail, statustext: $osResult"
-            return 1
+            # return 1
         fi
 
         # 3. Identify latest compatible major OS
         latest_compatible_os=$(/usr/bin/plutil -extract "Models.$model.SupportedOS.0" raw -expect string "$json_cache" | /usr/bin/head -n 1)
-        info "Latest Compatible macOS: $latest_compatible_os"
+        # logComment "Latest Compatible macOS: $latest_compatible_os"
 
         # 4. Get OSVersions.Latest.ProductVersion
         latest_version_match=false
@@ -778,29 +801,98 @@ function checkOS() {
         done
 
         if [[ "$latest_version_match" == true ]] || [[ "$security_update_within_30_days" == true ]] || [[ "$n_rule" == true ]]; then
-            osResult="Compliant OS Version"
-            result "$osResult"
+            osResult="Compliant OS Version: ${osVersion} (${osBuild})"
             dialogUpdate "listitem: index: ${1}, status: success, statustext: $osResult"
+            info "$osResult"
         else
-            osResult="Non-Compliant OS Version"
-            result "$osResult"
+            osResult="Non-Compliant OS Version: ${osVersion} (${osBuild})"
             dialogUpdate "listitem: index: ${1}, status: fail, statustext: $osResult"
+            errorOut "$osResult"
             overallCompliance+="Failed: ${1}; "
-            errorOut "${1}"
         fi
 
     fi
-
-    # dialogUpdate "icon: ${icon}"
-
-    results+="${osResult}; "
 
 }
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Uptime Variables
+# Check System Integrity Protection
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function checkSIP() {
+
+    notice "Check System Integrity Protection …"
+
+    dialogUpdate "icon: SF=checkmark.shield.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+
+    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
+    dialogUpdate "progress: increment"
+    dialogUpdate "progresstext: Determining System Integrity Protection status …"
+
+    sleep "${anticipationDuration}"
+
+    sipCheck=$( csrutil status )
+
+    case ${sipCheck} in
+
+        *"enabled"* ) 
+            dialogUpdate "listitem: index: ${1}, status: success, statustext: Enabled"
+            info "System Integrity Protection: Enabled"
+            ;;
+
+        * )
+            dialogUpdate "listitem: index: ${1}, status: fail, statustext: Failed"
+            errorOut "System Integrity Protection: Failed"
+            overallCompliance+="Failed: ${1}; "
+            ;;
+
+    esac
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check Firewall
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function checkFirewall() {
+
+    notice "Check Firewall …"
+
+    dialogUpdate "icon: SF=firewall.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+
+    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
+    dialogUpdate "progress: increment"
+    dialogUpdate "progresstext: Determining Firewall status …"
+
+    sleep "${anticipationDuration}"
+
+    firewallCheck=$( /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate)
+
+    case ${firewallCheck} in
+
+        *"enabled"* ) 
+            dialogUpdate "listitem: index: ${1}, status: success, statustext: Enabled"
+            info "Firewall: Enabled"
+            ;;
+
+        *  )
+            dialogUpdate "listitem: index: ${1}, status: fail, statustext: Failed"
+            errorOut "Firewall: Failed"
+            overallCompliance+="Failed: ${1}; "
+            ;;
+
+    esac
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check Uptime
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function checkUptime() {
@@ -808,10 +900,11 @@ function checkUptime() {
     notice "Check Uptime …"
 
     dialogUpdate "icon: SF=clock.badge.questionmark,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Calculating time since last reboot …"
+
+    sleep "${anticipationDuration}"
 
     timestamp="$( date '+%Y-%m-%d-%H%M%S' )"
     lastBootTime=$( sysctl kern.boottime | awk -F'[ |,]' '{print $5}' )
@@ -836,15 +929,12 @@ function checkUptime() {
 
     if [[ "${upTimeMin}" -gt "${allowedUptimeMinutes}" ]]; then
         dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${uptimeHumanReadable}"
+        errorOut "Uptime: ${uptimeHumanReadable}"
         overallCompliance+="Failed: ${1}; "
-        errorOut "${1}"
     else
         dialogUpdate "listitem: index: ${1}, status: success, statustext: ${uptimeHumanReadable}"
+        info "Uptime: ${uptimeHumanReadable}"
     fi
-
-    # dialogUpdate "icon: ${icon}"
-
-    results+="Uptime: ${uptimeHumanReadable}; "
 
 }
 
@@ -859,10 +949,10 @@ function checkFreeDiskSpace() {
     notice "Checking Free Disk Space …"
 
     dialogUpdate "icon: SF=folder.fill.badge.questionmark,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining free disk space …"
+
     sleep "${anticipationDuration}"
 
     freeSpace=$( diskutil info / | grep -E 'Free Space|Available Space|Container Free Space' | awk -F ":\s*" '{ print $2 }' | awk -F "(" '{ print $1 }' | xargs )
@@ -874,16 +964,17 @@ function checkFreeDiskSpace() {
     diskMessage="Disk Space: ${diskSpace}"
 
     if [[ "${freePercentage}" < "${allowedFreeDiskPercentage}" ]]; then
+
         dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${diskSpace}"
+        errorOut "Disk Space: ${diskSpace}"
         overallCompliance+="Failed: ${1}; "
-        errorOut "${1}"
+
     else
+
         dialogUpdate "listitem: index: ${1}, status: success, statustext: ${diskSpace}"
+        info "Disk Space: ${diskSpace}"
+
     fi
-
-    # dialogUpdate "icon: ${icon}"
-
-    results+="Disk Space: ${diskSpace}; "
 
 }
 
@@ -897,32 +988,63 @@ function checkJamfProMdmProfile() {
 
     notice "Check the status of the Jamf Pro MDM Profile …"
 
-    dialogUpdate "icon: SF=globe,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
+    dialogUpdate "icon: SF=gear.badge,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining MDM Profile status …"
+
     sleep "${anticipationDuration}"
 
     mdmProfileTest=$( profiles list -all | grep "00000000-0000-0000-A000-4A414D460003" )
 
     if [[ -n "${mdmProfileTest}" ]]; then
 
-        jamfProMdmProfileStatus="Installed"
-        dialogUpdate "listitem: index: ${1}, status: success, statustext: ${jamfProMdmProfileStatus}"
+        dialogUpdate "listitem: index: ${1}, status: success, statustext: Installed"
+        info "Jamf Pro MDM Profile: Installed"
 
     else
 
-        jamfProMdmProfileStatus="NOT Installed"
-        dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${jamfProMdmProfileStatus}"
+        dialogUpdate "listitem: index: ${1}, status: fail, statustext: NOT Installed"
+        errorOut "Jamf Pro MDM Profile: NOT Installed"
         overallCompliance+="Failed: ${1}; "
-        errorOut "${1}"
 
     fi
- 
-    # dialogUpdate "icon: ${icon}"
 
-    results+="Jamf Pro MDM Profile: ${jamfProMdmProfileStatus}; "
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check Apple Push Notification service (thanks, @isaacatmann!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function checkAPNs() {
+
+    notice "Check Apple Push Notification service …"
+
+    dialogUpdate "icon: SF=ellipsis.bubble.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
+    dialogUpdate "progress: increment"
+    dialogUpdate "progresstext: Determining Apple Push Notification service status …"
+
+    sleep "${anticipationDuration}"
+
+    apnsCheck=$( command log show --last 24h --predicate 'subsystem == "com.apple.ManagedClient" && (eventMessage CONTAINS[c] "Received HTTP response (200) [Acknowledged" || eventMessage CONTAINS[c] "Received HTTP response (200) [NotNow")' | tail -1 | cut -d '.' -f 1 )
+
+    if [[ "${apnsCheck}" == *"Timestamp"* ]] || [[ -z "${apnsCheck}" ]]; then
+
+        dialogUpdate "listitem: index: ${1}, status: fail, statustext: Failed"
+        errorOut "Apple Push Notification service: ${apnsCheck}"
+        overallCompliance+="Failed: ${1}; "
+
+    else
+
+        apnsStatusEpoch=$( date -j -f "%Y-%m-%d %H:%M:%S" "${apnsCheck}" +"%s" )
+        apnsStatus=$( date -r "${apnsStatusEpoch}" "+%A %-l:%M %p" )
+        dialogUpdate "listitem: index: ${1}, status: success, statustext: ${apnsStatus}"
+        info "Apple Push Notification service: ${apnsCheck}"
+
+    fi
 
 }
 
@@ -930,7 +1052,6 @@ function checkJamfProMdmProfile() {
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Check the expiration date of the JSS Built-in Certificate Authority (thanks, @isaacatmann!)
-# For updates or support options, please visit https://mann.com/jamf or contact us at support@mann.com.
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function checkJssCertificateExpiration() {
@@ -938,10 +1059,10 @@ function checkJssCertificateExpiration() {
     notice "Check the expiration date of the JSS Built-in Certificate Authority …"
 
     dialogUpdate "icon: SF=mail.and.text.magnifyingglass,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining MDM Certificate expiration date …"
+
     sleep "${anticipationDuration}"
 
     identities=( $( security find-identity -v /Library/Keychains/System.keychain | awk '{print $3}' | tr -d '"' | head -n 1 ) )
@@ -956,10 +1077,11 @@ function checkJssCertificateExpiration() {
                 date_seconds=$(date -j -f "%b %d %T %Y %Z" "$expiry" +%s)
                 if (( date_seconds > now_seconds )); then
                     dialogUpdate "listitem: index: ${1}, status: success, statustext: ${expirationDateFormatted}"
+                    info "JSS Built-in Certificate Authority Expiration: ${expirationDateFormatted}"
                 else
                     dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${expirationDateFormatted}"
+                    errorOut "JSS Built-in Certificate Authority Expiration: ${expirationDateFormatted}"
                     overallCompliance+="Failed: ${1}; "
-                    errorOut "${1}"
                 fi
             fi
         done
@@ -968,32 +1090,28 @@ function checkJssCertificateExpiration() {
 
         expirationDateFormatted="NOT Installed"
         dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${expirationDateFormatted}"
+        errorOut "JSS Built-in Certificate Authority Expiration: ${expirationDateFormatted}"
         overallCompliance+="Failed: ${1}; "
-        errorOut "${1}"
 
     fi
- 
-    # dialogUpdate "icon: ${icon}"
-
-    results+="Jamf Pro Certificate Expiration: ${expirationDateFormatted}; " 
 
 }
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check MDM Last Check-In (thanks, @jordywitteman!)
+# Check Last Jamf Pro Check-In (thanks, @jordywitteman!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function checkMdmCheckIn() {
+function checkJamfProCheckIn() {
 
-    notice "Checking computer for MDM check-in status"
+    notice "Checking last Jamf Pro check-in …"
 
-    dialogUpdate "icon: SF=globe,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
+    dialogUpdate "icon: SF=dot.radiowaves.left.and.right,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
-    dialogUpdate "progresstext: Determining MDM check-in status …"
+    dialogUpdate "progresstext: Determining last Jamf Pro check-in …"
+
     sleep "${anticipationDuration}"
 
     # Enable 24 hour clock format (12 hour clock enabled by default)
@@ -1022,38 +1140,36 @@ function checkMdmCheckIn() {
     if [ ${time_since_check_in_epoch} -ge ${check_in_time_old} ]; then
         # check_in_status_indicator="🔴"
         dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${last_check_in_time_human_reable}"
+        errorOut "Last Jamf Pro Check-in: ${last_check_in_time_human_reable}"
         overallCompliance+="Failed: ${1}; "
-        errorOut "${1}"
     elif [ ${time_since_check_in_epoch} -ge ${check_in_time_aging} ]; then
         # check_in_status_indicator="🟠"
         dialogUpdate "listitem: index: ${1}, status: error, statustext: ${last_check_in_time_human_reable}"
+        warning "Last Jamf Pro Check-in: ${last_check_in_time_human_reable}"
         overallCompliance+="Error ${1}"
     elif [ ${time_since_check_in_epoch} -lt ${check_in_time_aging} ]; then
         # check_in_status_indicator="🟢"
         dialogUpdate "listitem: index: ${1}, status: success, statustext: ${last_check_in_time_human_reable}"
+        info "Last Jamf Pro Check-in: ${last_check_in_time_human_reable}"
     fi
-
-    # dialogUpdate "icon: ${icon}"
-
-    results+="Last Check-In: ${last_check_in_time_human_reable}; "
 
 }
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check MDM Last Inventory (thanks, @jordywitteman!)
+# Check Last Jamf Pro Inventory Update (thanks, @jordywitteman!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-function checkMdmInventory() {
+function checkJamfProInventory() {
 
-    notice "Checking computer for MDM inventory status"
+    notice "Checking last Jamf Pro inventory update …"
 
-    dialogUpdate "icon: SF=globe,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
+    dialogUpdate "icon: SF=checklist,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
-    dialogUpdate "progresstext: Determining MDM inventory status …"
+    dialogUpdate "progresstext: Determining last Jamf Pro inventory update …"
+
     sleep "${anticipationDuration}"
 
     # Enable 24 hour clock format (12 hour clock enabled by default)
@@ -1083,20 +1199,18 @@ function checkMdmInventory() {
     if [ ${time_since_inventory_epoch} -ge ${inventory_time_old} ]; then
         # inventory_status_indicator="🔴"
         dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${last_inventory_time_human_reable}"
+        errorOut "Last Jamf Pro Inventory Update: ${last_inventory_time_human_reable}"
         overallCompliance+="Failed: ${1}; "
-        errorOut "${1}"
     elif [ ${time_since_inventory_epoch} -ge ${inventory_time_aging} ]; then
         # inventory_status_indicator="🟠"
         dialogUpdate "listitem: index: ${1}, status: error, statustext: ${last_inventory_time_human_reable}"
+        warning "Last Jamf Pro Inventory Update: ${last_inventory_time_human_reable}"
         overallCompliance+="Error ${1}"
     elif [ ${time_since_inventory_epoch} -lt ${inventory_time_aging} ]; then
         # inventory_status_indicator="🟢"
         dialogUpdate "listitem: index: ${1}, status: success, statustext: ${last_inventory_time_human_reable}"
+        info "Last Jamf Pro Inventory Update: ${last_inventory_time_human_reable}"
     fi
-
-    # dialogUpdate "icon: ${icon}"
-
-    results+="Last Inventory Update: ${last_inventory_time_human_reable}; "
 
 }
 
@@ -1111,40 +1225,45 @@ function checkFileVault() {
     notice "Checking FileVault status …"
 
     dialogUpdate "icon: SF=lock.rectangle,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining FileVault disk encryption status …"
+
     sleep "${anticipationDuration}"
 
     fileVaultCheck=$( fdesetup isactive )
 
     if [[ -f /Library/Preferences/com.apple.fdesetup.plist ]] || [[ "$fileVaultCheck" == "true" ]]; then
+
         fileVaultStatus=$( fdesetup status -extended -verbose 2>&1 )
+
         case ${fileVaultStatus} in
+
             *"FileVault is On."* ) 
                 dialogUpdate "listitem: index: ${1}, status: success, statustext: Enabled"
-                results+="FileVault: Enabled; "
+                info "FileVault: Enabled"
                 ;;
+
             *"Deferred enablement appears to be active for user"* )
                 dialogUpdate "listitem: index: ${1}, status: success, statustext: Enabled (next login)"
-                results+="FileVault: Enabled (next login); "
+                warning "FileVault: Enabled (next login)"
                 ;;
+
             *  )
                 dialogUpdate "listitem: index: ${1}, status: error, statustext: Failed"
-                results+="FileVault: Failed; "
+                errorOut "FileVault: Failed"
                 overallCompliance+="Failed: ${1}; "
-                errorOut "${1}"
                 ;;
-        esac
-    else
-        dialogUpdate "listitem: index: ${1}, status: error, statustext: Failed"
-        results+="FileVault: Failed; "
-        overallCompliance+="Failed: ${1}; "
-        errorOut "${1}"
-    fi
 
-    # dialogUpdate "icon: ${icon}"
+        esac
+
+    else
+
+        dialogUpdate "listitem: index: ${1}, status: error, statustext: Failed"
+        errorOut "FileVault: Failed"
+        overallCompliance+="Failed: ${1}; "
+
+    fi
 
 }
 
@@ -1159,39 +1278,37 @@ function checkSetupYourMacValidation() {
     trigger="${2}"
     appPath="${3}"
 
-    notice "Checking ${trigger} status …"
+    notice "Setup Your Mac Validation: ${appPath} …"
 
     dialogUpdate "icon: ${appPath}"
-
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining status of ${appPath} …"
-    sleep "${anticipationDuration}"
 
-    symValidation=$( /usr/local/bin/jamf policy -event $trigger | grep "Script result:")
+    # sleep "${anticipationDuration}"
 
-    logComment "symValidation: $symValidation"
+    symValidation=$( /usr/local/bin/jamf policy -event $trigger | grep "Script result:" )
 
     case ${symValidation} in
-        *"Error"* | *"Failed"* )
+
+        *"Failed"* )
             dialogUpdate "listitem: index: ${1}, status: fail, statustext: Failed"
-            results+="${trigger}: Failed; "
+            errorOut "${appPath} Failed"
             overallCompliance+="Failed: ${1}; "
-            errorOut "${1}"
             ;;
+
         *"Running"* ) 
             dialogUpdate "listitem: index: ${1}, status: success, statustext: Running"
-            results+="${trigger}: Running; "
+            info "${appPath} Running"
             ;;
-        *  )
-            dialogUpdate "listitem: index: ${1}, status: error, statustext: Error"
-            results+="${trigger}: Error; "
-            overallCompliance+="Error: ${1}; "
-            errorOut "${1}"
-            ;;
-    esac
 
-    dialogUpdate "icon: ${icon}"
+        *"Error"* | * )
+            dialogUpdate "listitem: index: ${1}, status: error, statustext: Error"
+            errorOut "${appPath} Error"
+            overallCompliance+="Error: ${1}; "
+            ;;
+
+    esac
 
 }
 
@@ -1205,11 +1322,12 @@ function checkNetworkQuality() {
     
     notice "Checking Network Quality …"
 
-    dialogUpdate "icon: SF=network,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
+    dialogUpdate "icon: SF=gauge.with.dots.needle.bottom.100percent,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining Network Quality …"
+
+    # sleep "${anticipationDuration}"
 
     networkQuality -s -v -c > /var/tmp/networkQualityTest
     networkQualityTest=$( < /var/tmp/networkQualityTest )
@@ -1220,45 +1338,18 @@ function checkNetworkQuality() {
         11* ) 
             dlThroughput="N/A; macOS ${osVersion}"
             dlResponsiveness="N/A; macOS ${osVersion}"
-            dlStartDate="N/A; macOS ${osVersion}"
-            dlEndDate="N/A; macOS ${osVersion}"
             ;;
 
         12* | 13* | 14* | 15* )
             dlThroughput=$( get_json_value "$networkQualityTest" "dl_throughput")
             dlResponsiveness=$( get_json_value "$networkQualityTest" "dl_responsiveness" )
-            dlStartDate=$( get_json_value "$networkQualityTest" "start_date" )
-            dlEndDate=$( get_json_value "$networkQualityTest" "end_date" )
             ;;
 
     esac
 
     mbps=$( echo "scale=2; ( $dlThroughput / 1000000 )" | bc )
     dialogUpdate "listitem: index: ${1}, status: success, statustext: $mbps Mbps"
-    results+="Download: $mbps Mbps, Responsiveness: $dlResponsiveness; "
-
-    dialogUpdate "icon: ${icon}"
-
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Check Template
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function checkTemplate() {
-    
-    notice "Checking Template …"
-
-    dialogUpdate "icon: SF=network,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-
-    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
-    dialogUpdate "progress: increment"
-    dialogUpdate "progresstext: Checking Template …"
-    sleep "${anticipationDuration}"
-
-
+    info "Download: $mbps Mbps, Responsiveness: $dlResponsiveness; "
 
     dialogUpdate "icon: ${icon}"
 
@@ -1278,7 +1369,6 @@ function checkTemplate() {
 
 ${dialogBinary} --jsonfile ${dialogJSONFile} --json &
 
-# dialogUpdate "progress: increment"
 dialogUpdate "progresstext: Initializing …"
 
 # Band-Aid for macOS 15 `withAnimation` SwiftUI bug
@@ -1292,21 +1382,25 @@ dialogUpdate "list: show"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 checkOS "0"
-checkUptime "1"
-checkFreeDiskSpace "2"
-checkJamfProMdmProfile "3"
-checkJssCertificateExpiration "4"
-checkMdmCheckIn "5"
-checkMdmInventory "6"
-checkFileVault "7"
-checkSetupYourMacValidation "8" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
-checkSetupYourMacValidation "9" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
-checkSetupYourMacValidation "10" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
-checkSetupYourMacValidation "11" "symvGlobalProtect" "/Applications/GlobalProtect.app"
-checkNetworkQuality "12"
+checkSIP "1"
+checkFirewall "2"
+checkFileVault "3"
+checkUptime "4"
+checkFreeDiskSpace "5"
+checkJamfProMdmProfile "6"
+checkJssCertificateExpiration "7"
+checkAPNs "8"
+checkJamfProCheckIn "9"
+checkJamfProInventory "10"
+checkSetupYourMacValidation "11" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
+checkSetupYourMacValidation "12" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
+checkSetupYourMacValidation "13" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
+checkSetupYourMacValidation "14" "symvGlobalProtect" "/Applications/GlobalProtect.app"
+checkNetworkQuality "15"
 
 dialogUpdate "icon: ${icon}"
 dialogUpdate "progresstext: Final Analysis …"
+
 sleep "${anticipationDuration}"
 
 
