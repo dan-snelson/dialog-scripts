@@ -52,6 +52,17 @@
 #       - Renamed the previous, so-called "MDM" checks to "Jamf Pro"
 #   - Replaced `errorOut "${1}"` in indvidual checks with more verbose, specific log output
 #
+# Version 0.0.10, 10-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Modified Uptime Check to use `warning` for excessive uptime
+#   - Removed stray occurrences of `results` 
+#
+# Version 0.0.11, 10-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added computer information to pre-flight section of logs
+#
+# Version 0.0.12, 10-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added `excessiveUptimeAlertStyle` varible (so excessive uptime will result in a "warning" or "error")
+#   - Added `organizationColorScheme` to more easily brand the various SF Symbols
+#
 ####################################################################################################
 
 
@@ -65,7 +76,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.9"
+scriptVersion="0.0.12"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -75,9 +86,6 @@ SECONDS="0"
 
 # Current Timestamp
 timestamp="$( date '+%Y-%m-%d-%H%M%S' )"
-
-# Results
-results="Results for ${timestamp}: "
 
 
 
@@ -91,6 +99,9 @@ humanReadableScriptName="Computer Compliance"
 # Organization's Script Name
 organizationScriptName="CC"
 
+# Organization's Color Scheme
+organizationColorScheme="weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+
 # Organization's Kerberos Realm (leave blank to disable check)
 kerberosRealm=""
 
@@ -100,13 +111,16 @@ anticipationDuration="2"
 # How many previous minor OS versions will be marked as compliant
 previousMinorOS="2"
 
+# Allowed percentage of free disk space
+allowedFreeDiskPercentage="10"
+
 # Allowed number of uptime minutes
 # - 1 day = 24 hours × 60 minutes/hour = 1,440 minutes
 # - 7 days, multiply: 7 × 1,440 minutes = 10,080 minutes
 allowedUptimeMinutes="10080"
 
-# Allowed percentage of free disk space
-allowedFreeDiskPercentage="10"
+# Should excessive uptime result in a "warning" or "failure" ?
+excessiveUptimeAlertStyle="warning"
 
 
 
@@ -238,8 +252,6 @@ done <<< "$networkServices"
 
 wiFiIpAddress=$( echo "$activeServices" | /usr/bin/sed '/^$/d' | head -n 1)
 
-results+="${wiFiIpAddress}; "
-
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -253,18 +265,15 @@ if [[ -e "${globalProtectTest}" ]] ; then
     interface=$( ifconfig | grep -B1 "10.25" | awk '{ print $1 }' | head -1 )
 
     if [[ -z "$interface" ]]; then
-        results+="GlobalProtect: Inactive; "
         globalProtectStatus="Inactive"
     else
         globalProtectIP=$( ifconfig | grep -A2 -E "${interface}" | grep inet | awk '{ print $2 }' )
         globalProtectStatus="${globalProtectIP}"
-        results+="GlobalProtect: ${globalProtectIP}; "
     fi
 
 else
 
     # Palo Alto Networks GlobalProtect is not installed
-    results+="GlobalProtect is NOT installed; "
     globalProtectStatus="GlobalProtect is NOT installed"
 
 fi
@@ -298,9 +307,9 @@ progressSteps="17"
 
 # Set initial icon based on whether the Mac is a desktop or laptop
 if system_profiler SPPowerDataType | grep -q "Battery Power"; then
-    icon="SF=laptopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    icon="SF=laptopcomputer.and.arrow.down,${organizationColorScheme}"
 else
-    icon="SF=desktopcomputer.and.arrow.down,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    icon="SF=desktopcomputer.and.arrow.down,${organizationColorScheme}"
 fi
 
 # Create `overlayicon` from Self Service's custom icon (thanks, @meschwartz!)
@@ -359,22 +368,22 @@ dialogJSON='
     "messagefont" : "size=14",
     "titlefont" : "shadow=true, size=24",
     "listitem" : [
-        {"title" : "macOS Version", "subtitle" : "Organizational standards are the current and immediately previous versions of macOS", "icon" : "SF=01.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "System Integrity Protection", "subtitle" : "System Integrity Protection (SIP) in macOS protects the entire system by preventing the execution of unauthorized code.", "icon" : "SF=02.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Firewall", "subtitle" : "The built-in macOS firewall helps protect your Mac from unauthorized access.", "icon" : "SF=03.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=04.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Last Reboot", "subtitle" : "Restart your Mac regularly — at least once a week — can help resolve many common issues", "icon" : "SF=05.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Free Disk Space", "subtitle" : "See KB0080685 Disk Usage to help identify the 50 largest directories", "icon" : "SF=06.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Profile", "subtitle" : "The presence of the Jamf Pro MDM profile helps ensure your Mac is enrolled", "icon" : "SF=07.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Certficate Expiration", "subtitle" : "Validate the expiration date of the Jamf Pro MDM certficate", "icon" : "SF=08.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Apple Push Notification service", "subtitle" : "Validate communication between Apple, Jamf Pro and your Mac", "icon" : "SF=09.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Jamf Pro Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=10.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Jamf Pro Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=11.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=12.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=13.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=14.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=15.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=16.square.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951", "status" : "pending", "statustext" : "Pending …"}
+        {"title" : "macOS Version", "subtitle" : "Organizational standards are the current and immediately previous versions of macOS", "icon" : "SF=01.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "System Integrity Protection", "subtitle" : "System Integrity Protection (SIP) in macOS protects the entire system by preventing the execution of unauthorized code.", "icon" : "SF=02.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Firewall", "subtitle" : "The built-in macOS firewall helps protect your Mac from unauthorized access.", "icon" : "SF=03.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=04.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Last Reboot", "subtitle" : "Restart your Mac regularly — at least once a week — can help resolve many common issues", "icon" : "SF=05.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Free Disk Space", "subtitle" : "See KB0080685 Disk Usage to help identify the 50 largest directories", "icon" : "SF=06.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Profile", "subtitle" : "The presence of the Jamf Pro MDM profile helps ensure your Mac is enrolled", "icon" : "SF=07.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Certficate Expiration", "subtitle" : "Validate the expiration date of the Jamf Pro MDM certficate", "icon" : "SF=08.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Apple Push Notification service", "subtitle" : "Validate communication between Apple, Jamf Pro and your Mac", "icon" : "SF=09.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Jamf Pro Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=10.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Jamf Pro Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=11.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=12.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=13.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=14.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=15.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=16.square.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"}
     ]
 }
 '
@@ -555,6 +564,16 @@ preFlight "Initiating …"
 
 
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Computer Information
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+preFlight "${computerName} (S/N ${serialNumber})"
+preFlight "${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}]" 
+
+
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Pre-flight Check: Confirm script is running as root
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -676,7 +695,7 @@ function checkOS() {
 
     notice "Checking macOS version compatibility..."
 
-    dialogUpdate "icon: SF=rectangle.and.pencil.and.ellipsis,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=rectangle.and.pencil.and.ellipsis,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Comparing installed OS version with compliant version …"
@@ -825,7 +844,7 @@ function checkSIP() {
 
     notice "Check System Integrity Protection …"
 
-    dialogUpdate "icon: SF=checkmark.shield.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=checkmark.shield.fill,${organizationColorScheme}"
 
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
@@ -862,7 +881,7 @@ function checkFirewall() {
 
     notice "Check Firewall …"
 
-    dialogUpdate "icon: SF=firewall.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=firewall.fill,${organizationColorScheme}"
 
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
@@ -899,7 +918,7 @@ function checkUptime() {
 
     notice "Check Uptime …"
 
-    dialogUpdate "icon: SF=clock.badge.questionmark,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=clock.badge.questionmark,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Calculating time since last reboot …"
@@ -928,12 +947,27 @@ function checkUptime() {
     fi
 
     if [[ "${upTimeMin}" -gt "${allowedUptimeMinutes}" ]]; then
-        dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${uptimeHumanReadable}"
-        errorOut "Uptime: ${uptimeHumanReadable}"
-        overallCompliance+="Failed: ${1}; "
+
+        case ${excessiveUptimeAlertStyle} in
+
+            "warning" ) 
+                dialogUpdate "listitem: index: ${1}, status: error, statustext: ${uptimeHumanReadable}"
+                warning "Uptime: ${uptimeHumanReadable}"
+                ;;
+
+            "failure" | * )
+                dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${uptimeHumanReadable}"
+                errorOut "Uptime: ${uptimeHumanReadable}"
+                overallCompliance+="Failed: ${1}; "
+                ;;
+
+        esac
+    
     else
+    
         dialogUpdate "listitem: index: ${1}, status: success, statustext: ${uptimeHumanReadable}"
         info "Uptime: ${uptimeHumanReadable}"
+    
     fi
 
 }
@@ -948,7 +982,7 @@ function checkFreeDiskSpace() {
 
     notice "Checking Free Disk Space …"
 
-    dialogUpdate "icon: SF=folder.fill.badge.questionmark,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=folder.fill.badge.questionmark,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining free disk space …"
@@ -988,7 +1022,7 @@ function checkJamfProMdmProfile() {
 
     notice "Check the status of the Jamf Pro MDM Profile …"
 
-    dialogUpdate "icon: SF=gear.badge,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=gear.badge,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining MDM Profile status …"
@@ -1022,7 +1056,7 @@ function checkAPNs() {
 
     notice "Check Apple Push Notification service …"
 
-    dialogUpdate "icon: SF=ellipsis.bubble.fill,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=ellipsis.bubble.fill,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining Apple Push Notification service status …"
@@ -1058,7 +1092,7 @@ function checkJssCertificateExpiration() {
 
     notice "Check the expiration date of the JSS Built-in Certificate Authority …"
 
-    dialogUpdate "icon: SF=mail.and.text.magnifyingglass,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=mail.and.text.magnifyingglass,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining MDM Certificate expiration date …"
@@ -1107,7 +1141,7 @@ function checkJamfProCheckIn() {
 
     notice "Checking last Jamf Pro check-in …"
 
-    dialogUpdate "icon: SF=dot.radiowaves.left.and.right,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=dot.radiowaves.left.and.right,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining last Jamf Pro check-in …"
@@ -1165,7 +1199,7 @@ function checkJamfProInventory() {
 
     notice "Checking last Jamf Pro inventory update …"
 
-    dialogUpdate "icon: SF=checklist,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=checklist,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining last Jamf Pro inventory update …"
@@ -1224,7 +1258,7 @@ function checkFileVault() {
 
     notice "Checking FileVault status …"
 
-    dialogUpdate "icon: SF=lock.rectangle,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=lock.rectangle,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining FileVault disk encryption status …"
@@ -1322,7 +1356,7 @@ function checkNetworkQuality() {
     
     notice "Checking Network Quality …"
 
-    dialogUpdate "icon: SF=gauge.with.dots.needle.bottom.100percent,weight=semibold,colour1=#ef9d51,colour2=#ef7951"
+    dialogUpdate "icon: SF=gauge.with.dots.needle.bottom.100percent,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining Network Quality …"
