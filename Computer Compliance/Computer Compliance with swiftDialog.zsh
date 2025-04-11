@@ -897,7 +897,7 @@ function checkAvailableSoftwareUpdates() {
             *"Deferred: YES"* )
                 availableSoftwareUpdates="Deferred software available."
                 dialogUpdate "listitem: index: ${1}, status: error, statustext: ${availableSoftwareUpdates}"
-                info "Available Software Updates: ${availableSoftwareUpdates}"
+                warning "Available Software Updates: ${availableSoftwareUpdates}"
                 ;;
 
             *"No new software available."* )
@@ -910,7 +910,7 @@ function checkAvailableSoftwareUpdates() {
                 SUList=$( echo "${SUListRaw}" | grep "*" | sed "s/\* Label: //g" | sed "s/,*$//g" )
                 availableSoftwareUpdates="${SUList}"
                 dialogUpdate "listitem: index: ${1}, status: error, statustext: ${availableSoftwareUpdates}"
-                info "Available Software Updates: ${availableSoftwareUpdates}"
+                warning "Available Software Updates: ${availableSoftwareUpdates}"
                 ;;
 
         esac
