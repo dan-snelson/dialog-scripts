@@ -843,11 +843,11 @@ function checkOS() {
         if [[ "$latest_version_match" == true ]] || [[ "$security_update_within_30_days" == true ]] || [[ "$n_rule" == true ]]; then
             osResult="Passed"
             dialogUpdate "listitem: index: ${1}, status: success, statustext: $osResult"
-            info "$osResult: ${osVersion} (${osBuild})"
+            info "$osResult: macOS ${osVersion} (${osBuild})"
         else
             osResult="Failed"
             dialogUpdate "listitem: index: ${1}, status: fail, statustext: $osResult"
-            errorOut "$osResult: ${osVersion} (${osBuild})"
+            errorOut "$osResult: macOS ${osVersion} (${osBuild})"
             overallCompliance+="Failed: ${1}; "
         fi
 
