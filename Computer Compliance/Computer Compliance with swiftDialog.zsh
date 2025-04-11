@@ -81,6 +81,9 @@
 # Version 0.0.15, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Supressed various error messages (i.e., "2>/dev/null" is your friend)
 #
+# Version 0.0.16, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Cache networkQuality test
+#
 ####################################################################################################
 
 
@@ -94,7 +97,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.15"
+scriptVersion="0.0.16"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -1452,9 +1455,19 @@ function checkNetworkQuality() {
 
     # sleep "${anticipationDuration}"
 
-    networkQuality -s -v -c > /var/tmp/networkQualityTest
+    if [[ -e /var/tmp/networkQualityTest ]]; then
+        info "Using cached Network Quality Test"
+        testStatus="(cached)"
+    else
+        info "Starting Network Quality Test …"
+        unset testStatus
+        networkQuality -s -v -c > /var/tmp/networkQualityTest
+        info "Completed Network Quality Test"
+    fi
+
     networkQualityTest=$( < /var/tmp/networkQualityTest )
-    rm /var/tmp/networkQualityTest
+
+    # rm /var/tmp/networkQualityTest
 
     case "${osVersion}" in
 
@@ -1471,8 +1484,8 @@ function checkNetworkQuality() {
     esac
 
     mbps=$( echo "scale=2; ( $dlThroughput / 1000000 )" | bc )
-    dialogUpdate "listitem: index: ${1}, status: success, statustext: $mbps Mbps"
-    info "Download: $mbps Mbps, Responsiveness: $dlResponsiveness; "
+    dialogUpdate "listitem: index: ${1}, status: success, statustext: ${mbps} Mbps ${testStatus}"
+    info "Download: ${mbps} Mbps, Responsiveness: ${dlResponsiveness}; "
 
     dialogUpdate "icon: ${icon}"
 
