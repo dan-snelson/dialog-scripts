@@ -78,6 +78,9 @@
 # Version 0.0.14, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Supressed extraneous output from `checkAvailableSoftwareUpdates`
 #
+# Version 0.0.15, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Supressed various error messages (i.e., "2>/dev/null" is your friend)
+#
 ####################################################################################################
 
 
@@ -91,7 +94,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.14"
+scriptVersion="0.0.15"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -175,7 +178,7 @@ computerName=$( scutil --get ComputerName | /usr/bin/sed 's/’//' )
 computerModel=$( sysctl -n hw.model )
 localHostName=$( scutil --get LocalHostName )
 batteryCycleCount=$( ioreg -r -c "AppleSmartBattery" | /usr/bin/grep '"CycleCount" = ' | /usr/bin/awk '{ print $3 }' | /usr/bin/sed s/\"//g )
-ssid=$( ipconfig getsummary $(networksetup -listallhardwareports | awk '/Hardware Port: Wi-Fi/{getline; print $2}') | awk -F ' SSID : '  '/ SSID : / {print $2}' )
+ssid=$( ipconfig getsummary 2>/dev/null $(networksetup -listallhardwareports | awk '/Hardware Port: Wi-Fi/{getline; print $2}') | awk -F ' SSID : '  '/ SSID : / {print $2}' )
 sshStatus=$( systemsetup -getremotelogin | awk -F ": " '{ print $2 }' )
 networkTimeServer=$( systemsetup -getnetworktimeserver )
 locationServices=$( defaults read /var/db/locationd/Library/Preferences/ByHost/com.apple.locationd LocationServicesEnabled )
@@ -208,7 +211,7 @@ if [[ -n "${kerberosRealm}" ]]; then
 fi
 
 # Platform Single Sign-on Extension
-pssoeEmail=$( dscl . read /Users/"${loggedInUser}" dsAttrTypeStandard:AltSecurityIdentities | awk -F'SSO:' '/PlatformSSO/ {print $2}' )
+pssoeEmail=$( dscl . read /Users/"${loggedInUser}" dsAttrTypeStandard:AltSecurityIdentities 2>/dev/null | awk -F'SSO:' '/PlatformSSO/ {print $2}' )
 
 if [[ -n "${pssoeEmail}" ]]; then
     platformSSOeResult="${pssoeEmail}"
@@ -217,25 +220,25 @@ else
 fi
 
 # Last modified time of user's Microsoft OneDrive sync file (thanks, @pbowden-msft!)
-DataFile=$(ls -t $loggedInUserHomeDirectory/Library/Application\ Support/OneDrive/settings/Business1/*.ini | head -n 1)
-if [[ "$DataFile" != "" ]]; then
+if [[ -d "${loggedInUserHomeDirectory}/Library/Application Support/OneDrive/settings/Business1/" ]]; then
+    DataFile=$( ls -t "${loggedInUserHomeDirectory}"/Library/Application\ Support/OneDrive/settings/Business1/*.ini | head -n 1 )
     EpochTime=$( stat -f %m "$DataFile" )
     UTCDate=$( date -u -r $EpochTime '+%d-%b-%Y' )
     oneDriveSyncDate="${UTCDate}"
 else
-    oneDriveSyncDate="Not configured"
+    oneDriveSyncDate="Not Configured"
 fi
 
 # Time Machine Backup Date
-tmDestinationInfo=$( tmutil destinationinfo )
+tmDestinationInfo=$( tmutil destinationinfo 2>/dev/null )
 if [[ "${tmDestinationInfo}" == *"No destinations configured"* ]]; then
     tmStatus="Not configured"
     tmLastBackup=""
 else
-    tmDestinations=$( tmutil destinationinfo | grep "Name" | awk -F ':' '{print $NF}' | awk '{$1=$1};1')
+    tmDestinations=$( tmutil destinationinfo 2>/dev/null | grep "Name" | awk -F ':' '{print $NF}' | awk '{$1=$1};1')
     tmStatus="${tmDestinations//$'\n'/, }"
 
-    tmBackupDates=$( tmutil latestbackup | awk -F "/" '{print $NF}' | cut -d'.' -f1 )
+    tmBackupDates=$( tmutil latestbackup  2>/dev/null | awk -F "/" '{print $NF}' | cut -d'.' -f1 )
     if [[ -z $tmBackupDates ]]; then
         tmLastBackup="Last backup date(s) unknown; connect destination(s)"
     else
