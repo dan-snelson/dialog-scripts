@@ -75,6 +75,9 @@
 #   - Removed `computerModel` from `helpmessage`
 #   - Removed `tmStatus` from `helpmessage`
 #
+# Version 0.0.14, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Supressed extraneous output from `checkAvailableSoftwareUpdates`
+#
 ####################################################################################################
 
 
@@ -88,7 +91,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.13"
+scriptVersion="0.0.14"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -866,7 +869,9 @@ function checkAvailableSoftwareUpdates() {
 
     sleep "${anticipationDuration}"
 
-    if /usr/libexec/PlistBuddy -c "Print :RecommendedUpdates:0" /Library/Preferences/com.apple.SoftwareUpdate.plist 2>/dev/null; then
+    recommendedUpdates=$( /usr/libexec/PlistBuddy -c "Print :RecommendedUpdates:0" /Library/Preferences/com.apple.SoftwareUpdate.plist 2>/dev/null )
+
+    if [[ -n "${recommendedUpdates}" ]]; then
 
         SUListRaw=$( softwareupdate --list --include-config-data 2>&1 )
 
