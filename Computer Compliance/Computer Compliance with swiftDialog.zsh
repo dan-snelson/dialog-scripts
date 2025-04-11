@@ -320,7 +320,7 @@ dialogJSONFile=$( mktemp -u /var/tmp/dialogJSONFile_${organizationScriptName}.XX
 dialogCommandFile=$( mktemp /var/tmp/dialogCommandFile_${organizationScriptName}.XXXX )
 
 # Set Permissions on Dialog Command Files
-chmod -vv 644 "${dialogCommandFile}" | tee -a "${scriptLog}"
+chmod 644 "${dialogCommandFile}"
 
 # The total number of steps for the progress bar, plus three (i.e., "progress: increment")
 progressSteps="18"
@@ -572,7 +572,7 @@ if [[ ! -f "${scriptLog}" ]]; then
         fatal "Unable to create specified scriptLog '${scriptLog}'; exiting.\n\n(Is this script running as 'root' ?)"
     fi
 else
-    preFlight "Specified scriptLog '${scriptLog}' exists; writing log entries to it"
+    # preFlight "Specified scriptLog '${scriptLog}' exists; writing log entries to it"
 fi
 
 
@@ -841,13 +841,13 @@ function checkOS() {
         done
 
         if [[ "$latest_version_match" == true ]] || [[ "$security_update_within_30_days" == true ]] || [[ "$n_rule" == true ]]; then
-            osResult="Compliant OS Version: ${osVersion} (${osBuild})"
+            osResult="Passed"
             dialogUpdate "listitem: index: ${1}, status: success, statustext: $osResult"
-            info "$osResult"
+            info "$osResult: ${osVersion} (${osBuild})"
         else
-            osResult="Non-Compliant OS Version: ${osVersion} (${osBuild})"
+            osResult="Failed"
             dialogUpdate "listitem: index: ${1}, status: fail, statustext: $osResult"
-            errorOut "$osResult"
+            errorOut "$osResult: ${osVersion} (${osBuild})"
             overallCompliance+="Failed: ${1}; "
         fi
 
