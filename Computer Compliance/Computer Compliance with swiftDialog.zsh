@@ -119,7 +119,7 @@ allowedFreeDiskPercentage="10"
 # - 7 days, multiply: 7 × 1,440 minutes = 10,080 minutes
 allowedUptimeMinutes="10080"
 
-# Should excessive uptime result in a "warning" or "failure" ?
+# Should excessive uptime result in a "warning" or "error" ?
 excessiveUptimeAlertStyle="warning"
 
 
@@ -392,7 +392,6 @@ echo "${dialogJSON}" > "${dialogJSONFile}"
 
 
 
-
 ####################################################################################################
 #
 # Functions
@@ -456,6 +455,7 @@ function dialogUpdate(){
     sleep 0.3
     echo "$1" >> "$dialogCommandFile"
 }
+
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -554,14 +554,12 @@ fi
 
 
 
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Pre-flight Check: Logging Preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 preFlight "\n\n###\n# $humanReadableScriptName (${scriptVersion})\n# https://snelson.us/2025/04/computer-compliance-0-0-2/\n###\n"
 preFlight "Initiating …"
-
 
 
 
@@ -955,7 +953,7 @@ function checkUptime() {
                 warning "Uptime: ${uptimeHumanReadable}"
                 ;;
 
-            "failure" | * )
+            "error" | * )
                 dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${uptimeHumanReadable}"
                 errorOut "Uptime: ${uptimeHumanReadable}"
                 overallCompliance+="Failed: ${1}; "
