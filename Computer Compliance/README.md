@@ -17,6 +17,7 @@ The following compliance checks and information reporting are included in versio
 ### Compliance Checks
 
 1. macOS Version
+1. Available Updates
 1. System Integrity Protection
 1. Firewall
 1. FileVault Encryption
@@ -47,25 +48,19 @@ The following compliance checks and information reporting are included in versio
 - Full Name
 - User Name
 - User ID
+- Location Services
 - Microsoft OneDrive Sync Date
-- Time Machine Backup Date
-- Kerberos Single Sign-on Extension
 - Platform Single Sign-on Extension
 
 #### Computer Information
 - macOS version (and build)
 - Computer Name
 - Serial Number
-- Computer Model
-- LocalHostName
-- Battery Cycle Count
 - Wi-Fi SSID
 - Wi-FI IP Address
 - VPN IP Address
-- Network Time Server
 
 #### Jamf Pro Information**
-- Jamf Pro ID
 - Site
 
 **[Payload Variables for Configuration Profiles](https://learn.jamf.com/en-US/bundle/jamf-pro-documentation-11.15.0/page/Computer_Configuration_Profiles.html#ariaid-title2)

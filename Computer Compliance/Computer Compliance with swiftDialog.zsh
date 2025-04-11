@@ -63,6 +63,18 @@
 #   - Added `excessiveUptimeAlertStyle` varible (so excessive uptime will result in a "warning" or "error")
 #   - Added `organizationColorScheme` to more easily brand the various SF Symbols
 #
+# Version 0.0.13, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Dialog is now "ontop" and can be minimized
+#   - Added `checkAvailableSoftwareUpdates`
+#   - Added `locationServicesStatus` (to quitScript output)
+#   - Moved `batteryCycleCount` to quitScript output
+#   - Moved `jamfProID` to quitScript output
+#   - Moved `networkTimeServer` to quitScript output
+#   - Removed `kerberosSSOeResult` from `helpmessage`
+#   - Removed `localHostName` from `helpmessage`
+#   - Removed `computerModel` from `helpmessage`
+#   - Removed `tmStatus` from `helpmessage`
+#
 ####################################################################################################
 
 
@@ -76,7 +88,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.12"
+scriptVersion="0.0.13"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -163,6 +175,8 @@ batteryCycleCount=$( ioreg -r -c "AppleSmartBattery" | /usr/bin/grep '"CycleCoun
 ssid=$( ipconfig getsummary $(networksetup -listallhardwareports | awk '/Hardware Port: Wi-Fi/{getline; print $2}') | awk -F ' SSID : '  '/ SSID : / {print $2}' )
 sshStatus=$( systemsetup -getremotelogin | awk -F ": " '{ print $2 }' )
 networkTimeServer=$( systemsetup -getnetworktimeserver )
+locationServices=$( defaults read /var/db/locationd/Library/Preferences/ByHost/com.apple.locationd LocationServicesEnabled )
+locationServicesStatus=$( [ "${locationServices}" = "1" ] && echo "Enabled" || echo "Disabled" )
 
 
 
@@ -302,8 +316,8 @@ dialogCommandFile=$( mktemp /var/tmp/dialogCommandFile_${organizationScriptName}
 # Set Permissions on Dialog Command Files
 chmod -vv 644 "${dialogCommandFile}" | tee -a "${scriptLog}"
 
-# The total number of steps for the progress bar, plus two (i.e., "progress: increment")
-progressSteps="17"
+# The total number of steps for the progress bar, plus three (i.e., "progress: increment")
+progressSteps="18"
 
 # Set initial icon based on whether the Mac is a desktop or laptop
 if system_profiler SPPowerDataType | grep -q "Battery Power"; then
@@ -337,7 +351,7 @@ supportKBURL="[${supportKB}](${infobuttonaction})"
 # Help Message Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telephone:** ${supportTeamPhone}<br>- **Email:** ${supportTeamEmail}<br>- **Website:** ${supportTeamWebsite}<br>- **Knowledge Base Article:** ${supportKBURL}<br><br>---<br><br>**User Information:**<br>- **Full Name:** ${loggedInUserFullname}<br>- **User Name:** ${loggedInUser}<br>- **User ID:** ${loggedInUserID}<br>- **Microsoft OneDrive Sync Date:** ${oneDriveSyncDate}<br>- **Time Machine Destination(s) / Backup Date(s):** ${tmStatus} ${tmLastBackup}<br>- **Kerberos SSOe:** ${kerberosSSOeResult}<br>- **Platform SSOe:** ${platformSSOeResult}<br><br>---<br><br>**Computer Information:**<br>- **macOS:** ${osVersion} (${osBuild})<br>- **Computer Name:** ${computerName}<br>- **Serial Number:** ${serialNumber}<br>- **Computer Model:** ${computerModel}<br>- **LocalHostName:** ${localHostName}<br>- **Battery Cycle Count:** ${batteryCycleCount}<br>- **Wi-Fi:** ${ssid}<br>- ${wiFiIpAddress}<br>- **VPN IP:** ${globalProtectStatus}<br>- ${networkTimeServer}<br><br>---<br><br>**Jamf Pro Information:**<br>- **Jamf Pro ID:** ${jamfProID}<br>- **Site:** ${jamfProSiteName}"
+helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telephone:** ${supportTeamPhone}<br>- **Email:** ${supportTeamEmail}<br>- **Website:** ${supportTeamWebsite}<br>- **Knowledge Base Article:** ${supportKBURL}<br><br>---<br><br>**User Information:**<br>- **Full Name:** ${loggedInUserFullname}<br>- **User Name:** ${loggedInUser}<br>- **User ID:** ${loggedInUserID}<br>- **Location Services:** ${locationServicesStatus}<br>- **Microsoft OneDrive Sync Date:** ${oneDriveSyncDate}<br>- **Platform SSOe:** ${platformSSOeResult}<br><br>---<br><br>**Computer Information:**<br>- **macOS:** ${osVersion} (${osBuild})<br>- **Computer Name:** ${computerName}<br>- **Serial Number:** ${serialNumber}<br>- **Wi-Fi:** ${ssid}<br>- ${wiFiIpAddress}<br>- **VPN IP:** ${globalProtectStatus}<br><br>---<br><br>**Jamf Pro Information:**<br>- **Site:** ${jamfProSiteName}"
 
 
 
@@ -348,6 +362,9 @@ helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telep
 dialogJSON='
 {
     "commandfile" : "'"${dialogCommandFile}"'",
+    "ontop" : true,
+    "moveable" : true,
+    "windowbuttons" : "min",
     "title" : "'"${humanReadableScriptName} (${scriptVersion})"'",
     "icon" : "'"${icon}"'",
     "overlayicon" : "'"${overlayicon}"'",
@@ -362,28 +379,28 @@ dialogJSON='
     "position" : "center",
     "progress" :  "'"${progressSteps}"'",
     "progresstext" : "Please wait …",
-    "moveable" : true,
     "height" : "750",
     "width" : "900",
     "messagefont" : "size=14",
     "titlefont" : "shadow=true, size=24",
     "listitem" : [
         {"title" : "macOS Version", "subtitle" : "Organizational standards are the current and immediately previous versions of macOS", "icon" : "SF=01.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "System Integrity Protection", "subtitle" : "System Integrity Protection (SIP) in macOS protects the entire system by preventing the execution of unauthorized code.", "icon" : "SF=02.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Firewall", "subtitle" : "The built-in macOS firewall helps protect your Mac from unauthorized access.", "icon" : "SF=03.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=04.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Last Reboot", "subtitle" : "Restart your Mac regularly — at least once a week — can help resolve many common issues", "icon" : "SF=05.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Free Disk Space", "subtitle" : "See KB0080685 Disk Usage to help identify the 50 largest directories", "icon" : "SF=06.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Profile", "subtitle" : "The presence of the Jamf Pro MDM profile helps ensure your Mac is enrolled", "icon" : "SF=07.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "MDM Certficate Expiration", "subtitle" : "Validate the expiration date of the Jamf Pro MDM certficate", "icon" : "SF=08.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Apple Push Notification service", "subtitle" : "Validate communication between Apple, Jamf Pro and your Mac", "icon" : "SF=09.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Jamf Pro Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=10.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Jamf Pro Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=11.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=12.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=13.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=14.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=15.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=16.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"}
+        {"title" : "Available Updates", "subtitle" : "Keep your Mac up-to-date to ensure its security and performance", "icon" : "SF=02.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "System Integrity Protection", "subtitle" : "System Integrity Protection (SIP) in macOS protects the entire system by preventing the execution of unauthorized code.", "icon" : "SF=03.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Firewall", "subtitle" : "The built-in macOS firewall helps protect your Mac from unauthorized access.", "icon" : "SF=04.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "FileVault Encryption", "subtitle" : "FileVault is built-in to macOS and provides full-disk encryption to help prevent unauthorized access to your Mac", "icon" : "SF=05.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Last Reboot", "subtitle" : "Restart your Mac regularly — at least once a week — can help resolve many common issues", "icon" : "SF=06.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Free Disk Space", "subtitle" : "See KB0080685 Disk Usage to help identify the 50 largest directories", "icon" : "SF=07.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Profile", "subtitle" : "The presence of the Jamf Pro MDM profile helps ensure your Mac is enrolled", "icon" : "SF=08.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "MDM Certficate Expiration", "subtitle" : "Validate the expiration date of the Jamf Pro MDM certficate", "icon" : "SF=09.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Apple Push Notification service", "subtitle" : "Validate communication between Apple, Jamf Pro and your Mac", "icon" : "SF=10.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Jamf Pro Check-In", "subtitle" : "Your Mac should check-in with the Jamf Pro MDM server multiple times each day", "icon" : "SF=11.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Jamf Pro Inventory", "subtitle" : "Your Mac should submit its inventory to the Jamf Pro MDM server daily", "icon" : "SF=12.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "BeyondTrust Privilege Management", "subtitle" : "Privilege Management for Mac pairs powerful least-privilege management and application control", "icon" : "SF=13.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=14.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=15.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=16.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=17.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"}
     ]
 }
 '
@@ -491,7 +508,7 @@ function quitScript() {
 
     quitOut "Exiting …"
 
-    notice "User: ${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}] ${loggedInUserGroupMembership}; Kerberos SSOe: ${kerberosSSOeResult}; Platform SSOe: ${platformSSOeResult}; SSH: ${sshStatus}; Microsoft OneDrive Sync Date: ${oneDriveSyncDate}; Time Machine Backup Date: ${tmStatus} ${tmLastBackup}; Wi-Fi: ${ssid}; ${wiFiIpAddress}; VPN IP: ${globalProtectStatus}; Site: ${jamfProSiteName}"
+    notice "User: ${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}] ${loggedInUserGroupMembership}; Kerberos SSOe: ${kerberosSSOeResult}; Platform SSOe: ${platformSSOeResult}; Location Services: ${locationServicesStatus}; SSH: ${sshStatus}; Microsoft OneDrive Sync Date: ${oneDriveSyncDate}; Time Machine Backup Date: ${tmStatus} ${tmLastBackup}; Battery Cycle Count: ${batteryCycleCount}; Wi-Fi: ${ssid}; ${wiFiIpAddress}; VPN IP: ${globalProtectStatus}; ${networkTimeServer}; Jamf Pro ID: ${jamfProID}; Site: ${jamfProSiteName}"
 
     if [[ -n "${overallCompliance}" ]]; then
         dialogUpdate "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
@@ -835,6 +852,74 @@ function checkOS() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Check Available Software Updates
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function checkAvailableSoftwareUpdates() {
+
+    notice "Check Available Software Updates …"
+
+    dialogUpdate "icon: SF=arrow.trianglehead.2.clockwise,${organizationColorScheme}"
+    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
+    dialogUpdate "progress: increment"
+    dialogUpdate "progresstext: Determining Available Software Updates status …"
+
+    sleep "${anticipationDuration}"
+
+    if /usr/libexec/PlistBuddy -c "Print :RecommendedUpdates:0" /Library/Preferences/com.apple.SoftwareUpdate.plist 2>/dev/null; then
+
+        SUListRaw=$( softwareupdate --list --include-config-data 2>&1 )
+
+        case "${SUListRaw}" in
+
+            *"Can’t connect"* )
+                availableSoftwareUpdates="Can’t connect to the Software Update server"
+                dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${availableSoftwareUpdates}"
+                errorOut "Available Software Updates: ${availableSoftwareUpdates}"
+                overallCompliance+="Failed: ${1}; "
+                ;;
+
+            *"The operation couldn’t be completed."* )
+                availableSoftwareUpdates="The operation couldn’t be completed."
+                dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${availableSoftwareUpdates}"
+                errorOut "Available Software Updates: ${availableSoftwareUpdates}"
+                overallCompliance+="Failed: ${1}; "
+                ;;
+
+            *"Deferred: YES"* )
+                availableSoftwareUpdates="Deferred software available."
+                dialogUpdate "listitem: index: ${1}, status: error, statustext: ${availableSoftwareUpdates}"
+                info "Available Software Updates: ${availableSoftwareUpdates}"
+                ;;
+
+            *"No new software available."* )
+                availableSoftwareUpdates="No new software available."
+                dialogUpdate "listitem: index: ${1}, status: success, statustext: ${availableSoftwareUpdates}"
+                info "Available Software Updates: ${availableSoftwareUpdates}"
+                ;;
+
+            * )
+                SUList=$( echo "${SUListRaw}" | grep "*" | sed "s/\* Label: //g" | sed "s/,*$//g" )
+                availableSoftwareUpdates="${SUList}"
+                dialogUpdate "listitem: index: ${1}, status: error, statustext: ${availableSoftwareUpdates}"
+                info "Available Software Updates: ${availableSoftwareUpdates}"
+                ;;
+
+        esac
+
+    else
+
+        availableSoftwareUpdates="None"
+        dialogUpdate "listitem: index: ${1}, status: success, statustext: ${availableSoftwareUpdates}"
+        info "Available Software Updates: ${availableSoftwareUpdates}"
+
+    fi
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Check System Integrity Protection
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -843,7 +928,6 @@ function checkSIP() {
     notice "Check System Integrity Protection …"
 
     dialogUpdate "icon: SF=checkmark.shield.fill,${organizationColorScheme}"
-
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining System Integrity Protection status …"
@@ -880,7 +964,6 @@ function checkFirewall() {
     notice "Check Firewall …"
 
     dialogUpdate "icon: SF=firewall.fill,${organizationColorScheme}"
-
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining Firewall status …"
@@ -1414,21 +1497,22 @@ dialogUpdate "list: show"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 checkOS "0"
-checkSIP "1"
-checkFirewall "2"
-checkFileVault "3"
-checkUptime "4"
-checkFreeDiskSpace "5"
-checkJamfProMdmProfile "6"
-checkJssCertificateExpiration "7"
-checkAPNs "8"
-checkJamfProCheckIn "9"
-checkJamfProInventory "10"
-checkSetupYourMacValidation "11" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
-checkSetupYourMacValidation "12" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
-checkSetupYourMacValidation "13" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
-checkSetupYourMacValidation "14" "symvGlobalProtect" "/Applications/GlobalProtect.app"
-checkNetworkQuality "15"
+checkAvailableSoftwareUpdates "1"
+checkSIP "2"
+checkFirewall "3"
+checkFileVault "4"
+checkUptime "5"
+checkFreeDiskSpace "6"
+checkJamfProMdmProfile "7"
+checkJssCertificateExpiration "8"
+checkAPNs "9"
+checkJamfProCheckIn "10"
+checkJamfProInventory "11"
+checkSetupYourMacValidation "12" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
+checkSetupYourMacValidation "13" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
+checkSetupYourMacValidation "14" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
+checkSetupYourMacValidation "15" "symvGlobalProtect" "/Applications/GlobalProtect.app"
+checkNetworkQuality "16"
 
 dialogUpdate "icon: ${icon}"
 dialogUpdate "progresstext: Final Analysis …"
