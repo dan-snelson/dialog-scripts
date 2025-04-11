@@ -1256,7 +1256,7 @@ function checkFileVault() {
 
     notice "Checking FileVault status …"
 
-    dialogUpdate "icon: SF=lock.laptopcomputer.rectangle,${organizationColorScheme}"
+    dialogUpdate "icon: SF=lock.laptopcomputer,${organizationColorScheme}"
     dialogUpdate "listitem: index: ${1}, status: wait, statustext: Checking …"
     dialogUpdate "progress: increment"
     dialogUpdate "progresstext: Determining FileVault disk encryption status …"
