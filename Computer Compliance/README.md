@@ -65,9 +65,26 @@ The following compliance checks and information reporting are included in versio
 
 **[Payload Variables for Configuration Profiles](https://learn.jamf.com/en-US/bundle/jamf-pro-documentation-11.15.0/page/Computer_Configuration_Profiles.html#ariaid-title2)
 
+### Policy Log Reporting
+
+1. Logged-In User Group Membership
+1. Kerberos SSOe
+1. SSH
+1. Time Machine
+1. Battery Cycle Count
+1. Network Time Server
+1. Jamf Pro ID
+
+---
+
 ## Configuration
 
 [Continue reading …](https://snelson.us/2025/04/computer-compliance-0-0-2/)
 
+---
+
 ## Script
 - [Computer Compliance with swiftDialog.zsh](Computer%20Compliance%20with%20swiftDialog.zsh)
+
+---
+
