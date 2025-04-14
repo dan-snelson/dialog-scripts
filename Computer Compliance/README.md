@@ -12,7 +12,7 @@ Last week, after a conversation with one of our rock-star TSRs, we decided it wa
 
 ## Features
 
-The following compliance checks and information reporting are included in version 0.0.2.
+The following compliance checks and information reporting are included in version `0.0.17`.
 
 ### Compliance Checks
 
