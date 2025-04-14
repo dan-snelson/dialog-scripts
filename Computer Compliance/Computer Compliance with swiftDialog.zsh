@@ -138,7 +138,7 @@ previousMinorOS="2"
 # Allowed percentage of free disk space
 allowedFreeDiskPercentage="10"
 
-# Network Quality Test Maxium Age
+# Network Quality Test Maximum Age
 # Leverages `date -v-`; One of either y, m, w, d, H, M or S
 # must be used to specify which part of the date is to be adjusted
 networkQualityTestMaximumAge="1H"
