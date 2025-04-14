@@ -84,6 +84,9 @@
 # Version 0.0.16, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Cache networkQuality test
 #
+# Version 0.0.17, 14-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Better control the caching of the networkQuality test (See: `networkQualityTestMaximumAge`)
+#
 ####################################################################################################
 
 
@@ -97,7 +100,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.16"
+scriptVersion="0.0.17"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -134,6 +137,11 @@ previousMinorOS="2"
 
 # Allowed percentage of free disk space
 allowedFreeDiskPercentage="10"
+
+# Network Quality Test Maxium Age
+# Leverages `date -v-`; One of either y, m, w, d, H, M or S
+# must be used to specify which part of the date is to be adjusted
+networkQualityTestMaximumAge="1H"
 
 # Allowed number of uptime minutes
 # - 1 day = 24 hours × 60 minutes/hour = 1,440 minutes
@@ -176,7 +184,7 @@ osVersionExtra=$( sw_vers -productVersionExtra )
 osBuild=$( sw_vers -buildVersion )
 osMajorVersion=$( echo "${osVersion}" | awk -F '.' '{print $1}' )
 if [[ -n $osVersionExtra ]] && [[ "${osMajorVersion}" -ge 13 ]]; then osVersion="${osVersion} ${osVersionExtra}"; fi
-serialNumber=$( system_profiler SPHardwareDataType | awk '/Serial/{print $NF}' )
+serialNumber=$( ioreg -rd1 -c IOPlatformExpertDevice | awk -F'"' '/IOPlatformSerialNumber/{print $4}' )
 computerName=$( scutil --get ComputerName | /usr/bin/sed 's/’//' )
 computerModel=$( sysctl -n hw.model )
 localHostName=$( scutil --get LocalHostName )
@@ -1455,19 +1463,38 @@ function checkNetworkQuality() {
 
     # sleep "${anticipationDuration}"
 
-    if [[ -e /var/tmp/networkQualityTest ]]; then
-        info "Using cached Network Quality Test"
-        testStatus="(cached)"
+    networkQualityTestFile="/var/tmp/networkQualityTest"
+
+    if [[ -e "${networkQualityTestFile}" ]]; then
+
+        networkQualityTestFileCreationEpoch=$( stat -f "%m" "${networkQualityTestFile}" )
+        networkQualityTestMaximumEpoch=$( date -v-"${networkQualityTestMaximumAge}" +%s )
+
+        if [[ "${networkQualityTestFileCreationEpoch}" -gt "${networkQualityTestMaximumEpoch}" ]]; then
+
+            info "Using cached Network Quality Test"
+            testStatus="(cached)"
+
+        else
+
+            unset testStatus
+            info "Removing cached result …"
+            rm "${networkQualityTestFile}"
+            info "Starting Network Quality Test …"
+            networkQuality -s -v -c > "${networkQualityTestFile}"
+            info "Completed Network Quality Test"
+
+        fi
+
     else
+
         info "Starting Network Quality Test …"
-        unset testStatus
-        networkQuality -s -v -c > /var/tmp/networkQualityTest
+        networkQuality -s -v -c > "${networkQualityTestFile}"
         info "Completed Network Quality Test"
+
     fi
 
-    networkQualityTest=$( < /var/tmp/networkQualityTest )
-
-    # rm /var/tmp/networkQualityTest
+    networkQualityTest=$( < "${networkQualityTestFile}" )
 
     case "${osVersion}" in
 
