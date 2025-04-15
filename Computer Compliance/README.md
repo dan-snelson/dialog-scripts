@@ -79,6 +79,8 @@ The following compliance checks and information reporting are included in versio
 
 ## Configuration
 
+<a href="https://snelson.us/2025/04/computer-compliance-0-0-2/"><img src="images/qr-code-Computer_Compliance.png" width="250" /></a>
+
 [Continue reading …](https://snelson.us/2025/04/computer-compliance-0-0-2/)
 
 ---
