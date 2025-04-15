@@ -16,76 +16,8 @@
 #
 # HISTORY
 #
-# Version 0.0.1, 3-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Original, proof-of-concept version inspired by robjschroeder
-#
-# Version 0.0.2, 4-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Replaced manually created variables with swiftDialog built-ins (thanks for the reminder, @bartreadon!)
-#   - Applied Band-Aid for macOS 15 `withAnimation` SwiftUI bug
-#   - Included the output of several "helpmessage" variables to ${scriptLog}
-#   - Skipped Compliant OS Version check for Beta OSes
-#
-# Version 0.0.3, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added `exitCode` variable (to better report failures as errors in the Jamf Pro policy)
-#   - Adjusted `tmLastBackup` message (for when no Time Machine destination is configured)
-# 
-# Version 0.0.4, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added `infobuttontext` and `infobuttonaction` for the Knowledge Base article (in main dialog)
-# 
-# Version 0.0.5, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added check for Microsoft OneDrive's last sync time
-#
-# Version 0.0.6, 7-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added check for the Jamf Pro MDM Profile
-#   - Improved `checkSetupYourMacValidation` logic
-#
-# Version 0.0.7, 8-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added multiple drive support to Time Machine check (thanks, obi-@bartreadon!) [Issue #65](#65)
-#
-# Version 0.0.8, 8-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added JSS Built-in Certificate Authority expiration check (thanks, @isaacatmann!) [JNUC 2024](https://github.com/mannconsulting/JNUC2024/)
-#
-# Version 0.0.9, 10-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added check for System Integrity Protection
-#   - Added check for built-in firewall
-#   - Added check for APNs
-#       - Renamed the previous, so-called "MDM" checks to "Jamf Pro"
-#   - Replaced `errorOut "${1}"` in indvidual checks with more verbose, specific log output
-#
-# Version 0.0.10, 10-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Modified Uptime Check to use `warning` for excessive uptime
-#   - Removed stray occurrences of `results` 
-#
-# Version 0.0.11, 10-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added computer information to pre-flight section of logs
-#
-# Version 0.0.12, 10-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Added `excessiveUptimeAlertStyle` varible (so excessive uptime will result in a "warning" or "error")
-#   - Added `organizationColorScheme` to more easily brand the various SF Symbols
-#
-# Version 0.0.13, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Dialog is now "ontop" and can be minimized
-#   - Added `checkAvailableSoftwareUpdates`
-#   - Added `locationServicesStatus` (to quitScript output)
-#   - Moved `batteryCycleCount` to quitScript output
-#   - Moved `jamfProID` to quitScript output
-#   - Moved `networkTimeServer` to quitScript output
-#   - Removed `kerberosSSOeResult` from `helpmessage`
-#   - Removed `localHostName` from `helpmessage`
-#   - Removed `computerModel` from `helpmessage`
-#   - Removed `tmStatus` from `helpmessage`
-#
-# Version 0.0.14, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Supressed extraneous output from `checkAvailableSoftwareUpdates`
-#
-# Version 0.0.15, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Supressed various error messages (i.e., "2>/dev/null" is your friend)
-#
-# Version 0.0.16, 11-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Cache networkQuality test
-#
-# Version 0.0.17, 14-Apr-2025, Dan K. Snelson (@dan-snelson)
-#   - Better control the caching of the networkQuality test (See: `networkQualityTestMaximumAge`)
+# Version 1.0.0, 15-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - First "official" release
 #
 ####################################################################################################
 
@@ -100,7 +32,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.17"
+scriptVersion="1.0.0b1"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -370,6 +302,7 @@ supportKBURL="[${supportKB}](${infobuttonaction})"
 
 helpmessage="For assistance, please contact: **${supportTeamName}**<br>- **Telephone:** ${supportTeamPhone}<br>- **Email:** ${supportTeamEmail}<br>- **Website:** ${supportTeamWebsite}<br>- **Knowledge Base Article:** ${supportKBURL}<br><br>---<br><br>**User Information:**<br>- **Full Name:** ${loggedInUserFullname}<br>- **User Name:** ${loggedInUser}<br>- **User ID:** ${loggedInUserID}<br>- **Location Services:** ${locationServicesStatus}<br>- **Microsoft OneDrive Sync Date:** ${oneDriveSyncDate}<br>- **Platform SSOe:** ${platformSSOeResult}<br><br>---<br><br>**Computer Information:**<br>- **macOS:** ${osVersion} (${osBuild})<br>- **Computer Name:** ${computerName}<br>- **Serial Number:** ${serialNumber}<br>- **Wi-Fi:** ${ssid}<br>- ${wiFiIpAddress}<br>- **VPN IP:** ${globalProtectStatus}<br><br>---<br><br>**Jamf Pro Information:**<br>- **Site:** ${jamfProSiteName}"
 
+helpimage="https://raw.githubusercontent.com/dan-snelson/dialog-scripts/refs/heads/development/Computer%20Compliance/images/qr-code-Computer_Compliance.png"
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -393,6 +326,7 @@ dialogJSON='
     "button1text" : "Wait",
     "button1disabled" : "true",
     "helpmessage" : "'"${helpmessage}"'",
+    "helpimage" : "'"${helpimage}"'",
     "position" : "center",
     "progress" :  "'"${progressSteps}"'",
     "progresstext" : "Please wait …",
