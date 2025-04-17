@@ -19,6 +19,9 @@
 # Version 1.0.0, 15-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - First "official" release
 #
+# Version 1.1.0, 17-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added output of "/usr/libexec/mdmclient AvailableOSUpdates" to $scriptLog
+#
 ####################################################################################################
 
 
@@ -32,7 +35,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="1.0.0"
+scriptVersion="1.1.0"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -316,6 +319,7 @@ dialogJSON='
     "ontop" : true,
     "moveable" : true,
     "windowbuttons" : "min",
+    "quitkey" : "k",
     "title" : "'"${humanReadableScriptName} (${scriptVersion})"'",
     "icon" : "'"${icon}"'",
     "overlayicon" : "'"${overlayicon}"'",
@@ -818,8 +822,13 @@ function checkAvailableSoftwareUpdates() {
 
     sleep "${anticipationDuration}"
 
-    recommendedUpdates=$( /usr/libexec/PlistBuddy -c "Print :RecommendedUpdates:0" /Library/Preferences/com.apple.SoftwareUpdate.plist 2>/dev/null )
+    mdmClientAvailableOSUpdates=$( /usr/libexec/mdmclient AvailableOSUpdates | head -n 5 )
+    if [[ "${mdmClientAvailableOSUpdates}" == *"OS Update Item"* ]]; then
+        notice "MDM Client Available OS Updates"
+        info "${mdmClientAvailableOSUpdates}"
+    fi
 
+    recommendedUpdates=$( /usr/libexec/PlistBuddy -c "Print :RecommendedUpdates:0" /Library/Preferences/com.apple.SoftwareUpdate.plist 2>/dev/null )
     if [[ -n "${recommendedUpdates}" ]]; then
 
         SUListRaw=$( softwareupdate --list --include-config-data 2>&1 )

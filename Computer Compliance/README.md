@@ -12,12 +12,12 @@ Last week, after a conversation with one of our rock-star TSRs, we decided it wa
 
 ## Features
 
-The following compliance checks and information reporting are included in version `1.0.0`.
+The following compliance checks and information reporting are included in version `1.1.0`.
 
 ### Compliance Checks
 
 1. macOS Version
-1. Available Updates
+1. Available Updates (including deferred updates)
 1. System Integrity Protection
 1. Firewall
 1. FileVault Encryption
@@ -67,6 +67,7 @@ The following compliance checks and information reporting are included in versio
 
 ### Policy Log Reporting
 
+1. Deferred Software Updates
 1. Logged-In User Group Membership
 1. Kerberos SSOe
 1. SSH
