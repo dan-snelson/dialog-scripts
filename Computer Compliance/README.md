@@ -12,7 +12,7 @@ Last week, after a conversation with one of our rock-star TSRs, we decided it wa
 
 ## Features
 
-The following compliance checks and information reporting are included in version `1.1.0`.
+The following compliance checks and information reporting are included in version `1.2.0`, which operates in "test" mode by default. (Change `operationMode` to `production` before deploying in production.)
 
 ### Compliance Checks
 

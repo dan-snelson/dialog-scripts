@@ -22,6 +22,9 @@
 # Version 1.1.0, 17-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Added output of "/usr/libexec/mdmclient AvailableOSUpdates" to $scriptLog
 #
+# Version 1.2.0, 19-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added `operationMode` [ test | production ]
+#
 ####################################################################################################
 
 
@@ -35,7 +38,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="1.1.0"
+scriptVersion="1.2.0"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -43,8 +46,8 @@ scriptLog="/var/log/org.churchofjesuschrist.log"
 # Elapsed Time
 SECONDS="0"
 
-# Current Timestamp
-timestamp="$( date '+%Y-%m-%d-%H%M%S' )"
+# Operation Mode [ test | production ]
+operationMode="test"
 
 
 
@@ -239,7 +242,6 @@ if [[ -e "${globalProtectTest}" ]] ; then
 
 else
 
-    # Palo Alto Networks GlobalProtect is not installed
     globalProtectStatus="GlobalProtect is NOT installed"
 
 fi
@@ -654,7 +656,7 @@ preFlight "Complete"
 
 ####################################################################################################
 #
-# Computer Check Functions
+# Compliance Check Functions
 #
 ####################################################################################################
 
@@ -1485,31 +1487,61 @@ dialogUpdate "list: show"
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Computer Check (where "n" represents the listitem order)
+# Compliance Checks (where "n" represents the listitem order)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-checkOS "0"
-checkAvailableSoftwareUpdates "1"
-checkSIP "2"
-checkFirewall "3"
-checkFileVault "4"
-checkUptime "5"
-checkFreeDiskSpace "6"
-checkJamfProMdmProfile "7"
-checkJssCertificateExpiration "8"
-checkAPNs "9"
-checkJamfProCheckIn "10"
-checkJamfProInventory "11"
-checkSetupYourMacValidation "12" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
-checkSetupYourMacValidation "13" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
-checkSetupYourMacValidation "14" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
-checkSetupYourMacValidation "15" "symvGlobalProtect" "/Applications/GlobalProtect.app"
-checkNetworkQuality "16"
 
-dialogUpdate "icon: ${icon}"
-dialogUpdate "progresstext: Final Analysis …"
+if [[ "${operationMode}" == "production" ]]; then
 
-sleep "${anticipationDuration}"
+    # Production Mode
+
+    checkOS "0"
+    checkAvailableSoftwareUpdates "1"
+    checkSIP "2"
+    checkFirewall "3"
+    checkFileVault "4"
+    checkUptime "5"
+    checkFreeDiskSpace "6"
+    checkJamfProMdmProfile "7"
+    checkJssCertificateExpiration "8"
+    checkAPNs "9"
+    checkJamfProCheckIn "10"
+    checkJamfProInventory "11"
+    checkSetupYourMacValidation "12" "symvBeyondTrustPMfM" "/Applications/PrivilegeManagement.app"
+    checkSetupYourMacValidation "13" "symvCiscoUmbrella" "/Applications/Cisco/Cisco Secure Client.app"
+    checkSetupYourMacValidation "14" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
+    checkSetupYourMacValidation "15" "symvGlobalProtect" "/Applications/GlobalProtect.app"
+    checkNetworkQuality "16"
+
+    dialogUpdate "icon: ${icon}"
+    dialogUpdate "progresstext: Final Analysis …"
+
+    sleep "${anticipationDuration}"
+
+else
+
+    # Non-production Mode
+
+    dialogUpdate "title: ${humanReadableScriptName} (${scriptVersion}) [Operation Mode: ${operationMode}]"
+
+    listitemLength=$(get_json_value "${dialogJSON}" "listitem.length")
+
+    for (( i=0; i<listitemLength; i++ )); do
+
+        dialogUpdate "listitem: index: ${i}, status: wait, statustext: Checking …"
+        dialogUpdate "progress: increment"
+        dialogUpdate "progresstext: [Operation Mode: ${operationMode}] • Item No. ${i} …"
+        # sleep "${anticipationDuration}"
+        dialogUpdate "listitem: index: ${i}, status: success, statustext: Enabled"
+
+    done
+
+    dialogUpdate "icon: ${icon}"
+    dialogUpdate "progresstext: Final Analysis …"
+
+    sleep "${anticipationDuration}"
+
+fi
 
 
 
