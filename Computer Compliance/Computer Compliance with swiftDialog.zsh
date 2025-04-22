@@ -47,7 +47,7 @@ scriptLog="/var/log/org.churchofjesuschrist.log"
 SECONDS="0"
 
 # Operation Mode [ test | production ]
-operationMode="test"
+operationMode="${4:-"test"}"
 
 
 
@@ -935,7 +935,7 @@ function checkFirewall() {
 
     sleep "${anticipationDuration}"
 
-    firewallCheck=$( /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate)
+    firewallCheck=$( /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate )
 
     case ${firewallCheck} in
 
@@ -1528,11 +1528,32 @@ else
 
     for (( i=0; i<listitemLength; i++ )); do
 
+        notice "[Operation Mode: ${operationMode}] Check ${i} …"
+
+        dialogUpdate "icon: SF=${i}.square,${organizationColorScheme}"
         dialogUpdate "listitem: index: ${i}, status: wait, statustext: Checking …"
         dialogUpdate "progress: increment"
         dialogUpdate "progresstext: [Operation Mode: ${operationMode}] • Item No. ${i} …"
+
         # sleep "${anticipationDuration}"
-        dialogUpdate "listitem: index: ${i}, status: success, statustext: Enabled"
+
+        ###
+        #
+        # START EXAMPLE
+        #
+        #   Check-specific
+        #
+        #   code
+        #
+        #   goes
+        #
+        #   here
+        #
+        # END EXAMPLE
+        #
+        ###
+
+        dialogUpdate "listitem: index: ${i}, status: success, statustext: Pass"
 
     done
 
