@@ -12,7 +12,7 @@ Last week, after a conversation with one of our rock-star TSRs, we decided it wa
 
 ## Features
 
-The following compliance checks and information reporting are included in version `1.2.0`, which operates in "test" mode by default. (Change `operationMode` to `production` before deploying in production.)
+The following compliance checks and information reporting are included in version `1.3.0`, which operates in "test" mode by default. (Change `operationMode` to `production` before deploying in production.)
 
 ### Compliance Checks
 
@@ -69,7 +69,9 @@ The following compliance checks and information reporting are included in versio
 
 1. Deferred Software Updates
 1. Logged-In User Group Membership
+1. sudoers
 1. Kerberos SSOe
+1. Location Services
 1. SSH
 1. Time Machine
 1. Battery Cycle Count
