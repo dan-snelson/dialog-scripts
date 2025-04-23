@@ -260,6 +260,9 @@ fi
 
 # swiftDialog Binary Path
 dialogBinary="/usr/local/bin/dialog"
+case ${operationMode} in
+    "test" ) dialogBinary="${dialogBinary} --verbose --resizable --debug red" ;;
+esac
 
 # swiftDialog JSON File
 dialogJSONFile=$( mktemp -u /var/tmp/dialogJSONFile_${organizationScriptName}.XXXX )
@@ -1476,7 +1479,7 @@ function checkNetworkQuality() {
 # Create Dialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-${dialogBinary} --jsonfile ${dialogJSONFile} --json &
+eval ${dialogBinary} --jsonfile ${dialogJSONFile} --json &
 
 dialogUpdate "progresstext: Initializing …"
 
