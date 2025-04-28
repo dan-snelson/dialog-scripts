@@ -28,6 +28,10 @@
 # Version 1.3.0, 23-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Added sudoers check
 #
+# Version 1.4.0, 28-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added `timer` option to swiftDialog
+#   - Added forcible-quit for all other running dialogs
+#
 ####################################################################################################
 
 
@@ -41,7 +45,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="1.3.0"
+scriptVersion="1.4.0"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -91,6 +95,9 @@ allowedUptimeMinutes="10080"
 
 # Should excessive uptime result in a "warning" or "error" ?
 excessiveUptimeAlertStyle="warning"
+
+# Dialog Timer (in seconds; in general, 60 seconds longer than needed for all checks)
+dialogTimer="197"
 
 
 
@@ -330,6 +337,8 @@ dialogJSON='
     "moveable" : true,
     "windowbuttons" : "min",
     "quitkey" : "k",
+    "timer" : "'"${dialogTimer}"'",
+    "hidetimerbar" : true,
     "title" : "'"${humanReadableScriptName} (${scriptVersion})"'",
     "icon" : "'"${icon}"'",
     "overlayicon" : "'"${overlayicon}"'",
@@ -490,7 +499,6 @@ function quitScript() {
     dialogUpdate "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
     dialogUpdate "button1text: Close"
     dialogUpdate "button1: enable"
-
     
     # Remove the dialog command file
     rm -rf "${dialogCommandFile}"
@@ -510,6 +518,26 @@ function quitScript() {
 
     exit "${exitCode}"
 
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Kill a specified process (thanks, @grahampugh!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function killProcess() {
+    process="$1"
+    if process_pid=$( pgrep -a "${process}" 2>/dev/null ) ; then
+        info "Attempting to terminate the '$process' process …"
+        info "(Termination message indicates success.)"
+        kill "$process_pid" 2> /dev/null
+        if pgrep -a "$process" >/dev/null ; then
+            error "'$process' could not be terminated."
+        fi
+    else
+        info "The '$process' process isn't running."
+    fi
 }
 
 
@@ -651,6 +679,15 @@ function dialogCheck() {
 }
 
 dialogCheck
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Forcible-quit for all other running dialogs
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+preFlight "Forcible-quit for all other running dialogs …"
+killProcess "Dialog"
 
 
 
