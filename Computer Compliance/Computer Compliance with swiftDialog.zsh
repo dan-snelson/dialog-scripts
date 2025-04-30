@@ -32,6 +32,10 @@
 #   - Added `timer` option to swiftDialog
 #   - Added forcible-quit for all other running dialogs
 #
+# Version 1.5.0, 29-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added `jamf recon` as final "check"
+#   - Improved logging output
+#
 ####################################################################################################
 
 
@@ -45,7 +49,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="1.4.0"
+scriptVersion="1.5.0"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -97,7 +101,7 @@ allowedUptimeMinutes="10080"
 excessiveUptimeAlertStyle="warning"
 
 # Dialog Timer (in seconds; in general, 60 seconds longer than needed for all checks)
-dialogTimer="197"
+dialogTimer="230"
 
 
 
@@ -285,8 +289,8 @@ dialogCommandFile=$( mktemp /var/tmp/dialogCommandFile_${organizationScriptName}
 # Set Permissions on Dialog Command Files
 chmod 644 "${dialogCommandFile}"
 
-# The total number of steps for the progress bar, plus three (i.e., "progress: increment")
-progressSteps="18"
+# The total number of steps for the progress bar, plus two (i.e., "progress: increment")
+progressSteps="20"
 
 # Set initial icon based on whether the Mac is a desktop or laptop
 if system_profiler SPPowerDataType | grep -q "Battery Power"; then
@@ -375,7 +379,8 @@ dialogJSON='
         {"title" : "Cisco Umbrella", "subtitle" : "Cisco Umbrella combines multiple security functions so you can extend data protection anywhere.", "icon" : "SF=14.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
         {"title" : "CrowdStrike Falcon", "subtitle" : "Technology, intelligence, and expertise come together in CrowdStrike Falcon to deliver security that works.", "icon" : "SF=15.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
         {"title" : "Palo Alto GlobalProtect", "subtitle" : "Virtual Private Network (VPN) connection to Church headquarters", "icon" : "SF=16.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
-        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=17.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"}
+        {"title" : "Network Quality Test", "subtitle" : "Various networking-related tests of your Mac’s Internet connection", "icon" : "SF=17.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"},
+        {"title" : "Computer Inventory", "subtitle" : "The listing of your Mac’s apps and settings", "icon" : "SF=18.circle.fill,'"${organizationColorScheme}"'", "status" : "pending", "statustext" : "Pending …"}
     ]
 }
 '
@@ -536,7 +541,7 @@ function killProcess() {
             error "'$process' could not be terminated."
         fi
     else
-        info "The '$process' process isn't running."
+        info "The '$process' process isn’t running."
     fi
 }
 
@@ -1511,6 +1516,35 @@ function checkNetworkQuality() {
 
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# "Check" Update Computer Inventory
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function checkUpdateComputerInventory() {
+
+    notice "Updating Computer Inventory …"
+
+    dialogUpdate "icon: SF=pencil.and.list.clipboard,${organizationColorScheme}"
+    dialogUpdate "listitem: index: ${1}, status: wait, statustext: Updating …"
+    dialogUpdate "progress: increment"
+    dialogUpdate "progresstext: Updating Computer Inventory …"
+
+    if [[ "${operationMode}" == "production" ]]; then
+
+        jamf recon # -verbose
+
+    else
+
+        sleep "${anticipationDuration}"
+
+    fi
+
+    dialogUpdate "listitem: index: ${1}, status: success, statustext: Updated"
+
+}
+
+
+
 ####################################################################################################
 #
 # Program
@@ -1557,6 +1591,7 @@ if [[ "${operationMode}" == "production" ]]; then
     checkSetupYourMacValidation "14" "symvCrowdStrikeFalcon" "/Applications/Falcon.app"
     checkSetupYourMacValidation "15" "symvGlobalProtect" "/Applications/GlobalProtect.app"
     checkNetworkQuality "16"
+    checkUpdateComputerInventory "17"
 
     dialogUpdate "icon: ${icon}"
     dialogUpdate "progresstext: Final Analysis …"
@@ -1598,7 +1633,7 @@ else
         #
         ###
 
-        dialogUpdate "listitem: index: ${i}, status: success, statustext: Pass"
+        dialogUpdate "listitem: index: ${i}, status: success, statustext: ${operationMode}"
 
     done
 

@@ -12,7 +12,7 @@ Last week, after a conversation with one of our rock-star TSRs, we decided it wa
 
 ## Features
 
-The following compliance checks and information reporting are included in version `1.4.0`, which operates in "test" mode by default. (Change `operationMode` to `production` before deploying in production.)
+The following compliance checks and information reporting are included in version `1.5.0`, which operates in "test" mode by default. (Change `operationMode` to `production` before deploying in production.)
 
 ### Compliance Checks
 
@@ -33,6 +33,7 @@ The following compliance checks and information reporting are included in versio
 1. CrowdStrike Falcon*
 1. Palo Alto GlobalProtect*
 1. Network Quality Test
+1. Update Computer Inventory
 
 *[Setup Your Mac Validations](https://github.com/setup-your-mac/Setup-Your-Mac/tree/main/Validations)
 
