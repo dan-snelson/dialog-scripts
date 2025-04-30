@@ -36,6 +36,9 @@
 #   - Added `jamf recon` as final "check"
 #   - Improved logging output
 #
+# Version 1.6.0, 30-Apr-2025, Dan K. Snelson (@dan-snelson)
+#   - Added countdown progress bar to `quitScript` function (thanks, @samg and @bartreadon!)
+#
 ####################################################################################################
 
 
@@ -49,7 +52,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="1.5.0"
+scriptVersion="1.6.0"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -100,8 +103,8 @@ allowedUptimeMinutes="10080"
 # Should excessive uptime result in a "warning" or "error" ?
 excessiveUptimeAlertStyle="warning"
 
-# Dialog Timer (in seconds; in general, 60 seconds longer than needed for all checks)
-dialogTimer="230"
+# Completion Timer (in seconds)
+completionTimer="60"
 
 
 
@@ -341,8 +344,6 @@ dialogJSON='
     "moveable" : true,
     "windowbuttons" : "min",
     "quitkey" : "k",
-    "timer" : "'"${dialogTimer}"'",
-    "hidetimerbar" : true,
     "title" : "'"${humanReadableScriptName} (${scriptVersion})"'",
     "icon" : "'"${icon}"'",
     "overlayicon" : "'"${overlayicon}"'",
@@ -500,11 +501,26 @@ function quitScript() {
         dialogUpdate "title: Computer Compliant (as of $( date '+%Y-%m-%d-%H%M%S' ))"
     fi
 
-    dialogUpdate "progress: increment 100"
+    dialogUpdate "progress: 100"
     dialogUpdate "progresstext: Elapsed Time: $(printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
     dialogUpdate "button1text: Close"
     dialogUpdate "button1: enable"
     
+    sleep "${anticipationDuration}"
+
+    # Progress countdown (thanks, @samg and @bartreadon!)
+    dialogUpdate "progress: reset"
+    while true; do
+        if [[ ${completionTimer} -lt ${progressSteps} ]]; then
+            dialogUpdate "progress: ${completionTimer}"
+        fi
+        dialogUpdate "progresstext: Closing automatically in ${completionTimer} seconds …"
+        sleep 1
+        ((completionTimer--))
+        if [[ ${completionTimer} -lt 0 ]]; then break; fi;
+    done
+    dialogUpdate "quit:"
+
     # Remove the dialog command file
     rm -rf "${dialogCommandFile}"
 
