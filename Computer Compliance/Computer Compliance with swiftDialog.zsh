@@ -39,6 +39,10 @@
 # Version 1.6.0, 30-Apr-2025, Dan K. Snelson (@dan-snelson)
 #   - Added countdown progress bar to `quitScript` function (thanks, @samg and @bartreadon!)
 #
+# Version 1.7.0, 07-May-2025, Dan K. Snelson (@dan-snelson)
+#   - Updated `checkOS` function to display macOS version and build to user
+#   - Removed OS version from `infobox`
+#
 ####################################################################################################
 
 
@@ -52,7 +56,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="1.6.0"
+scriptVersion="1.7.0"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -349,7 +353,7 @@ dialogJSON='
     "overlayicon" : "'"${overlayicon}"'",
     "message" : "none",
     "iconsize" : "198.0",
-    "infobox" : "**User:** '"{userfullname}"'<br><br>**Computer Model:** '"{computermodel}"'<br><br>**Serial Number:** '"{serialnumber} "'<br><br>**macOS Version:** '"{osversion} (${osBuild})"' ",
+    "infobox" : "**User:** '"{userfullname}"'<br><br>**Computer Model:** '"{computermodel}"'<br><br>**Serial Number:** '"{serialnumber}"' ",
     "infobuttontext" : "'"${supportKB}"'",
     "infobuttonaction" : "'"${infobuttonaction}"'",
     "button1text" : "Wait",
@@ -744,7 +748,7 @@ function checkOS() {
     if [[ "${osBuild}" =~ [a-zA-Z]$ ]]; then
 
         logComment "OS Build, ${osBuild}, ends with a letter; skipping"
-        osResult="Non-Compliant Beta OS"
+        osResult="Beta macOS ${osVersion} (${osBuild})"
         dialogUpdate "listitem: index: ${1}, status: error, statustext: ${osResult}"
         warning "${osResult}"
     
@@ -859,13 +863,13 @@ function checkOS() {
         done
 
         if [[ "$latest_version_match" == true ]] || [[ "$security_update_within_30_days" == true ]] || [[ "$n_rule" == true ]]; then
-            osResult="Passed"
-            dialogUpdate "listitem: index: ${1}, status: success, statustext: $osResult"
-            info "$osResult: macOS ${osVersion} (${osBuild})"
+            osResult="macOS ${osVersion} (${osBuild})"
+            dialogUpdate "listitem: index: ${1}, status: success, statustext: ${osResult}"
+            info "${osResult}"
         else
-            osResult="Failed"
-            dialogUpdate "listitem: index: ${1}, status: fail, statustext: $osResult"
-            errorOut "$osResult: macOS ${osVersion} (${osBuild})"
+            osResult="macOS ${osVersion} (${osBuild})"
+            dialogUpdate "listitem: index: ${1}, status: fail, statustext: ${osResult}"
+            errorOut "${osResult}"
             overallCompliance+="Failed: ${1}; "
         fi
 
