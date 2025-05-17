@@ -12,7 +12,7 @@ Last week, after a conversation with one of our rock-star TSRs, we decided it wa
 
 ## Features
 
-The following compliance checks and information reporting are included in version `1.7.0`, which operates in "test" mode by default. (Change `operationMode` to `production` before deploying in production.)
+The following compliance checks and information reporting are included in version `1.8.0`, which operates in "test" mode by default. (Change `operationMode` to `production` before deploying in production.)
 
 ### Compliance Checks
 
@@ -68,6 +68,7 @@ The following compliance checks and information reporting are included in versio
 
 ### Policy Log Reporting
 
+1. Warning when logged-in user is a member of `admin`
 1. Deferred Software Updates
 1. Logged-In User Group Membership
 1. sudoers

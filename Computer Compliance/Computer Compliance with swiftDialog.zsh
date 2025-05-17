@@ -43,6 +43,9 @@
 #   - Updated `checkOS` function to display macOS version and build to user
 #   - Removed OS version from `infobox`
 #
+# Version 1.8.0, 17-May-2025, Dan K. Snelson (@dan-snelson)
+#   - Added "warning" when logged-in user is a member of 'admin'
+#
 ####################################################################################################
 
 
@@ -56,7 +59,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="1.7.0"
+scriptVersion="1.8.0"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -167,6 +170,7 @@ loggedInUserFullname=$( id -F "${loggedInUser}" )
 loggedInUserFirstname=$( echo "$loggedInUserFullname" | sed -E 's/^.*, // ; s/([^ ]*).*/\1/' | sed 's/\(.\{25\}\).*/\1…/' | awk '{print ( $0 == toupper($0) ? toupper(substr($0,1,1))substr(tolower($0),2) : toupper(substr($0,1,1))substr($0,2) )}' )
 loggedInUserID=$( id -u "${loggedInUser}" )
 loggedInUserGroupMembership=$( id -Gn "${loggedInUser}" )
+if [[ ${loggedInUserGroupMembership} == *"admin"* ]]; then localAdminWarning="WARNING: '$loggedInUser' IS A MEMBER OF 'admin'; "; fi
 loggedInUserHomeDirectory=$( dscl . read "/Users/${loggedInUser}" NFSHomeDirectory | awk -F ' ' '{print $2}' )
 
 # Kerberos Single Sign-on Extension
@@ -493,7 +497,7 @@ function quitScript() {
 
     quitOut "Exiting …"
 
-    notice "User: ${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}] ${loggedInUserGroupMembership}; sudo Check: ${sudoStatus}; sudoers: ${sudoAllLines}; Kerberos SSOe: ${kerberosSSOeResult}; Platform SSOe: ${platformSSOeResult}; Location Services: ${locationServicesStatus}; SSH: ${sshStatus}; Microsoft OneDrive Sync Date: ${oneDriveSyncDate}; Time Machine Backup Date: ${tmStatus} ${tmLastBackup}; Battery Cycle Count: ${batteryCycleCount}; Wi-Fi: ${ssid}; ${wiFiIpAddress}; VPN IP: ${globalProtectStatus}; ${networkTimeServer}; Jamf Pro ID: ${jamfProID}; Site: ${jamfProSiteName}"
+    notice "User: ${localAdminWarning}${loggedInUserFullname} (${loggedInUser}) [${loggedInUserID}] ${loggedInUserGroupMembership}; sudo Check: ${sudoStatus}; sudoers: ${sudoAllLines}; Kerberos SSOe: ${kerberosSSOeResult}; Platform SSOe: ${platformSSOeResult}; Location Services: ${locationServicesStatus}; SSH: ${sshStatus}; Microsoft OneDrive Sync Date: ${oneDriveSyncDate}; Time Machine Backup Date: ${tmStatus} ${tmLastBackup}; Battery Cycle Count: ${batteryCycleCount}; Wi-Fi: ${ssid}; ${wiFiIpAddress}; VPN IP: ${globalProtectStatus}; ${networkTimeServer}; Jamf Pro ID: ${jamfProID}; Site: ${jamfProSiteName}"
 
     if [[ -n "${overallCompliance}" ]]; then
         dialogUpdate "icon: SF=xmark.circle.fill,weight=bold,colour1=#BB1717,colour2=#F31F1F"
