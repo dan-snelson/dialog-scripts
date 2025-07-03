@@ -46,6 +46,9 @@
 # Version 1.8.0, 17-May-2025, Dan K. Snelson (@dan-snelson)
 #   - Added "warning" when logged-in user is a member of 'admin'
 #
+# Version 1.9.0, 10-Jun-2025, Dan K. Snelson (@dan-snelson)
+#   - Updates for macOS 26
+#
 ####################################################################################################
 
 
@@ -59,7 +62,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="1.8.0"
+scriptVersion="1.9.0"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -151,7 +154,7 @@ computerName=$( scutil --get ComputerName | /usr/bin/sed 's/’//' )
 computerModel=$( sysctl -n hw.model )
 localHostName=$( scutil --get LocalHostName )
 batteryCycleCount=$( ioreg -r -c "AppleSmartBattery" | /usr/bin/grep '"CycleCount" = ' | /usr/bin/awk '{ print $3 }' | /usr/bin/sed s/\"//g )
-ssid=$( ipconfig getsummary 2>/dev/null $(networksetup -listallhardwareports | awk '/Hardware Port: Wi-Fi/{getline; print $2}') | awk -F ' SSID : '  '/ SSID : / {print $2}' )
+ssid=$( system_profiler SPAirPortDataType | awk '/Current Network Information:/ { getline; print substr($0, 13, (length($0) - 13)); exit }' )
 sshStatus=$( systemsetup -getremotelogin | awk -F ": " '{ print $2 }' )
 networkTimeServer=$( systemsetup -getnetworktimeserver )
 locationServices=$( defaults read /var/db/locationd/Library/Preferences/ByHost/com.apple.locationd LocationServicesEnabled )
@@ -258,7 +261,7 @@ globalProtectTest="/Applications/GlobalProtect.app"
 
 if [[ -e "${globalProtectTest}" ]] ; then
 
-    interface=$( ifconfig | grep -B1 "10.25" | awk '{ print $1 }' | head -1 )
+    interface=$( ifconfig | grep -B1 "10.25" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1 )
 
     if [[ -z "$interface" ]]; then
         globalProtectStatus="Inactive"
@@ -1523,8 +1526,8 @@ function checkNetworkQuality() {
             dlResponsiveness="N/A; macOS ${osVersion}"
             ;;
 
-        12* | 13* | 14* | 15* )
-            dlThroughput=$( get_json_value "$networkQualityTest" "dl_throughput")
+        * )
+            dlThroughput=$( get_json_value "$networkQualityTest" "dl_throughput" )
             dlResponsiveness=$( get_json_value "$networkQualityTest" "dl_responsiveness" )
             ;;
 
