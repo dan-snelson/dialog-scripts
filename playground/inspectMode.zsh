@@ -16,6 +16,9 @@
 # Version 0.0.1, 15-Nov-2025, Dan K. Snelson (@dan-snelson)
 #   - Original version
 #
+# Version 0.0.2, 15-Nov-2025, Dan K. Snelson (@dan-snelson)
+#   - Added "Organizational Preset" variable
+#
 ####################################################################################################
 
 
@@ -29,7 +32,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.1"
+scriptVersion="0.0.2"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -54,7 +57,7 @@ SECONDS="0"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Parameter 4: Operation Mode [ Test | Debug | Self Service | Silent ]
-operationMode="${4:-"Debug"}"
+operationMode="${4:-"Self Service"}"
 
     # Enable `set -x` if operation mode is "Debug" to help identify issues
     [[ "${operationMode}" == "Debug" ]] && set -x
@@ -73,6 +76,9 @@ humanReadableScriptName="swiftDialog Inspect Mode"
 
 # Organization's Script Name
 organizationScriptName="sDIM"
+
+# Organization's swiftDialog Inspect Mode Preset Option (See: https://beta.swiftdialog.app/advanced/inspect-mode/)
+organizationPreset="4"
 
 # Organization's Branding Banner URL
 organizationBrandingBannerURL="https://img.freepik.com/free-photo/orange-wall-with-cracks-peeling-paint_1258-28309.jpg" # [Image by benzoix on Freepik](https://www.freepik.com/author/benzoix)
@@ -292,91 +298,135 @@ echo "${dialogJSON}" > "${dialogJSONFile}"
 
 function createInspectConfig() {
 
-    cat > "${dialogInspectModeJSONFile}" <<'EOF'
+    cat > "${dialogInspectModeJSONFile}" <<EOF
 {
-  "title": "Enrollment Progress Screen - Preset 1",
-  "message": "Installing Office applications",
-  "preset": "preset1",
-  "icon": "/Library/Application Support/Dialog/Dialog.app",
-  "iconsize": 120,
-  "size": "compact",
-
-  "cachePaths": [
-    "/Library/Managed Installs/Cache",
-    "/Library/Application Support/AirWatch/Data/Munki/Managed Installs/Cache",
-    "/Library/Application Support/JAMF/Receipts"
-  ],
-
-  "sideMessage": [
-    "This Enrollment includes essential productivity applications.",
-    "The installation progress is automatically monitored.",
-    "Please wait until all applications are completely installed.",
-    "Your device will be ready for productive work once complete."
-  ],
-  "sideInterval": 8,
-
-  "highlightColor": "#FF904C",
-  "popupButton": "Installation Details...",
-
-  "button1Text": "Please wait...",
-  "button1Disabled": true,
-  "button2Text": "Restart Later", 
-  "button2Disabled": false,
-  "button2Visible": true,
-  "buttonStyle": "center",
-  "autoEnableButton": true,
-
-  "items": [
-    {
-      "id": "outlook",
-      "displayName": "Microsoft Outlook",
-      "guiIndex": 0,
-      "paths": ["/Applications/Microsoft Outlook.app"],
-      "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_a2bbe84f741a9fd7b524e5277467d84886545c04f6d3ea82dedbbca11adc3a57"
+    "title": "Enrollment Progress Screen - Preset ${organizationPreset}",
+    "message": "Installing Office applications",
+    "preset": "preset${organizationPreset}",
+    "icon": "/Library/Application Support/Dialog/Dialog.app",
+    "iconsize": 120,
+    "size": "standard",
+    "cachePaths": [
+        "/Library/Managed Installs/Cache",
+        "/Library/Application Support/Installomator/Downloads",
+        "/Library/Application Support/JAMF/Downloads",
+        "/Library/Application Support/AirWatch/Data/Munki/Managed Installs/Cache"
+    ],
+    "scanInterval": 5,
+    "colorThresholds": {
+        "excellent": 0.95,
+        "good": 0.8,
+        "warning": 0.6,
+        "excellentColor": "#00C853",
+        "goodColor": "#2196F3",
+        "warningColor": "#FF9800",
+        "criticalColor": "#F44336"
     },
-    {
-      "id": "excel",
-      "displayName": "Microsoft Excel", 
-      "guiIndex": 1,
-      "paths": ["/Applications/Microsoft Excel.app"],
-      "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_953c93b6a3d8b315733a3c6c8f01cf84306f76e53ed213216a22d7387dd24b17"
-    },
-    {
-      "id": "word",
-      "displayName": "Microsoft Word",
-      "guiIndex": 2, 
-      "paths": ["/Applications/Microsoft Word.app"],
-      "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_a47fd5bb8f553b3eb62eef7ac7f732b2d96554327bd8365e7d8c7d569ee62a07"
-    },
-    {
-      "id": "teams",
-      "displayName": "Microsoft Teams",
-      "guiIndex": 3,
-      "paths": ["/Applications/Microsoft Teams.app"],
-      "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_ddaf0a68208164124968f2682598638511f5f277a5924b05be24fc87e2e36fb3"
-    },
-    {
-      "id": "powerpoint",
-      "displayName": "Microsoft PowerPoint",
-      "guiIndex": 4,
-      "paths": ["/Applications/Microsoft PowerPoint.app"],
-      "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_624c894823f7493dd8860f5cf7cc6c1dd49b09cd67c86aae61edc1d188a158d9"
-    },
-    {
-      "id": "onenote", 
-      "displayName": "Microsoft OneNote",
-      "guiIndex": 5,
-      "paths": ["/Applications/Microsoft OneNote.app"], 
-      "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_0e78dd0798dad53052eda3fdaec736c07ea10b6d9322cf747dcd52ae8530eaf6"
-    },
-    {
-      "id": "edge",
-      "displayName": "Microsoft Edge",
-      "guiIndex": 6,
-      "paths": ["/Applications/Microsoft Edge.app"],
-      "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_e8696f8104ff3ee2f3027faeffe9a6b541cfcaf6a24144d2da886cead0408477"
-    }
-  ]
+    "sideMessage": [
+        "This Enrollment includes essential productivity applications.",
+        "The installation progress is automatically monitored.",
+        "Please wait until all applications are completely installed.",
+        "Your device will be ready for productive work once complete."
+    ],
+    "sideInterval": 8,
+    "highlightColor": "#FF904C",
+    "popupButton": "Installation Details...",
+    "button1text": "Please wait...",
+    "button1disabled": true,
+    "button2text": "Restart Later",
+    "button2disabled": false,
+    "button2visible": false,
+    "autoEnableButton": true,
+    "autoEnableButtonText": "Close",
+    "items": [
+        {
+            "id": "outlook",
+            "displayName": "Microsoft Outlook",
+            "guiIndex": 0,
+            "paths": [
+                "/Applications/Microsoft Outlook.app"
+            ],
+            "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_a2bbe84f741a9fd7b524e5277467d84886545c04f6d3ea82dedbbca11adc3a57"
+        },
+        {
+            "id": "excel",
+            "displayName": "Microsoft Excel",
+            "guiIndex": 1,
+            "paths": [
+                "/Applications/Microsoft Excel.app"
+            ],
+            "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_953c93b6a3d8b315733a3c6c8f01cf84306f76e53ed213216a22d7387dd24b17"
+        },
+        {
+            "id": "word",
+            "displayName": "Microsoft Word",
+            "guiIndex": 2,
+            "paths": [
+                "/Applications/Microsoft Word.app"
+            ],
+            "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_a47fd5bb8f553b3eb62eef7ac7f732b2d96554327bd8365e7d8c7d569ee62a07"
+        },
+        {
+            "id": "teams",
+            "displayName": "Microsoft Teams",
+            "guiIndex": 3,
+            "paths": [
+                "/Applications/Microsoft Teams.app"
+            ],
+            "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_ddaf0a68208164124968f2682598638511f5f277a5924b05be24fc87e2e36fb3"
+        },
+        {
+            "id": "powerpoint",
+            "displayName": "Microsoft PowerPoint",
+            "guiIndex": 4,
+            "paths": [
+                "/Applications/Microsoft PowerPoint.app"
+            ],
+            "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_624c894823f7493dd8860f5cf7cc6c1dd49b09cd67c86aae61edc1d188a158d9"
+        },
+        {
+            "id": "onenote",
+            "displayName": "Microsoft OneNote",
+            "guiIndex": 5,
+            "paths": [
+                "/Applications/Microsoft OneNote.app"
+            ],
+            "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_0e78dd0798dad53052eda3fdaec736c07ea10b6d9322cf747dcd52ae8530eaf6"
+        },
+        {
+            "id": "edge",
+            "displayName": "Microsoft Edge",
+            "guiIndex": 6,
+            "paths": [
+                "/Applications/Microsoft Edge.app"
+            ],
+            "icon": "https://apse2.ics.services.jamfcloud.com/icon/hash_e8696f8104ff3ee2f3027faeffe9a6b541cfcaf6a24144d2da886cead0408477"
+        },
+        {
+            "id": "findmymac",
+            "displayName": "Find My Mac Status",
+            "guiIndex": 7,
+            "paths": [
+                "/Library/Preferences/com.apple.FindMyMac.plist"
+            ],
+            "plistKey": "FMMEnabled",
+            "expectedValue": "true",
+            "evaluation": "boolean",
+            "icon": "sf=shield.lefthalf.filled,colour=#16a34a,weight=bold"
+        },
+        {
+            "id": "ssh_disable",
+            "displayName": "SSH Disabled",
+            "guiIndex": 9,
+            "paths": [
+                "/System/Library/LaunchDaemons/ssh.plist"
+            ],
+            "plistKey": "Disabled",
+            "expectedValue": "true",
+            "evaluation": "boolean",
+            "icon": "sf=network.badge.shield.half.filled,colour=#0891b2,weight=bold"
+        }
+    ]
 }
 EOF
 
