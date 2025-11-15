@@ -394,8 +394,8 @@ function dialogCheck() {
 
 function runAsUser() {
 
-    updateScriptLog "Run \"$@\" as \"$uid\" … "
-    launchctl asuser "$uid" sudo -u "$loggedInUser" "$@"
+    updateScriptLog "Run \"$@\" as \"$loggedInUserID\" … "
+    launchctl asuser "$loggedInUserID" sudo -u "$loggedInUser" "$@"
 
 }
 
