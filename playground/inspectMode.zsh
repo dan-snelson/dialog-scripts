@@ -45,7 +45,7 @@ tmpScriptLog="${TMPDIR:-/private/tmp}/${organizationScriptName// /_}.${$}.log"
 autoload -Uz is-at-least
 
 # Minimum Required Version of swiftDialog
-swiftDialogMinimumRequiredVersion="3.0.0.4916"
+swiftDialogMinimumRequiredVersion="3.0.0.4925"
 
 # Elapsed Time
 SECONDS="0"
