@@ -20,6 +20,7 @@
 #
 # Version 0.0.2, 13-Feb-2026, Dan K. Snelson (@dan-snelson)
 #   - Removed check for swiftDialog
+#   - Added Installomator phase logging for Downloading / Verifying / Installing
 #
 ####################################################################################################
 
@@ -122,6 +123,10 @@ title="Microsoft 365 Applications"
 # swiftDialog Binary Path
 dialogBinary="/usr/local/bin/dialog"
 
+# swiftDialog Command File
+dialogCommandFile=$( /usr/bin/mktemp /var/tmp/dialogCommandFile_${organizationScriptName}.XXXX )
+/bin/chmod 666 "${dialogCommandFile}"
+
 # swiftDialog Inspect Mode JSON File
 dialogInspectModeJSONFile=$( /usr/bin/mktemp -u /var/tmp/dialogJSONFile_InspectMode_${organizationScriptName}.XXXX )
 
@@ -204,6 +209,13 @@ function createInspectConfig() {
         "/var/tmp/Installomator/downloads/Microsoft Word.pkg"
     ],
     "scanInterval": 5,
+    "logMonitors": [
+        {
+            "path": "${scriptLog}",
+            "pattern": "INFO][[:space:]]+((Downloading|Verifying|Installing).*)",
+            "autoMatch": true
+        }
+    ],
     "sideMessage": [
         "Thank you for your patience.",
         "The installation progress is automatically monitored.",
@@ -291,11 +303,13 @@ EOF
         fatal "Failed to create Dialog inspect config file"
     fi
     
-    if ! /usr/bin/jq empty "${dialogInspectModeJSONFile}" 2>/dev/null; then
-        fatal "Dialog inspect config JSON is malformed"
+    local jqValidationError
+    jqValidationError=$(/usr/bin/jq empty "${dialogInspectModeJSONFile}" 2>&1)
+    if [[ $? -ne 0 ]]; then
+        fatal "Dialog inspect config JSON is malformed: ${jqValidationError}"
     fi
-    
-    /bin/echo "${dialogInspectModeJSONFile}"
+
+    return 0
 }
 
 
@@ -392,6 +406,19 @@ installomatorLabelsFromInspectConfig() {
     /usr/bin/jq -r '.items[]?.id' "${inspectConfigPath}" 2>/dev/null
 }
 
+installomatorGUIIndexForLabel() {
+    local inspectConfigPath="${1}"
+    local targetInstallomatorLabel="${2}"
+
+    if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
+        return 1
+    fi
+
+    /usr/bin/jq -r --arg label "${targetInstallomatorLabel}" \
+        '.items[] | select(.id == $label) | .guiIndex' \
+        "${inspectConfigPath}" 2>/dev/null | /usr/bin/head -n 1
+}
+
 installomatorLabelIsInstalled() {
     local inspectConfigPath="${1}"
     local targetInstallomatorLabel="${2}"
@@ -422,12 +449,48 @@ installomatorLabelIsInstalled() {
     fi
 }
 
+installomatorProgressFromLine() {
+    local installomatorOutputLine="${1}"
+
+    /bin/echo "${installomatorOutputLine}" | /usr/bin/sed -nE \
+        's/.*:[[:space:]]*((Downloading|Verifying|Installing)([:[:space:]-].*)?)/\1/p' | /usr/bin/head -n 1
+}
+
+dialogUpdateInspectProgressText() {
+    local progressText="${1}"
+
+    if [[ -n "${progressText}" ]]; then
+        /bin/echo "progresstext: ${progressText}" >> "${dialogCommandFile}"
+    fi
+}
+
+dialogUpdateInspectListItemStatus() {
+    local inspectConfigPath="${1}"
+    local installomatorLabel="${2}"
+    local statusText="${3}"
+    local guiIndex
+
+    [[ -z "${statusText}" ]] && return 0
+
+    guiIndex=$(installomatorGUIIndexForLabel "${inspectConfigPath}" "${installomatorLabel}")
+
+    if [[ -z "${guiIndex}" || "${guiIndex}" == "null" ]]; then
+        return 0
+    fi
+
+    /bin/echo "listitem: index: ${guiIndex}, status: wait, statustext: ${statusText}" >> "${dialogCommandFile}"
+}
+
 installomatorInstallInspectItem() {
     local inspectConfigPath installomatorLabel installomatorExitCode dialogPID
+    local installomatorOutputLine installomatorProgressLine
 
     # Create Dialog configuration and ensure download directory exists
     notice "Create Dialog …"
-    inspectConfigPath=$(createInspectConfig)
+    if ! createInspectConfig; then
+        fatal "Failed to create Dialog inspect config"
+    fi
+    inspectConfigPath="${dialogInspectModeJSONFile}"
 
     if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
         fatal "Failed to create or read Dialog inspect config"
@@ -436,7 +499,7 @@ installomatorInstallInspectItem() {
     /bin/mkdir -p "${organizationInstallomatorDownloadDirectory}"
 
     # Launch Dialog in background for real-time progress
-    runAsUser DIALOG_INSPECT_CONFIG="${inspectConfigPath}" "${dialogBinary}" --inspect-mode &
+    runAsUser DIALOG_INSPECT_CONFIG="${inspectConfigPath}" "${dialogBinary}" --inspect-mode --commandfile "${dialogCommandFile}" &
     dialogPID=$!
     info "Inspect Mode PID: ${dialogPID}"
 
@@ -456,8 +519,18 @@ installomatorInstallInspectItem() {
         notice "Installing '${installomatorLabel}' …"
         "${organizationInstallomatorFile}" "${installomatorLabel}" \
             DOWNLOAD_DIRECTORY="${organizationInstallomatorDownloadDirectory}" \
-            DEBUG=0 NOTIFY=silent
-        installomatorExitCode=$?
+            DEBUG=0 NOTIFY=silent 2>&1 | while IFS= read -r installomatorOutputLine; do
+                installomatorProgressLine=$(installomatorProgressFromLine "${installomatorOutputLine}")
+                if [[ -n "${installomatorProgressLine}" ]]; then
+                    installomatorProgressLine="${installomatorProgressLine%%$'\r'*}"
+                    info "${installomatorProgressLine} (${installomatorLabel})"
+                    dialogUpdateInspectProgressText "${installomatorProgressLine} (${installomatorLabel})"
+                    dialogUpdateInspectListItemStatus "${inspectConfigPath}" "${installomatorLabel}" "${installomatorProgressLine}"
+                else
+                    logComment "Installomator (${installomatorLabel}): ${installomatorOutputLine}"
+                fi
+            done
+        installomatorExitCode=${pipestatus[1]}
 
         if [[ ${installomatorExitCode} -ne 0 ]]; then
             error "Installomator failed for '${installomatorLabel}' (exit code: ${installomatorExitCode})"
@@ -501,7 +574,8 @@ function quitScript() {
         /bin/rm -f "${overlayicon}"
     fi
     
-    # Remove default dialog.log
+    # Remove dialog command file and default dialog.log
+    /bin/rm -f "${dialogCommandFile}"
     /bin/rm -f /var/tmp/dialog.log
     
     info "Total Elapsed Time: $(/usr/bin/printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
