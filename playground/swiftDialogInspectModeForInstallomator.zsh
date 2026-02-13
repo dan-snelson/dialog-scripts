@@ -600,6 +600,9 @@ if [[ ! -f "${scriptLog}" ]]; then
     /usr/bin/touch "${scriptLog}"
     if [[ -f "${scriptLog}" ]]; then
         preFlight "Created specified scriptLog: ${scriptLog}"
+        preFlight "Pause for 15 seconds to allow screen recording to be manually started."
+        sleep 15
+        preFlight "Continuing pre-flight checks …"
     else
         fatal "Unable to create specified scriptLog '${scriptLog}'; exiting.\n\n(Is this script running as 'root' ?)"
     fi
