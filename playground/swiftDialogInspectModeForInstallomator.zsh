@@ -18,6 +18,9 @@
 # Version 0.0.1, 05-Jan-2026, Dan K. Snelson (@dan-snelson)
 #   - Original version
 #
+# Version 0.0.2, 13-Feb-2026, Dan K. Snelson (@dan-snelson)
+#   - Removed check for swiftDialog
+#
 ####################################################################################################
 
 
@@ -31,7 +34,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.1"
+scriptVersion="0.0.2"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -293,74 +296,6 @@ EOF
     fi
     
     /bin/echo "${dialogInspectModeJSONFile}"
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Dialog Installation Functions (thanks, @acodega!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function dialogInstall() {
-    dialogURL=$(/usr/bin/curl -L --silent --fail --connect-timeout 10 --max-time 30 \
-        "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" \
-        | /usr/bin/awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
-    
-    if [[ -z "${dialogURL}" ]]; then
-        fatal "Failed to retrieve swiftDialog download URL from GitHub API"
-    fi
-    
-    if [[ ! "${dialogURL}" =~ ^https://github\.com/ ]]; then
-        fatal "Invalid swiftDialog URL format: ${dialogURL}"
-    fi
-    
-    expectedDialogTeamID="PWA5E9TQ59"
-    preFlight "Installing swiftDialog from ${dialogURL}..."
-    
-    workDirectory=$( /usr/bin/basename "$0" )
-    tempDirectory=$( /usr/bin/mktemp -d "/private/tmp/${workDirectory}.XXXXXX" )
-    
-    if ! /usr/bin/curl --location --silent --fail --connect-timeout 10 --max-time 60 \
-             "${dialogURL}" -o "${tempDirectory}/Dialog.pkg"; then
-        /bin/rm -Rf "${tempDirectory}"
-        fatal "Failed to download swiftDialog package"
-    fi
-    
-    teamID=$(/usr/sbin/spctl -a -vv -t install "${tempDirectory}/Dialog.pkg" 2>&1 | /usr/bin/awk '/origin=/ {print $NF }' | /usr/bin/tr -d '()')
-    
-    if [[ "${expectedDialogTeamID}" == "${teamID}" ]]; then
-        /usr/sbin/installer -pkg "${tempDirectory}/Dialog.pkg" -target /
-        /bin/sleep 2
-        dialogVersion=$( /usr/local/bin/dialog --version )
-        preFlight "swiftDialog version ${dialogVersion} installed; proceeding..."
-    else
-        /usr/bin/osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "Installation Error" buttons {"Close"} with icon caution'
-        /bin/rm -Rf "${tempDirectory}"
-        fatal "Team ID mismatch: expected ${expectedDialogTeamID}, got ${teamID}"
-    fi
-    
-    /bin/rm -Rf "${tempDirectory}"
-}
-
-function dialogCheck() {
-    if [[ ! -x "/Library/Application Support/Dialog/Dialog.app" ]]; then
-        preFlight "swiftDialog not found; installing …"
-        dialogInstall
-        if [[ ! -x "/usr/local/bin/dialog" ]]; then
-            fatal "swiftDialog still not found; are downloads from GitHub blocked on this Mac?"
-        fi
-    else
-        dialogVersion=$(/usr/local/bin/dialog --version 2>/dev/null)
-        if ! is-at-least "${swiftDialogMinimumRequiredVersion}" "${dialogVersion}"; then
-            preFlight "swiftDialog version ${dialogVersion} found but swiftDialog ${swiftDialogMinimumRequiredVersion} or newer is required; updating …"
-            dialogInstall
-            if [[ ! -x "/usr/local/bin/dialog" ]]; then
-                fatal "Unable to update swiftDialog; are downloads from GitHub blocked on this Mac?"
-            fi
-        else
-            preFlight "swiftDialog version ${dialogVersion} found; proceeding …"
-        fi
-    fi
 }
 
 
@@ -647,12 +582,6 @@ preFlight "Complete!"
 #
 ####################################################################################################
 
-# Pre-flight checks ensure jq is available
-if ! command -v /usr/bin/jq &> /dev/null; then
-    fatal "jq binary not found at /usr/bin/jq; required for JSON parsing."
-fi
-
-dialogCheck
 installomatorDownload
 installomatorInstallInspectItem
 quitScript 0
