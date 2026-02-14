@@ -22,6 +22,11 @@
 #   - Removed check for swiftDialog
 #   - Added Installomator phase logging for Downloading / Verifying / Installing
 #
+# Version 0.0.3, 14-Feb-2026, Dan K. Snelson (@dan-snelson)
+#   - Added explicit Installomator log variable (`/private/var/log/Installomator.log`)
+#   - Normalized Downloading / Verifying / Installing text sent to Inspect Mode
+#   - Simplified list item install text to avoid duplicate "Installing Installing ..."
+#
 ####################################################################################################
 
 
@@ -35,10 +40,13 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.2"
+scriptVersion="0.0.3"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
+
+# Installomator Log
+installomatorLog="/private/var/log/Installomator.log"
 
 # Elapsed Time
 SECONDS="0"
@@ -213,6 +221,11 @@ function createInspectConfig() {
         {
             "path": "${scriptLog}",
             "pattern": "INFO][[:space:]]+((Downloading|Verifying|Installing).*)",
+            "autoMatch": true
+        },
+        {
+            "path": "${installomatorLog}",
+            "pattern": ":[[:space:]]+((Downloading|Verifying|Installing).*)",
             "autoMatch": true
         }
     ],
@@ -419,6 +432,19 @@ installomatorGUIIndexForLabel() {
         "${inspectConfigPath}" 2>/dev/null | /usr/bin/head -n 1
 }
 
+installomatorDisplayNameForLabel() {
+    local inspectConfigPath="${1}"
+    local targetInstallomatorLabel="${2}"
+
+    if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
+        return 1
+    fi
+
+    /usr/bin/jq -r --arg label "${targetInstallomatorLabel}" \
+        '.items[] | select(.id == $label) | .displayName' \
+        "${inspectConfigPath}" 2>/dev/null | /usr/bin/head -n 1
+}
+
 installomatorLabelIsInstalled() {
     local inspectConfigPath="${1}"
     local targetInstallomatorLabel="${2}"
@@ -449,11 +475,11 @@ installomatorLabelIsInstalled() {
     fi
 }
 
-installomatorProgressFromLine() {
+installomatorPhaseFromLine() {
     local installomatorOutputLine="${1}"
 
     /bin/echo "${installomatorOutputLine}" | /usr/bin/sed -nE \
-        's/.*:[[:space:]]*((Downloading|Verifying|Installing)([:[:space:]-].*)?)/\1/p' | /usr/bin/head -n 1
+        's/.*:[[:space:]]*(Downloading|Verifying|Installing)(:|[[:space:]].*)?/\1/p' | /usr/bin/head -n 1
 }
 
 dialogUpdateInspectProgressText() {
@@ -483,7 +509,8 @@ dialogUpdateInspectListItemStatus() {
 
 installomatorInstallInspectItem() {
     local inspectConfigPath installomatorLabel installomatorExitCode dialogPID
-    local installomatorOutputLine installomatorProgressLine
+    local installomatorOutputLine installomatorPhase installomatorDisplayName
+    local installomatorProgressText installomatorListStatusText
 
     # Create Dialog configuration and ensure download directory exists
     notice "Create Dialog …"
@@ -508,6 +535,10 @@ installomatorInstallInspectItem() {
         [[ -z "${installomatorLabel}" ]] && continue
 
         notice "Processing Installomator Label: ${installomatorLabel}"
+        installomatorDisplayName=$(installomatorDisplayNameForLabel "${inspectConfigPath}" "${installomatorLabel}")
+        if [[ -z "${installomatorDisplayName}" || "${installomatorDisplayName}" == "null" ]]; then
+            installomatorDisplayName="${installomatorLabel}"
+        fi
 
         # Skip if already installed
         if installomatorLabelIsInstalled "${inspectConfigPath}" "${installomatorLabel}"; then
@@ -520,12 +551,31 @@ installomatorInstallInspectItem() {
         "${organizationInstallomatorFile}" "${installomatorLabel}" \
             DOWNLOAD_DIRECTORY="${organizationInstallomatorDownloadDirectory}" \
             DEBUG=0 NOTIFY=silent 2>&1 | while IFS= read -r installomatorOutputLine; do
-                installomatorProgressLine=$(installomatorProgressFromLine "${installomatorOutputLine}")
-                if [[ -n "${installomatorProgressLine}" ]]; then
-                    installomatorProgressLine="${installomatorProgressLine%%$'\r'*}"
-                    info "${installomatorProgressLine} (${installomatorLabel})"
-                    dialogUpdateInspectProgressText "${installomatorProgressLine} (${installomatorLabel})"
-                    dialogUpdateInspectListItemStatus "${inspectConfigPath}" "${installomatorLabel}" "${installomatorProgressLine}"
+                installomatorPhase=$(installomatorPhaseFromLine "${installomatorOutputLine}")
+                if [[ -n "${installomatorPhase}" ]]; then
+                    installomatorProgressText=""
+                    installomatorListStatusText=""
+                    case "${installomatorPhase}" in
+                        Downloading)
+                            installomatorProgressText="Downloading ${installomatorDisplayName} ..."
+                            ;;
+                        Verifying)
+                            installomatorProgressText="Verifying ${installomatorDisplayName} ..."
+                            ;;
+                        Installing)
+                            installomatorProgressText="Installing ${installomatorDisplayName} ..."
+                            installomatorListStatusText="${installomatorDisplayName} ..."
+                            ;;
+                    esac
+
+                    if [[ -n "${installomatorProgressText}" ]]; then
+                        info "${installomatorProgressText}"
+                        dialogUpdateInspectProgressText "${installomatorProgressText}"
+                    fi
+
+                    if [[ -n "${installomatorListStatusText}" ]]; then
+                        dialogUpdateInspectListItemStatus "${inspectConfigPath}" "${installomatorLabel}" "${installomatorListStatusText}"
+                    fi
                 else
                     logComment "Installomator (${installomatorLabel}): ${installomatorOutputLine}"
                 fi
@@ -600,12 +650,22 @@ if [[ ! -f "${scriptLog}" ]]; then
     /usr/bin/touch "${scriptLog}"
     if [[ -f "${scriptLog}" ]]; then
         preFlight "Created specified scriptLog: ${scriptLog}"
-        preFlight "Pause for 15 seconds to allow screen recording to be manually started."
-        sleep 15
+        preFlight "Pause for 5 seconds to allow screen recording to be manually started."
+        sleep 5
         preFlight "Continuing pre-flight checks …"
     else
         fatal "Unable to create specified scriptLog '${scriptLog}'; exiting.\n\n(Is this script running as 'root' ?)"
     fi
+fi
+
+if [[ ! -f "${installomatorLog}" ]]; then
+    /usr/bin/touch "${installomatorLog}" 2>/dev/null
+fi
+
+if [[ -f "${installomatorLog}" ]]; then
+    preFlight "Installomator log available: ${installomatorLog}"
+else
+    preFlight "Installomator log not available yet: ${installomatorLog} (continuing with stdout parsing)"
 fi
 
 # Check and rotate log if exceeds max size
