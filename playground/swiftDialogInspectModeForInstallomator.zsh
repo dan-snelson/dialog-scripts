@@ -27,6 +27,10 @@
 #   - Normalized Downloading / Verifying / Installing text sent to Inspect Mode
 #   - Simplified list item install text to avoid duplicate "Installing Installing ..."
 #
+# Version 0.0.4, 16-Feb-2026, Dan K. Snelson (@dan-snelson)
+#   - Ultra-simplified logMonitor pattern: "(Downloading|Verifying|Installing) .*"
+#   - Pattern now directly matches the phase message text without complex regex
+#
 ####################################################################################################
 
 
@@ -40,7 +44,7 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.3"
+scriptVersion="0.0.4"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
@@ -213,19 +217,13 @@ function createInspectConfig() {
     "iconsize": 120,
     "size": "compact",
     "cachePaths": [
-        "${organizationInstallomatorDownloadDirectory}/*.pkg",
-        "/var/tmp/Installomator/downloads/Microsoft Word.pkg"
+        "${organizationInstallomatorDownloadDirectory}/*.pkg"
     ],
     "scanInterval": 5,
     "logMonitors": [
         {
             "path": "${scriptLog}",
-            "pattern": "INFO][[:space:]]+((Downloading|Verifying|Installing).*)",
-            "autoMatch": true
-        },
-        {
-            "path": "${installomatorLog}",
-            "pattern": ":[[:space:]]+((Downloading|Verifying|Installing).*)",
+            "pattern": "(Downloading|Verifying|Installing) .*",
             "autoMatch": true
         }
     ],
@@ -570,7 +568,6 @@ installomatorInstallInspectItem() {
 
                     if [[ -n "${installomatorProgressText}" ]]; then
                         info "${installomatorProgressText}"
-                        dialogUpdateInspectProgressText "${installomatorProgressText}"
                     fi
 
                     if [[ -n "${installomatorListStatusText}" ]]; then
