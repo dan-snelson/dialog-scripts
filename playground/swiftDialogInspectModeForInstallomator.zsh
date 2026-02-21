@@ -9,7 +9,7 @@
 #   `createInspectConfig` function > dialogInspectModeJSONFile > items:id
 # - Monitors installation progress via swiftDialog 3.0.0 Inspect Mode
 #
-# https://snelson.us
+# https://snelson.us/2026/02/swiftdialog-inspect-mode-for-installomator-0-0-5/
 #
 ####################################################################################################
 #
@@ -31,6 +31,17 @@
 #   - Ultra-simplified logMonitor pattern: "(Downloading|Verifying|Installing) .*"
 #   - Pattern now directly matches the phase message text without complex regex
 #
+# Version 0.0.5, 21-Feb-2026, Dan K. Snelson (@dan-snelson)
+#   - Re-added `dialogInstall` and `dialogCheck` functions (with `dialogAppBundle` variable)
+#   - Added per-app marketing messages to `sideMessage` array
+#   - Removed `installomatorLog` variable and all related pre-flight checks
+#     (swiftDialog Inspect Mode logMonitor watches `scriptLog` exclusively)
+#   - Removed functions made redundant by logMonitor / autoMatch:
+#     `installomatorLabelForApplicationPath`, `installomatorGUIIndexForLabel`,
+#     `installomatorPhaseFromLine`, `dialogUpdateInspectProgressText`,
+#     `dialogUpdateInspectListItemStatus`
+#   - Simplified install loop: all Installomator stdout now routes directly to `logComment`
+#
 ####################################################################################################
 
 
@@ -44,19 +55,16 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.4"
+scriptVersion="0.0.5"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
-
-# Installomator Log
-installomatorLog="/private/var/log/Installomator.log"
 
 # Elapsed Time
 SECONDS="0"
 
 # Minimum Required Version of swiftDialog
-swiftDialogMinimumRequiredVersion="3.0.0.4925"
+swiftDialogMinimumRequiredVersion="3.0.0.4934"
 
 # Load is-at-least for version comparison
 autoload -Uz is-at-least
@@ -66,6 +74,9 @@ autoload -Uz is-at-least
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Organization Variables
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Organization's swiftDialog Inspect Mode Preset Option (See: https://swiftdialog.app/advanced/inspect-mode/)
+organizationPreset="1"
 
 # Script Human-readable Name
 humanReadableScriptName="swiftDialog Inspect Mode for Installomator"
@@ -85,26 +96,25 @@ organizationInstallomatorFile="/var/tmp/Installomator/Installomator.sh"
 # Organization's Installomator Download Directory
 organizationInstallomatorDownloadDirectory="$(dirname "${organizationInstallomatorFile}")/downloads"
 
-# Organization's swiftDialog Inspect Mode Preset Option (See: https://beta.swiftdialog.app/advanced/inspect-mode/)
-organizationPreset="1"
-
 # Organization's Branding Banner URL
 organizationBrandingBannerURL="https://img.freepik.com/free-photo/orange-wall-with-cracks-peeling-paint_1258-28309.jpg"
 
 # Organization's Overlayicon URL
-organizationOverlayiconURL="https://beta.swiftdialog.app/_astro/dialog_logo.CZF0LABZ_ZjWz8w.webp"
+organizationOverlayiconURL="https://swiftdialog.app/_astro/dialog_logo.CZF0LABZ_ZjWz8w.webp"
 
 # Organization's Color Scheme
 if [[ $( /usr/bin/defaults read /Users/$( /usr/bin/stat -f %Su /dev/console )/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>/dev/null ) == "Dark" ]]; then
+    # Dark Mode
     organizationColorScheme="weight=semibold,colour1=#ef9d51,colour2=#ef7951"
 else
+    # Light Mode
     organizationColorScheme="weight=semibold,colour1=#ef9d51,colour2=#ef7951"
 fi
 
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Jamf Pro Script Parameters
+# Script Parameters
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Parameter 4: Application Icon
@@ -134,6 +144,9 @@ title="Microsoft 365 Applications"
 
 # swiftDialog Binary Path
 dialogBinary="/usr/local/bin/dialog"
+
+# swiftDialog App Bundle
+dialogAppBundle="/Library/Application Support/Dialog/Dialog.app"
 
 # swiftDialog Command File
 dialogCommandFile=$( /usr/bin/mktemp /var/tmp/dialogCommandFile_${organizationScriptName}.XXXX )
@@ -170,37 +183,6 @@ fi
 ####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Client-side Logging
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function updateScriptLog() {
-    echo "${organizationScriptName} ($scriptVersion): $( /bin/date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | /usr/bin/tee -a "${scriptLog}"
-}
-
-function preFlight()    { updateScriptLog "[PRE-FLIGHT]      ${1}"; }
-function logComment()   { updateScriptLog "                  ${1}"; }
-function notice()       { updateScriptLog "[NOTICE]          ${1}"; }
-function info()         { updateScriptLog "[INFO]            ${1}"; }
-function errorOut()     { updateScriptLog "[ERROR]           ${1}"; }
-function error()        { updateScriptLog "[ERROR]           ${1}"; let errorCount++; }
-function warning()      { updateScriptLog "[WARNING]         ${1}"; let errorCount++; }
-function fatal()        { updateScriptLog "[FATAL ERROR]     ${1}"; exit 1; }
-function quitOut()      { updateScriptLog "[QUIT]            ${1}"; }
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Run command as logged-in user (thanks, @scriptingosx!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function runAsUser() {
-    /bin/echo "Run \"$@\" as \"$loggedInUserID\" … "
-    /bin/launchctl asuser "$loggedInUserID" /usr/bin/sudo -u "$loggedInUser" "$@"
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Create swiftDialog Inspect Mode configuration (thanks, @headmin!)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -209,9 +191,9 @@ function createInspectConfig() {
 {
     "preset": "preset${organizationPreset}",
     "bannerimage": "${organizationBrandingBannerURL}",
-    "title": "Happy $( /bin/date +'%A' ), ${loggedInUserFirstname}!\n\nWe're starting to install ${title}.",
-    "bannertitle": "Happy $( /bin/date +'%A' ), ${loggedInUserFirstname}!\n\nWe're starting to install ${title}.",
-    "message": "Installing ${title} …",
+    "title": "title Happy $( /bin/date +'%A' ), ${loggedInUserFirstname}!\n\nWe're starting to install ${title}",
+    "bannertitle": "bannertitle Happy $( /bin/date +'%A' ), ${loggedInUserFirstname}!\n\nWe're starting to install ${title}",
+    "message": "message Installing ${title} …",
     "icon": "${applicationIcon}",
     "overlayicon": "${organizationOverlayiconURL}",
     "iconsize": 120,
@@ -228,17 +210,47 @@ function createInspectConfig() {
         }
     ],
     "sideMessage": [
+        "sideMessage goes here.",
         "Thank you for your patience.",
+        "sideMessage goes here.",
         "The installation progress is automatically monitored.",
+        "sideMessage goes here.",
         "Please wait while ${title} is being installed.",
-        "Your device will be ready for productive work once complete."
+        "sideMessage goes here.",
+        "Microsoft Word is on its way — create polished documents with ease.",
+        "sideMessage goes here.",
+        "Whether it's a quick memo or a detailed report, Word makes every word count.",
+        "sideMessage goes here.",
+        "Microsoft Excel is installing — turn raw data into powerful decisions.",
+        "sideMessage goes here.",
+        "Crunch numbers with confidence using Excel's formulas, charts, and pivot tables.",
+        "sideMessage goes here.",
+        "Microsoft PowerPoint is coming — make every presentation unforgettable.",
+        "sideMessage goes here.",
+        "Tell your story visually with stunning, professional-quality slides.",
+        "sideMessage goes here.",
+        "Microsoft Outlook is installing — your email, calendar, and contacts, all in one place.",
+        "sideMessage goes here.",
+        "Stay on top of your day with Outlook's intelligent inbox and scheduling tools.",
+        "sideMessage goes here.",
+        "Microsoft OneNote is on its way — capture ideas wherever inspiration strikes.",
+        "sideMessage goes here.",
+        "From meeting notes to project plans, OneNote keeps everything organized and searchable.",
+        "sideMessage goes here.",
+        "OneDrive is installing — access your files from any device, anywhere.",
+        "sideMessage goes here.",
+        "Collaborate in real time and never worry about losing a file again with OneDrive.",
+        "sideMessage goes here.",
+        "Microsoft Teams is on its way — collaborate, meet, and chat all in one app.",
+        "sideMessage goes here.",
+        "Bring your team together instantly with Teams' chat, video, and file-sharing tools."
     ],
     "sideInterval": 8,
     "highlightColor": "#FF904C",
-    "popupButton": "Installation Details...",
-    "button1text": "Please wait...",
+    "popupButton": "popupButton Installation Details...",
+    "button1text": "button1text Please wait...",
     "button1disabled": true,
-    "button2text": "Restart Later",
+    "button2text": "button2text Restart Later",
     "button2disabled": false,
     "button2visible": false,
     "autoEnableButton": true,
@@ -326,6 +338,131 @@ EOF
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Client-side Logging
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function updateScriptLog() {
+    echo "${organizationScriptName} ($scriptVersion): $( /bin/date +%Y-%m-%d\ %H:%M:%S ) - ${1}" | /usr/bin/tee -a "${scriptLog}"
+}
+
+function preFlight()    { updateScriptLog "[PRE-FLIGHT]      ${1}"; }
+function logComment()   { updateScriptLog "                  ${1}"; }
+function notice()       { updateScriptLog "[NOTICE]          ${1}"; }
+function info()         { updateScriptLog "[INFO]            ${1}"; }
+function errorOut()     { updateScriptLog "[ERROR]           ${1}"; }
+function error()        { updateScriptLog "[ERROR]           ${1}"; let errorCount++; }
+function warning()      { updateScriptLog "[WARNING]         ${1}"; let errorCount++; }
+function fatal()        { updateScriptLog "[FATAL ERROR]     ${1}"; exit 1; }
+function quitOut()      { updateScriptLog "[QUIT]            ${1}"; }
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Run command as logged-in user (thanks, @scriptingosx!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function runAsUser() {
+    /bin/echo "Run \"$@\" as \"$loggedInUserID\" … "
+    /bin/launchctl asuser "$loggedInUserID" /usr/bin/sudo -u "$loggedInUser" "$@"
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Validate / install swiftDialog (Thanks big bunches, @acodega!)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+function dialogInstall() {
+    # Get the URL of the latest PKG From the Dialog GitHub repo
+    dialogURL=$(curl -L --silent --fail --connect-timeout 10 --max-time 30 \
+        "https://api.github.com/repos/swiftDialog/swiftDialog/releases/latest" \
+        | awk -F '"' "/browser_download_url/ && /pkg\"/ { print \$4; exit }")
+
+    # Validate URL was retrieved
+    if [[ -z "${dialogURL}" ]]; then
+        fatal "Failed to retrieve swiftDialog download URL from GitHub API"
+    fi
+
+    # Validate URL format
+    if [[ ! "${dialogURL}" =~ ^https://github\.com/ ]]; then
+        fatal "Invalid swiftDialog URL format: ${dialogURL}"
+    fi
+
+    # Expected Team ID of the downloaded PKG
+    expectedDialogTeamID="PWA5E9TQ59"
+
+    preFlight "Installing swiftDialog from ${dialogURL}..."
+
+    # Create temporary working directory
+    workDirectory=$( basename "$0" )
+    tempDirectory=$( mktemp -d "/private/tmp/$workDirectory.XXXXXX" )
+
+    # Download the installer package with timeouts
+    if ! curl --location --silent --fail --connect-timeout 10 --max-time 60 \
+             "$dialogURL" -o "$tempDirectory/Dialog.pkg"; then
+        rm -Rf "$tempDirectory"
+        fatal "Failed to download swiftDialog package"
+    fi
+
+    # Verify the download
+    teamID=$(spctl -a -vv -t install "$tempDirectory/Dialog.pkg" 2>&1 | awk '/origin=/ {print $NF }' | tr -d '()')
+
+    # Install the package if Team ID validates
+    if [[ "$expectedDialogTeamID" == "$teamID" ]]; then
+
+        installer -pkg "$tempDirectory/Dialog.pkg" -target /
+        sleep 2
+        dialogVersion=$( /usr/local/bin/dialog --version )
+        preFlight "swiftDialog version ${dialogVersion} installed; proceeding..."
+
+    else
+
+        # Display a so-called "simple" dialog if Team ID fails to validate
+        osascript -e 'display dialog "Please advise your Support Representative of the following error:\r\r• Dialog Team ID verification failed\r\r" with title "'"${humanReadableScriptName}"' Error" buttons {"Close"} with icon caution'
+        exit "1"
+
+    fi
+
+    # Remove the temporary working directory when done
+    rm -Rf "$tempDirectory"
+
+}
+
+function dialogCheck() {
+
+    # Check for Dialog and install if not found
+    if [[ ! -d "${dialogAppBundle}" ]]; then
+
+        preFlight "swiftDialog not found; installing …"
+        dialogInstall
+        if [[ ! -x "${dialogBinary}" ]]; then
+            fatal "swiftDialog still not found; are downloads from GitHub blocked on this Mac?"
+        fi
+
+    else
+
+        dialogVersion=$("${dialogBinary}" --version)
+        if ! is-at-least "${swiftDialogMinimumRequiredVersion}" "${dialogVersion}"; then
+
+            preFlight "swiftDialog version ${dialogVersion} found but swiftDialog ${swiftDialogMinimumRequiredVersion} or newer is required; updating …"
+            dialogInstall
+            if [[ ! -x "${dialogBinary}" ]]; then
+                fatal "Unable to update swiftDialog; are downloads from GitHub blocked on this Mac?"
+            fi
+
+        else
+
+            preFlight "swiftDialog version ${dialogVersion} found; proceeding …"
+
+        fi
+
+    fi
+
+}
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Installomator Download
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -378,20 +515,6 @@ function installomatorDownload() {
 # Installomator Label Helpers (Inspect Mode JSON)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-installomatorLabelForApplicationPath() {
-    local inspectConfigPath="${1}"
-    local targetApplicationPath="${2}"
-
-    if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
-        logComment "inspect config missing or unreadable: ${inspectConfigPath}"
-        return 1
-    fi
-
-    /usr/bin/jq -r --arg path "${targetApplicationPath}" \
-        '.items[] | select(.paths[]? == $path) | .id' \
-        "${inspectConfigPath}" 2>/dev/null | /usr/bin/head -n 1
-}
-
 installomatorPathsForLabel() {
     local inspectConfigPath="${1}"
     local targetInstallomatorLabel="${2}"
@@ -415,19 +538,6 @@ installomatorLabelsFromInspectConfig() {
     fi
 
     /usr/bin/jq -r '.items[]?.id' "${inspectConfigPath}" 2>/dev/null
-}
-
-installomatorGUIIndexForLabel() {
-    local inspectConfigPath="${1}"
-    local targetInstallomatorLabel="${2}"
-
-    if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
-        return 1
-    fi
-
-    /usr/bin/jq -r --arg label "${targetInstallomatorLabel}" \
-        '.items[] | select(.id == $label) | .guiIndex' \
-        "${inspectConfigPath}" 2>/dev/null | /usr/bin/head -n 1
 }
 
 installomatorDisplayNameForLabel() {
@@ -473,42 +583,9 @@ installomatorLabelIsInstalled() {
     fi
 }
 
-installomatorPhaseFromLine() {
-    local installomatorOutputLine="${1}"
-
-    /bin/echo "${installomatorOutputLine}" | /usr/bin/sed -nE \
-        's/.*:[[:space:]]*(Downloading|Verifying|Installing)(:|[[:space:]].*)?/\1/p' | /usr/bin/head -n 1
-}
-
-dialogUpdateInspectProgressText() {
-    local progressText="${1}"
-
-    if [[ -n "${progressText}" ]]; then
-        /bin/echo "progresstext: ${progressText}" >> "${dialogCommandFile}"
-    fi
-}
-
-dialogUpdateInspectListItemStatus() {
-    local inspectConfigPath="${1}"
-    local installomatorLabel="${2}"
-    local statusText="${3}"
-    local guiIndex
-
-    [[ -z "${statusText}" ]] && return 0
-
-    guiIndex=$(installomatorGUIIndexForLabel "${inspectConfigPath}" "${installomatorLabel}")
-
-    if [[ -z "${guiIndex}" || "${guiIndex}" == "null" ]]; then
-        return 0
-    fi
-
-    /bin/echo "listitem: index: ${guiIndex}, status: wait, statustext: ${statusText}" >> "${dialogCommandFile}"
-}
-
 installomatorInstallInspectItem() {
     local inspectConfigPath installomatorLabel installomatorExitCode dialogPID
-    local installomatorOutputLine installomatorPhase installomatorDisplayName
-    local installomatorProgressText installomatorListStatusText
+    local installomatorOutputLine installomatorDisplayName
 
     # Create Dialog configuration and ensure download directory exists
     notice "Create Dialog …"
@@ -549,33 +626,7 @@ installomatorInstallInspectItem() {
         "${organizationInstallomatorFile}" "${installomatorLabel}" \
             DOWNLOAD_DIRECTORY="${organizationInstallomatorDownloadDirectory}" \
             DEBUG=0 NOTIFY=silent 2>&1 | while IFS= read -r installomatorOutputLine; do
-                installomatorPhase=$(installomatorPhaseFromLine "${installomatorOutputLine}")
-                if [[ -n "${installomatorPhase}" ]]; then
-                    installomatorProgressText=""
-                    installomatorListStatusText=""
-                    case "${installomatorPhase}" in
-                        Downloading)
-                            installomatorProgressText="Downloading ${installomatorDisplayName} ..."
-                            ;;
-                        Verifying)
-                            installomatorProgressText="Verifying ${installomatorDisplayName} ..."
-                            ;;
-                        Installing)
-                            installomatorProgressText="Installing ${installomatorDisplayName} ..."
-                            installomatorListStatusText="${installomatorDisplayName} ..."
-                            ;;
-                    esac
-
-                    if [[ -n "${installomatorProgressText}" ]]; then
-                        info "${installomatorProgressText}"
-                    fi
-
-                    if [[ -n "${installomatorListStatusText}" ]]; then
-                        dialogUpdateInspectListItemStatus "${inspectConfigPath}" "${installomatorLabel}" "${installomatorListStatusText}"
-                    fi
-                else
-                    logComment "Installomator (${installomatorLabel}): ${installomatorOutputLine}"
-                fi
+            logComment "Installomator (${installomatorLabel}): ${installomatorOutputLine}"
             done
         installomatorExitCode=${pipestatus[1]}
 
@@ -655,16 +706,6 @@ if [[ ! -f "${scriptLog}" ]]; then
     fi
 fi
 
-if [[ ! -f "${installomatorLog}" ]]; then
-    /usr/bin/touch "${installomatorLog}" 2>/dev/null
-fi
-
-if [[ -f "${installomatorLog}" ]]; then
-    preFlight "Installomator log available: ${installomatorLog}"
-else
-    preFlight "Installomator log not available yet: ${installomatorLog} (continuing with stdout parsing)"
-fi
-
 # Check and rotate log if exceeds max size
 logSize=$(/usr/bin/stat -f%z "${scriptLog}" 2>/dev/null || /bin/echo "0")
 maxLogSize=$((10 * 1024 * 1024))  # 10MB
@@ -685,7 +726,7 @@ fi
 # Pre-flight Check: Logging Preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-preFlight "\n\n###\n# $humanReadableScriptName (${scriptVersion})\n# https://snelson.us\n####\n\n"
+preFlight "\n\n###\n# $humanReadableScriptName (${scriptVersion})\n# https://snelson.us/2026/02/swiftdialog-inspect-mode-for-installomator-0-0-5/\n####\n\n"
 preFlight "Pre-flight Check: Initiating …"
 
 
@@ -699,6 +740,14 @@ if [[ $(/usr/bin/id -u) -ne 0 ]]; then
 else
     preFlight "Pre-flight Check: Running as root; proceeding …"
 fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Validate / install swiftDialog
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+dialogCheck
 
 
 
