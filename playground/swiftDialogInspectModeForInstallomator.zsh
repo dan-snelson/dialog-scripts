@@ -42,6 +42,27 @@
 #     `dialogUpdateInspectListItemStatus`
 #   - Simplified install loop: all Installomator stdout now routes directly to `logComment`
 #
+# Version 0.0.6, 22-Feb-2026, Dan K. Snelson (@dan-snelson)
+#   - Switched logMonitor to watch /private/var/log/Installomator.log directly
+#   - Replaced manual regex pattern with "preset": "installomator" (built-in swiftDialog)
+#   - Added "startFromEnd": true (prevents replaying prior installs from persistent log)
+#   - Replaced JSON-derived label loop with top-level labels=() shell array
+#   - Removed shell-side helpers made redundant by logMonitor / autoMatch / paths[]:
+#     `installomatorPathsForLabel`, `installomatorLabelsFromInspectConfig`,
+#     `installomatorDisplayNameForLabel`, `installomatorLabelIsInstalled`
+#   - Removed DOWNLOAD_DIRECTORY, cachePaths, scanInterval, guiIndex, popupButton
+#   - Removed dialogCommandFile (runtime commands no longer needed)
+#   - Removed organizationInstallomatorURL, organizationInstallomatorURLHash,
+#     installomatorDownloadValidation, installomatorDownload
+#     (assumes Installomator is pre-installed at organizationInstallomatorFile)
+#
+# Version 0.0.7, 22-Feb-2026, Dan K. Snelson (@dan-snelson)
+#   - Removed dead code identified by comparing against installomator_demo.sh:
+#     organizationColorScheme, icon (laptop/desktop detection), overlayicon curl
+#     download and cleanup, errorOut, quitOut
+#   - Removed screen recording pause (development artifact)
+#   - Removed echo from runAsUser (log noise)
+#
 ####################################################################################################
 
 
@@ -55,10 +76,13 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.5"
+scriptVersion="0.0.7"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
+
+# Installomator Log
+installomatorLog="/private/var/log/Installomator.log"
 
 # Elapsed Time
 SECONDS="0"
@@ -84,34 +108,25 @@ humanReadableScriptName="swiftDialog Inspect Mode for Installomator"
 # Organization's Script Name
 organizationScriptName="sDIMfI"
 
-# Organization's Installomator URL
-organizationInstallomatorURL="https://raw.githubusercontent.com/dan-snelson/Installomator/refs/heads/dev/Installomator.sh"
-
-# Organization's Installomator URL Hash
-organizationInstallomatorURLHash="b89128f7fe410208570427a4160017560104d84811e7f7336c6a5c92697b9ee7"
-
 # Organization's Installomator Path
-organizationInstallomatorFile="/var/tmp/Installomator/Installomator.sh"
+organizationInstallomatorFile="/Library/Management/AppAutoPatch/Installomator/Installomator.sh"
 
-# Organization's Installomator Download Directory
-organizationInstallomatorDownloadDirectory="$(dirname "${organizationInstallomatorFile}")/downloads"
+# Installomator Labels to install
+labels=(
+    microsoftword
+    microsoftexcel
+    microsoftpowerpoint
+    microsoftoutlook
+    microsoftonenote
+    microsoftonedrive
+    microsoftteamsnew
+)
 
 # Organization's Branding Banner URL
 organizationBrandingBannerURL="https://img.freepik.com/free-photo/orange-wall-with-cracks-peeling-paint_1258-28309.jpg"
 
 # Organization's Overlayicon URL
 organizationOverlayiconURL="https://swiftdialog.app/_astro/dialog_logo.CZF0LABZ_ZjWz8w.webp"
-
-# Organization's Color Scheme
-if [[ $( /usr/bin/defaults read /Users/$( /usr/bin/stat -f %Su /dev/console )/Library/Preferences/.GlobalPreferences.plist AppleInterfaceStyle 2>/dev/null ) == "Dark" ]]; then
-    # Dark Mode
-    organizationColorScheme="weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-else
-    # Light Mode
-    organizationColorScheme="weight=semibold,colour1=#ef9d51,colour2=#ef7951"
-fi
-
-
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Script Parameters
@@ -148,33 +163,8 @@ dialogBinary="/usr/local/bin/dialog"
 # swiftDialog App Bundle
 dialogAppBundle="/Library/Application Support/Dialog/Dialog.app"
 
-# swiftDialog Command File
-dialogCommandFile=$( /usr/bin/mktemp /var/tmp/dialogCommandFile_${organizationScriptName}.XXXX )
-/bin/chmod 666 "${dialogCommandFile}"
-
 # swiftDialog Inspect Mode JSON File
 dialogInspectModeJSONFile=$( /usr/bin/mktemp -u /var/tmp/dialogJSONFile_InspectMode_${organizationScriptName}.XXXX )
-
-# Set initial icon based on whether the Mac is a desktop or laptop
-if /usr/sbin/system_profiler SPPowerDataType | /usr/bin/grep -q "Battery Power"; then
-    icon="SF=laptopcomputer.and.arrow.down,${organizationColorScheme}"
-else
-    icon="SF=desktopcomputer.and.arrow.down,${organizationColorScheme}"
-fi
-
-# Download the overlayicon from ${organizationOverlayiconURL}
-if [[ -n "${organizationOverlayiconURL}" ]]; then
-    /usr/bin/curl -o "/var/tmp/overlayicon.png" "${organizationOverlayiconURL}" --silent --show-error --fail
-    if [[ "$?" -ne 0 ]]; then
-        overlayicon="/System/Library/CoreServices/Finder.app"
-    else
-        overlayicon="/var/tmp/overlayicon.png"
-    fi
-else
-    overlayicon="/System/Library/CoreServices/Finder.app"
-fi
-
-
 
 ####################################################################################################
 #
@@ -198,17 +188,12 @@ function createInspectConfig() {
     "overlayicon": "${organizationOverlayiconURL}",
     "iconsize": 120,
     "size": "compact",
-    "cachePaths": [
-        "${organizationInstallomatorDownloadDirectory}/*.pkg"
-    ],
-    "scanInterval": 5,
-    "logMonitors": [
-        {
-            "path": "${scriptLog}",
-            "pattern": "(Downloading|Verifying|Installing) .*",
-            "autoMatch": true
-        }
-    ],
+    "logMonitor": {
+        "path": "${installomatorLog}",
+        "preset": "installomator",
+        "autoMatch": true,
+        "startFromEnd": true
+    },
     "sideMessage": [
         "sideMessage goes here.",
         "Thank you for your patience.",
@@ -247,7 +232,6 @@ function createInspectConfig() {
     ],
     "sideInterval": 8,
     "highlightColor": "#FF904C",
-    "popupButton": "popupButton Installation Details...",
     "button1text": "button1text Please wait...",
     "button1disabled": true,
     "button2text": "button2text Restart Later",
@@ -259,7 +243,6 @@ function createInspectConfig() {
         {
             "id": "microsoftword",
             "displayName": "Microsoft Word",
-            "guiIndex": 0,
             "paths": [
                 "/Applications/Microsoft Word.app"
             ],
@@ -268,7 +251,6 @@ function createInspectConfig() {
         {
             "id": "microsoftexcel",
             "displayName": "Microsoft Excel",
-            "guiIndex": 1,
             "paths": [
                 "/Applications/Microsoft Excel.app"
             ],
@@ -277,7 +259,6 @@ function createInspectConfig() {
         {
             "id": "microsoftpowerpoint",
             "displayName": "Microsoft PowerPoint",
-            "guiIndex": 2,
             "paths": [
                 "/Applications/Microsoft PowerPoint.app"
             ],
@@ -286,7 +267,6 @@ function createInspectConfig() {
         {
             "id": "microsoftoutlook",
             "displayName": "Microsoft Outlook",
-            "guiIndex": 3,
             "paths": [
                 "/Applications/Microsoft Outlook.app"
             ],
@@ -295,7 +275,6 @@ function createInspectConfig() {
         {
             "id": "microsoftonenote",
             "displayName": "Microsoft OneNote",
-            "guiIndex": 4,
             "paths": [
                 "/Applications/Microsoft OneNote.app"
             ],
@@ -304,7 +283,6 @@ function createInspectConfig() {
         {
             "id": "microsoftonedrive",
             "displayName": "OneDrive",
-            "guiIndex": 5,
             "paths": [
                 "/Applications/OneDrive.app"
             ],
@@ -313,7 +291,6 @@ function createInspectConfig() {
         {
             "id": "microsoftteamsnew",
             "displayName": "Microsoft Teams",
-            "guiIndex": 6,
             "paths": [
                 "/Applications/Microsoft Teams.app"
             ],
@@ -349,11 +326,9 @@ function preFlight()    { updateScriptLog "[PRE-FLIGHT]      ${1}"; }
 function logComment()   { updateScriptLog "                  ${1}"; }
 function notice()       { updateScriptLog "[NOTICE]          ${1}"; }
 function info()         { updateScriptLog "[INFO]            ${1}"; }
-function errorOut()     { updateScriptLog "[ERROR]           ${1}"; }
 function error()        { updateScriptLog "[ERROR]           ${1}"; let errorCount++; }
 function warning()      { updateScriptLog "[WARNING]         ${1}"; let errorCount++; }
 function fatal()        { updateScriptLog "[FATAL ERROR]     ${1}"; exit 1; }
-function quitOut()      { updateScriptLog "[QUIT]            ${1}"; }
 
 
 
@@ -362,7 +337,6 @@ function quitOut()      { updateScriptLog "[QUIT]            ${1}"; }
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 function runAsUser() {
-    /bin/echo "Run \"$@\" as \"$loggedInUserID\" … "
     /bin/launchctl asuser "$loggedInUserID" /usr/bin/sudo -u "$loggedInUser" "$@"
 }
 
@@ -463,170 +437,29 @@ function dialogCheck() {
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Installomator Download
+# Installomator Install via Inspect Mode
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-function installomatorDownloadValidation() {
-    local actualHash
-    
-    actualHash=$( /usr/bin/shasum -a 256 "${organizationInstallomatorFile}" 2>/dev/null | /usr/bin/awk '{print $1}' )
-    
-    if [[ -z "${actualHash}" ]]; then
-        fatal "Unable to calculate hash of ${organizationInstallomatorFile}"
-    fi
-    
-    if [[ "${organizationInstallomatorURLHash}" == "${actualHash}" ]]; then
-        preFlight "Installomator hash verified successfully: ${actualHash}"
-        /bin/chmod +x "${organizationInstallomatorFile}"
-    else
-        preFlight "Installomator download hash mismatch!"
-        preFlight "Expected: ${organizationInstallomatorURLHash}"
-        preFlight "Actual:   ${actualHash}"
-        /bin/rm -f "${organizationInstallomatorFile}"
-        fatal "Hash mismatch! Possible tampering, corruption, or outdated hash."
-    fi
-}
-
-function installomatorDownload() {
-    /bin/mkdir -p "$(/usr/bin/dirname "${organizationInstallomatorFile}")"
-    
-    if [[ -e "${organizationInstallomatorFile}" ]]; then
-        preFlight "Existing Installomator found; validating hash …"
-        installomatorDownloadValidation
-    else
-        preFlight "Downloading Installomator from ${organizationInstallomatorURL} …"
-        if ! /usr/bin/curl --location --silent --fail --connect-timeout 10 --max-time 60 --retry 3 \
-            "${organizationInstallomatorURL}" \
-            -o "${organizationInstallomatorFile}"; then
-            fatal "Failed to download Installomator from ${organizationInstallomatorURL}"
-        fi
-        
-        if [[ ! -e "${organizationInstallomatorFile}" || ! -s "${organizationInstallomatorFile}" ]]; then
-            fatal "Downloaded Installomator file is empty or missing"
-        fi
-        
-        installomatorDownloadValidation
-    fi
-}
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Installomator Label Helpers (Inspect Mode JSON)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-installomatorPathsForLabel() {
-    local inspectConfigPath="${1}"
-    local targetInstallomatorLabel="${2}"
-
-    if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
-        logComment "inspect config missing or unreadable: ${inspectConfigPath}"
-        return 1
-    fi
-
-    /usr/bin/jq -r --arg label "${targetInstallomatorLabel}" \
-        '.items[] | select(.id == $label) | .paths[]?' \
-        "${inspectConfigPath}" 2>/dev/null
-}
-
-installomatorLabelsFromInspectConfig() {
-    local inspectConfigPath="${1}"
-
-    if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
-        logComment "inspect config missing or unreadable: ${inspectConfigPath}"
-        return 1
-    fi
-
-    /usr/bin/jq -r '.items[]?.id' "${inspectConfigPath}" 2>/dev/null
-}
-
-installomatorDisplayNameForLabel() {
-    local inspectConfigPath="${1}"
-    local targetInstallomatorLabel="${2}"
-
-    if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
-        return 1
-    fi
-
-    /usr/bin/jq -r --arg label "${targetInstallomatorLabel}" \
-        '.items[] | select(.id == $label) | .displayName' \
-        "${inspectConfigPath}" 2>/dev/null | /usr/bin/head -n 1
-}
-
-installomatorLabelIsInstalled() {
-    local inspectConfigPath="${1}"
-    local targetInstallomatorLabel="${2}"
-    local paths
-    local missing=false
-    local path
-
-    paths=$(installomatorPathsForLabel "${inspectConfigPath}" "${targetInstallomatorLabel}")
-
-    if [[ -z "${paths}" ]]; then
-        return 1
-    fi
-
-    while IFS= read -r path; do
-        if [[ -z "${path}" ]]; then
-            continue
-        fi
-
-        if [[ ! -e "${path}" ]]; then
-            missing=true
-        fi
-    done <<< "${paths}"
-
-    if [[ "${missing}" == false ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
 
 installomatorInstallInspectItem() {
-    local inspectConfigPath installomatorLabel installomatorExitCode dialogPID
-    local installomatorOutputLine installomatorDisplayName
+    local installomatorLabel installomatorExitCode dialogPID
 
-    # Create Dialog configuration and ensure download directory exists
+    # Create Dialog configuration
     notice "Create Dialog …"
     if ! createInspectConfig; then
         fatal "Failed to create Dialog inspect config"
     fi
-    inspectConfigPath="${dialogInspectModeJSONFile}"
-
-    if [[ -z "${inspectConfigPath}" || ! -r "${inspectConfigPath}" ]]; then
-        fatal "Failed to create or read Dialog inspect config"
-    fi
-
-    /bin/mkdir -p "${organizationInstallomatorDownloadDirectory}"
 
     # Launch Dialog in background for real-time progress
-    runAsUser DIALOG_INSPECT_CONFIG="${inspectConfigPath}" "${dialogBinary}" --inspect-mode --commandfile "${dialogCommandFile}" &
+    runAsUser DIALOG_INSPECT_CONFIG="${dialogInspectModeJSONFile}" "${dialogBinary}" --inspect-mode &
     dialogPID=$!
     info "Inspect Mode PID: ${dialogPID}"
 
-    # Process each Installomator label (use process substitution to avoid extra subshells)
-    while IFS= read -r installomatorLabel; do
-        [[ -z "${installomatorLabel}" ]] && continue
-
-        notice "Processing Installomator Label: ${installomatorLabel}"
-        installomatorDisplayName=$(installomatorDisplayNameForLabel "${inspectConfigPath}" "${installomatorLabel}")
-        if [[ -z "${installomatorDisplayName}" || "${installomatorDisplayName}" == "null" ]]; then
-            installomatorDisplayName="${installomatorLabel}"
-        fi
-
-        # Skip if already installed
-        if installomatorLabelIsInstalled "${inspectConfigPath}" "${installomatorLabel}"; then
-            logComment "Label '${installomatorLabel}' already installed; skipping."
-            continue
-        fi
-
-        # Install via Installomator
+    # Install each label; Dialog reads Installomator.log directly via logMonitor
+    for installomatorLabel in "${labels[@]}"; do
         notice "Installing '${installomatorLabel}' …"
         "${organizationInstallomatorFile}" "${installomatorLabel}" \
-            DOWNLOAD_DIRECTORY="${organizationInstallomatorDownloadDirectory}" \
             DEBUG=0 NOTIFY=silent 2>&1 | while IFS= read -r installomatorOutputLine; do
-            logComment "Installomator (${installomatorLabel}): ${installomatorOutputLine}"
+                logComment "Installomator (${installomatorLabel}): ${installomatorOutputLine}"
             done
         installomatorExitCode=${pipestatus[1]}
 
@@ -635,8 +468,7 @@ installomatorInstallInspectItem() {
         else
             info "Installomator completed for '${installomatorLabel}'"
         fi
-
-    done < <(installomatorLabelsFromInspectConfig "${inspectConfigPath}")
+    done
 
     # Wait for Dialog to close
     info "Waiting for Inspect Mode (PID: ${dialogPID}) to close …"
@@ -666,14 +498,8 @@ function quitScript() {
     
     # Remove the dialog-related JSON files
     /bin/rm -f /var/tmp/dialogJSONFile_*
-    
-    # Remove overlay icon if it was downloaded
-    if [[ -n "${overlayicon}" ]] && [[ -f "${overlayicon}" ]] && [[ "${overlayicon}" != "/System/Library/CoreServices/Finder.app" ]]; then
-        /bin/rm -f "${overlayicon}"
-    fi
-    
-    # Remove dialog command file and default dialog.log
-    /bin/rm -f "${dialogCommandFile}"
+
+    # Remove default dialog.log
     /bin/rm -f /var/tmp/dialog.log
     
     info "Total Elapsed Time: $(/usr/bin/printf '%dh:%dm:%ds\n' $((SECONDS/3600)) $((SECONDS%3600/60)) $((SECONDS%60)))"
@@ -698,8 +524,6 @@ if [[ ! -f "${scriptLog}" ]]; then
     /usr/bin/touch "${scriptLog}"
     if [[ -f "${scriptLog}" ]]; then
         preFlight "Created specified scriptLog: ${scriptLog}"
-        preFlight "Pause for 5 seconds to allow screen recording to be manually started."
-        sleep 5
         preFlight "Continuing pre-flight checks …"
     else
         fatal "Unable to create specified scriptLog '${scriptLog}'; exiting.\n\n(Is this script running as 'root' ?)"
@@ -765,6 +589,9 @@ preFlight "Complete!"
 #
 ####################################################################################################
 
-installomatorDownload
+if [[ ! -x "${organizationInstallomatorFile}" ]]; then
+    fatal "Installomator not found at ${organizationInstallomatorFile}; exiting."
+fi
+
 installomatorInstallInspectItem
 quitScript 0
