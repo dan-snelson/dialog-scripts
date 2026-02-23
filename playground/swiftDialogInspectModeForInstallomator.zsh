@@ -88,7 +88,7 @@ installomatorLog="/private/var/log/Installomator.log"
 SECONDS="0"
 
 # Minimum Required Version of swiftDialog
-swiftDialogMinimumRequiredVersion="3.0.0.4934"
+swiftDialogMinimumRequiredVersion="3.0.0.4951"
 
 # Load is-at-least for version comparison
 autoload -Uz is-at-least
