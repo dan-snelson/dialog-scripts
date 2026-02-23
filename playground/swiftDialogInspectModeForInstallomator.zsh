@@ -15,53 +15,8 @@
 #
 # HISTORY
 #
-# Version 0.0.1, 05-Jan-2026, Dan K. Snelson (@dan-snelson)
-#   - Original version
-#
-# Version 0.0.2, 13-Feb-2026, Dan K. Snelson (@dan-snelson)
-#   - Removed check for swiftDialog
-#   - Added Installomator phase logging for Downloading / Verifying / Installing
-#
-# Version 0.0.3, 14-Feb-2026, Dan K. Snelson (@dan-snelson)
-#   - Added explicit Installomator log variable (`/private/var/log/Installomator.log`)
-#   - Normalized Downloading / Verifying / Installing text sent to Inspect Mode
-#   - Simplified list item install text to avoid duplicate "Installing Installing ..."
-#
-# Version 0.0.4, 16-Feb-2026, Dan K. Snelson (@dan-snelson)
-#   - Ultra-simplified logMonitor pattern: "(Downloading|Verifying|Installing) .*"
-#   - Pattern now directly matches the phase message text without complex regex
-#
-# Version 0.0.5, 21-Feb-2026, Dan K. Snelson (@dan-snelson)
-#   - Re-added `dialogInstall` and `dialogCheck` functions (with `dialogAppBundle` variable)
-#   - Added per-app marketing messages to `sideMessage` array
-#   - Removed `installomatorLog` variable and all related pre-flight checks
-#     (swiftDialog Inspect Mode logMonitor watches `scriptLog` exclusively)
-#   - Removed functions made redundant by logMonitor / autoMatch:
-#     `installomatorLabelForApplicationPath`, `installomatorGUIIndexForLabel`,
-#     `installomatorPhaseFromLine`, `dialogUpdateInspectProgressText`,
-#     `dialogUpdateInspectListItemStatus`
-#   - Simplified install loop: all Installomator stdout now routes directly to `logComment`
-#
-# Version 0.0.6, 22-Feb-2026, Dan K. Snelson (@dan-snelson)
-#   - Switched logMonitor to watch /private/var/log/Installomator.log directly
-#   - Replaced manual regex pattern with "preset": "installomator" (built-in swiftDialog)
-#   - Added "startFromEnd": true (prevents replaying prior installs from persistent log)
-#   - Replaced JSON-derived label loop with top-level labels=() shell array
-#   - Removed shell-side helpers made redundant by logMonitor / autoMatch / paths[]:
-#     `installomatorPathsForLabel`, `installomatorLabelsFromInspectConfig`,
-#     `installomatorDisplayNameForLabel`, `installomatorLabelIsInstalled`
-#   - Removed DOWNLOAD_DIRECTORY, cachePaths, scanInterval, guiIndex, popupButton
-#   - Removed dialogCommandFile (runtime commands no longer needed)
-#   - Removed organizationInstallomatorURL, organizationInstallomatorURLHash,
-#     installomatorDownloadValidation, installomatorDownload
-#     (assumes Installomator is pre-installed at organizationInstallomatorFile)
-#
-# Version 0.0.7, 22-Feb-2026, Dan K. Snelson (@dan-snelson)
-#   - Removed dead code identified by comparing against installomator_demo.sh:
-#     organizationColorScheme, icon (laptop/desktop detection), overlayicon curl
-#     download and cleanup, errorOut, quitOut
-#   - Removed screen recording pause (development artifact)
-#   - Removed echo from runAsUser (log noise)
+# Version 1.0.0a1, 23-Feb-2026, Dan K. Snelson (@dan-snelson)
+#   - First official alpha release
 #
 ####################################################################################################
 
@@ -76,19 +31,19 @@
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin/
 
 # Script Version
-scriptVersion="0.0.7"
+scriptVersion="1.0.0a1"
 
 # Client-side Log
 scriptLog="/var/log/org.churchofjesuschrist.log"
 
 # Installomator Log
-installomatorLog="/private/var/log/Installomator.log"
+installomatorLog="/var/log/Installomator.log"
 
 # Elapsed Time
 SECONDS="0"
 
 # Minimum Required Version of swiftDialog
-swiftDialogMinimumRequiredVersion="3.0.0.4951"
+swiftDialogMinimumRequiredVersion="3.0.0.4952"
 
 # Load is-at-least for version comparison
 autoload -Uz is-at-least
@@ -111,28 +66,10 @@ organizationScriptName="sDIMfI"
 # Organization's Installomator Path
 organizationInstallomatorFile="/Library/Management/AppAutoPatch/Installomator/Installomator.sh"
 
-# Installomator Labels to install
-labels=(
-    microsoftword
-    microsoftexcel
-    microsoftpowerpoint
-    microsoftoutlook
-    microsoftonenote
-    microsoftonedrive
-    microsoftteamsnew
-)
-
-# Organization's Branding Banner URL
-organizationBrandingBannerURL="https://img.freepik.com/free-photo/orange-wall-with-cracks-peeling-paint_1258-28309.jpg"
-
 # Organization's Overlayicon URL
 organizationOverlayiconURL="https://swiftdialog.app/_astro/dialog_logo.CZF0LABZ_ZjWz8w.webp"
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# Script Parameters
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-# Parameter 4: Application Icon
+# Application Icon (Parameter 4)
 applicationIcon="${4:-"https://usw2.ics.services.jamfcloud.com/icon/hash_8bf6549c22de3db831aafaf9c5c02d3aa9a928f4abe377eb2f8cbeab3959615c"}"
 
 
@@ -150,7 +87,7 @@ loggedInUserID=$( /usr/bin/id -u "${loggedInUser}" )
 
 ####################################################################################################
 #
-# swiftDialog Variables
+# swiftDialog Variables and Functions
 #
 ####################################################################################################
 
@@ -166,28 +103,17 @@ dialogAppBundle="/Library/Application Support/Dialog/Dialog.app"
 # swiftDialog Inspect Mode JSON File
 dialogInspectModeJSONFile=$( /usr/bin/mktemp -u /var/tmp/dialogJSONFile_InspectMode_${organizationScriptName}.XXXX )
 
-####################################################################################################
-#
-# Functions
-#
-####################################################################################################
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Create swiftDialog Inspect Mode configuration (thanks, @headmin!)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
 function createInspectConfig() {
     if ! /bin/cat > "${dialogInspectModeJSONFile}" <<EOF
 {
     "preset": "preset${organizationPreset}",
-    "bannerimage": "${organizationBrandingBannerURL}",
-    "title": "title Happy $( /bin/date +'%A' ), ${loggedInUserFirstname}!\n\nWe're starting to install ${title}",
-    "bannertitle": "bannertitle Happy $( /bin/date +'%A' ), ${loggedInUserFirstname}!\n\nWe're starting to install ${title}",
-    "message": "message Installing ${title} …",
+    "title": "{title} Happy $( /bin/date +'%A' ), ${loggedInUserFirstname}! This is Inspect Mode Preset ${organizationPreset}.\n\nInstalling ${title} …",
+    "message": "{message} Installing ${title} …",
     "icon": "${applicationIcon}",
     "overlayicon": "${organizationOverlayiconURL}",
     "iconsize": 120,
-    "size": "compact",
+    "size": "standard",
     "logMonitor": {
         "path": "${installomatorLog}",
         "preset": "installomator",
@@ -195,105 +121,88 @@ function createInspectConfig() {
         "startFromEnd": true
     },
     "sideMessage": [
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Thank you for your patience.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "The installation progress is automatically monitored.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Please wait while ${title} is being installed.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Microsoft Word is on its way — create polished documents with ease.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Whether it's a quick memo or a detailed report, Word makes every word count.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Microsoft Excel is installing — turn raw data into powerful decisions.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Crunch numbers with confidence using Excel's formulas, charts, and pivot tables.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Microsoft PowerPoint is coming — make every presentation unforgettable.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Tell your story visually with stunning, professional-quality slides.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Microsoft Outlook is installing — your email, calendar, and contacts, all in one place.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Stay on top of your day with Outlook's intelligent inbox and scheduling tools.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Microsoft OneNote is on its way — capture ideas wherever inspiration strikes.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "From meeting notes to project plans, OneNote keeps everything organized and searchable.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "OneDrive is installing — access your files from any device, anywhere.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Collaborate in real time and never worry about losing a file again with OneDrive.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Microsoft Teams is on its way — collaborate, meet, and chat all in one app.",
-        "sideMessage goes here.",
+        "{sideMessage} goes here.",
         "Bring your team together instantly with Teams' chat, video, and file-sharing tools."
     ],
     "sideInterval": 8,
     "highlightColor": "#FF904C",
-    "button1text": "button1text Please wait...",
+    "button1text": "{button1text} Please wait...",
     "button1disabled": true,
-    "button2text": "button2text Restart Later",
-    "button2disabled": false,
-    "button2visible": false,
     "autoEnableButton": true,
     "autoEnableButtonText": "Show",
     "items": [
         {
             "id": "microsoftword",
             "displayName": "Microsoft Word",
-            "paths": [
-                "/Applications/Microsoft Word.app"
-            ],
+            "paths": ["/Applications/Microsoft Word.app"],
             "icon": "https://usw2.ics.services.jamfcloud.com/icon/hash_51ae4c1e37bfbde2097e14712c3c13885157d632105804bcfaa912a627649b4c"
         },
         {
             "id": "microsoftexcel",
             "displayName": "Microsoft Excel",
-            "paths": [
-                "/Applications/Microsoft Excel.app"
-            ],
+            "paths": ["/Applications/Microsoft Excel.app"],
             "icon": "https://usw2.ics.services.jamfcloud.com/icon/hash_9df1c82089b6a3ef006dc6a94995782e1809d6f9767c189a1608067a9f651ca9"
         },
         {
             "id": "microsoftpowerpoint",
             "displayName": "Microsoft PowerPoint",
-            "paths": [
-                "/Applications/Microsoft PowerPoint.app"
-            ],
+            "paths": ["/Applications/Microsoft PowerPoint.app"],
             "icon": "https://usw2.ics.services.jamfcloud.com/icon/hash_caadba785f099cec2bb510388390f5239c735a30723ba81b8a0e51792c4adff3"
         },
         {
             "id": "microsoftoutlook",
             "displayName": "Microsoft Outlook",
-            "paths": [
-                "/Applications/Microsoft Outlook.app"
-            ],
+            "paths": ["/Applications/Microsoft Outlook.app"],
             "icon": "https://usw2.ics.services.jamfcloud.com/icon/hash_e5b0c5b42d26e39431ecc7445ff0122e7d1a73d3487f55ca91b99523136b825d"
         },
         {
             "id": "microsoftonenote",
             "displayName": "Microsoft OneNote",
-            "paths": [
-                "/Applications/Microsoft OneNote.app"
-            ],
+            "paths": ["/Applications/Microsoft OneNote.app"],
             "icon": "https://usw2.ics.services.jamfcloud.com/icon/hash_e17f32e5366c1d5a3f29f67f8b38470144ecaf597435d2d46523fc1757382ec7"
         },
         {
             "id": "microsoftonedrive",
             "displayName": "OneDrive",
-            "paths": [
-                "/Applications/OneDrive.app"
-            ],
+            "paths": ["/Applications/OneDrive.app"],
             "icon": "https://usw2.ics.services.jamfcloud.com/icon/hash_72e08cf3b2dc4d168dc62faf4fc6821b0e0ec79f3382b1567a02b35176024adc"
         },
         {
             "id": "microsoftteamsnew",
             "displayName": "Microsoft Teams",
-            "paths": [
-                "/Applications/Microsoft Teams.app"
-            ],
+            "paths": ["/Applications/Microsoft Teams.app"],
             "icon": "https://usw2.ics.services.jamfcloud.com/icon/hash_60344669638073113f3ca25e0a60e7080b5141536dbb62d8920d6e21fa70f877"
         }
     ]
@@ -301,18 +210,28 @@ function createInspectConfig() {
 EOF
     then
         fatal "Failed to create Dialog inspect config file"
+    else
+        info "Dialog inspect config file created at ${dialogInspectModeJSONFile}"
     fi
     
     local jqValidationError
     jqValidationError=$(/usr/bin/jq empty "${dialogInspectModeJSONFile}" 2>&1)
     if [[ $? -ne 0 ]]; then
         fatal "Dialog inspect config JSON is malformed: ${jqValidationError}"
+    else
+        info "Dialog inspect config JSON validated successfully"
     fi
 
     return 0
 }
 
 
+
+####################################################################################################
+#
+# Script Functions
+#
+####################################################################################################
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Client-side Logging
@@ -447,6 +366,8 @@ installomatorInstallInspectItem() {
     notice "Create Dialog …"
     if ! createInspectConfig; then
         fatal "Failed to create Dialog inspect config"
+    else
+        info "Dialog inspect config created at ${dialogInspectModeJSONFile}"
     fi
 
     # Launch Dialog in background for real-time progress
@@ -455,7 +376,12 @@ installomatorInstallInspectItem() {
     info "Inspect Mode PID: ${dialogPID}"
 
     # Install each label; Dialog reads Installomator.log directly via logMonitor
-    for installomatorLabel in "${labels[@]}"; do
+    # Label IDs and app paths are derived from the JSON config (items[].id and items[].paths[0])
+    while IFS=$'\t' read -r installomatorLabel appPath; do
+        if [[ -n "${appPath}" && -d "${appPath}" ]]; then
+            info "Skipping '${installomatorLabel}': ${appPath} already exists"
+            continue
+        fi
         notice "Installing '${installomatorLabel}' …"
         "${organizationInstallomatorFile}" "${installomatorLabel}" \
             DEBUG=0 NOTIFY=silent 2>&1 | while IFS= read -r installomatorOutputLine; do
@@ -468,7 +394,7 @@ installomatorInstallInspectItem() {
         else
             info "Installomator completed for '${installomatorLabel}'"
         fi
-    done
+    done < <(/usr/bin/jq -r '.items[] | [.id, .paths[0]] | @tsv' "${dialogInspectModeJSONFile}")
 
     # Wait for Dialog to close
     info "Waiting for Inspect Mode (PID: ${dialogPID}) to close …"
@@ -568,6 +494,18 @@ fi
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Pre-flight Check: Confirm Installomator is available
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if [[ ! -x "${organizationInstallomatorFile}" ]]; then
+    fatal "Installomator not found at ${organizationInstallomatorFile}; exiting."
+else
+    preFlight "Installomator found at ${organizationInstallomatorFile}; proceeding …"
+fi
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Pre-flight Check: Validate / install swiftDialog
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -589,9 +527,6 @@ preFlight "Complete!"
 #
 ####################################################################################################
 
-if [[ ! -x "${organizationInstallomatorFile}" ]]; then
-    fatal "Installomator not found at ${organizationInstallomatorFile}; exiting."
-fi
 
 installomatorInstallInspectItem
 quitScript 0
