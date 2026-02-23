@@ -9,7 +9,7 @@
 #   `createInspectConfig` function > dialogInspectModeJSONFile > items:id
 # - Monitors installation progress via swiftDialog 3.0.0 Inspect Mode
 #
-# https://snelson.us/2026/02/swiftdialog-inspect-mode-for-installomator/
+# https://snelson.us/2026/02/swiftdialog-inspect-mode-for-installomator-1-0-0a1/
 #
 ####################################################################################################
 #
@@ -476,7 +476,7 @@ fi
 # Pre-flight Check: Logging Preamble
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-preFlight "\n\n###\n# $humanReadableScriptName (${scriptVersion})\n# https://snelson.us/2026/02/swiftdialog-inspect-mode-for-installomator/\n####\n\n"
+preFlight "\n\n###\n# $humanReadableScriptName (${scriptVersion})\n# https://snelson.us/2026/02/swiftdialog-inspect-mode-for-installomator-1-0-0a1/\n####\n\n"
 preFlight "Pre-flight Check: Initiating …"
 
 
