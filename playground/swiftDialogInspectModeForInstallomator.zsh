@@ -161,7 +161,7 @@ function createInspectConfig() {
     "button1text": "{button1text} Please wait...",
     "button1disabled": true,
     "autoEnableButton": true,
-    "autoEnableButtonText": "Show",
+    "autoEnableButtonText": "{autoEnableButtonText} Close",
     "items": [
         {
             "id": "microsoftword",
